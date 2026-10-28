@@ -1,0 +1,31 @@
+{
+  "name": "dsh-sansheng-liubu",
+  "version": "0.5.0",
+  "type": "module",
+  "main": "index.mjs",
+  "description": "三省六部：把本机安装的 Claude Code / Codex / DSH / WorkBuddy 等 AI 工具组织成可配置的朝堂，按三省六部分工协同完成奏折。",
+  "keywords": ["dsh", "dsh-plugin", "deepseek-harness", "multi-agent", "orchestration"],
+  "license": "MIT",
+  "homepage": "https://github.com/shilaoban666/dsh-imperial-court#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shilaoban666/dsh-imperial-court.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shilaoban666/dsh-imperial-court/issues"
+  },
+  "exports": {
+    ".": "./index.mjs",
+    "./client": "./client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+# 运行时数据默认在 $DSH_HOME/sansheng-liubu，万一配到仓库里也别提交
+background.*
+state.json
+edicts/

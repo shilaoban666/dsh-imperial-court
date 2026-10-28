@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>三省六部 · 预览</title>
+<!--
+  本地预览：加载真正的 client.js，用一个假的 DSH 宿主驱动它。
+  - window.__ModuleLoader__ / ctx.slots / ctx.theme 都是模拟的
+  - fetch('/sansheng-liubu/*') 被拦截到内存里的假数据，有一份奏折会自动「办差」，可以看值房的实时输出
+  直接双击打开即可（需要联网加载 React）。
+-->
+<style>
+  :root {
+    --dsw-alias-bg-base: #f4f4f5; --dsw-alias-bg-layer-1: #ffffff; --dsw-alias-bg-layer-2: #f6f6f7; --dsw-alias-bg-layer-3: #efeff1;
+    --dsw-alias-bg-overlay: #ffffff; --dsw-alias-bg-mask-1: rgba(15, 15, 20, 0.32);
+    --dsw-alias-border-l1: rgba(20, 20, 30, 0.08); --dsw-alias-border-l2: rgba(20, 20, 30, 0.13);
+    --dsw-alias-border-l3: rgba(20, 20, 30, 0.2); --dsw-alias-border-l4: rgba(20, 20, 30, 0.26);
+    --dsw-alias-label-primary: #18181b; --dsw-alias-label-secondary: #3f3f46; --dsw-alias-label-tertiary: #71717a; --dsw-alias-label-caption: #a1a1aa;
+    --dsw-alias-brand-primary: #18181b; --dsw-alias-brand-primary-invert: #ffffff;
+    --dsw-alias-state-business-primary: #b4362b; --dsw-alias-state-success-primary: #2f7d4f; --dsw-alias-state-warn-primary: #b7791f;
+    --dsw-alias-state-error-primary: #c0392b; --dsw-alias-button-info-fill: #3d6f8e;
+    --dsw-alias-interactive-bg-hover: rgba(20, 20, 30, 0.04);
+    --dsw-alias-toast-bg: #27272a; --dsw-alias-toast-label: #fafafa;
+    --dsw-specific-sidebar-fill: #ececee;
+    color-scheme: light;
+  }
+  :root[data-mode="dark"] {
+    --dsw-alias-bg-base: #111113; --dsw-alias-bg-layer-1: #1a1a1d; --dsw-alias-bg-layer-2: #161618; --dsw-alias-bg-layer-3: #222226;
+    --dsw-alias-bg-overlay: #232327; --dsw-alias-bg-mask-1: rgba(0, 0, 0, 0.55);
+    --dsw-alias-border-l1: rgba(255, 255, 255, 0.07); --dsw-alias-border-l2: rgba(255, 255, 255, 0.12);
+    --dsw-alias-border-l3: rgba(255, 255, 255, 0.18); --dsw-alias-border-l4: rgba(255, 255, 255, 0.24);
+    --dsw-alias-label-primary: #ededef; --dsw-alias-label-secondary: #c4c4c8; --dsw-alias-label-tertiary: #8e8e95; --dsw-alias-label-caption: #66666d;
+    --dsw-alias-brand-primary: #ededef; --dsw-alias-brand-primary-invert: #111113;
+    --dsw-alias-state-business-primary: #e5796d; --dsw-alias-state-success-primary: #5fbf86; --dsw-alias-state-warn-primary: #e0a94e;
+    --dsw-alias-state-error-primary: #f0786b; --dsw-alias-button-info-fill: #7fa8c4;
+    --dsw-alias-interactive-bg-hover: rgba(255, 255, 255, 0.05);
+    --dsw-alias-toast-bg: #ededef; --dsw-alias-toast-label: #111113;
+    --dsw-specific-sidebar-fill: #0d0d0f;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary);
+    font: 14px/1.5 -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .pv-bar {
+    position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 7px 14px; font-size: 12px; color: var(--dsw-alias-label-tertiary);
+    background: var(--dsw-alias-bg-layer-1); border-bottom: 1px solid var(--dsw-alias-border-l2);
+  }
+  .pv-bar b { color: var(--dsw-alias-label-primary); }
+  .pv-bar .sp { flex: 1; }
+  .pv-bar button {
+    font: inherit; cursor: pointer; padding: 3px 10px; border-radius: 999px;
+    border: 1px solid var(--dsw-alias-border-l2); background: transparent; color: var(--dsw-alias-label-secondary);
+  }
+  .pv-bar button:hover { color: var(--dsw-alias-label-primary); }
+  .pv-shell { display: flex; min-height: calc(100vh - 38px); }
+  .pv-rail {
+    width: 56px; flex: 0 0 56px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 0;
+    background: var(--dsw-specific-sidebar-fill); border-right: 1px solid var(--dsw-alias-border-l1);
+  }
+  .pv-rail .item { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--dsw-alias-label-tertiary); font-size: 13px; }
+  .pv-rail .item.active { background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); box-shadow: 0 0 0 1px var(--dsw-alias-border-l2); }
+  .pv-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .pv-convo {
+    display: flex; align-items: center; gap: 10px; padding: 8px 18px; font-size: 12px; color: var(--dsw-alias-label-tertiary);
+    border-bottom: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1);
+  }
+  .pv-convo .sp { flex: 1; }
+  .pv-shell { height: calc(100vh - 38px); }
+  .pv-main { min-height: 0; }
+  .pv-convo { flex-wrap: wrap; gap: 14px; background: color-mix(in srgb, var(--dsw-alias-bg-layer-1) 70%, transparent); }
+  .pv-views { display: flex; gap: 2px; }
+  .pv-views button, .pv-toggle, .pv-right-tabs button {
+    font: inherit; font-size: 12.5px; cursor: pointer; padding: 4px 10px; border-radius: 6px; border: 0;
+    background: transparent; color: var(--dsw-alias-label-tertiary);
+  }
+  .pv-views button.on { color: var(--dsw-alias-label-primary); box-shadow: inset 0 -2px 0 var(--dsw-alias-brand-primary); border-radius: 0; }
+  .pv-body { flex: 1; min-height: 0; display: flex; }
+  .pv-view { flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+  .pv-right { width: 380px; flex: 0 0 380px; display: flex; flex-direction: column; border-left: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); min-height: 0; }
+  .pv-right-tabs { display: flex; gap: 2px; padding: 6px; border-bottom: 1px solid var(--dsw-alias-border-l1); }
+  .pv-right-tabs button.on { background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); }
+  .pv-right-body { flex: 1; min-height: 0; overflow: hidden; }
+  .pv-guide { padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+  .pv-guide-t { font-size: 12px; color: var(--dsw-alias-label-tertiary); margin-bottom: 6px; }
+  .pv-guide-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--dsw-alias-border-l2); background: transparent; color: var(--dsw-alias-label-primary); font: inherit; text-align: left; cursor: pointer; }
+  .pv-guide-item.dim { opacity: .5; cursor: default; }
+  .pv-guide-item .ic { width: 26px; height: 26px; border-radius: 6px; background: var(--dsw-alias-border-l2); }
+  .pv-guide-item b { display: block; font-size: 13px; }
+  .pv-guide-item small { color: var(--dsw-alias-label-tertiary); font-size: 11.5px; }
+  .pv-chat { padding: 24px; display: flex; flex-direction: column; gap: 14px; max-width: 760px; margin: 0 auto; color: var(--dsw-alias-label-primary); }
+  .pv-bubble { padding: 10px 14px; border-radius: 12px; background: var(--dsw-alias-bg-layer-1); border: 1px solid var(--dsw-alias-border-l1); line-height: 1.7; }
+  .pv-bubble.me { align-self: flex-end; background: var(--dsw-specific-bubble, var(--dsw-alias-bg-layer-2)); }
+  @media (max-width: 900px) { .pv-right { width: 300px; flex-basis: 300px; } }
+  @media (max-width: 640px) { .pv-rail { display: none; } .pv-right { display: none; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script>
+(function () {
+  // ======================= 假宿主：/sansheng-liubu/* =======================
+  const AGENTS = [
+    { id: 'cc', name: 'Claude Code', adapter: 'cli', command: 'claude', args: ['-p'], promptMode: 'stdin', modelArgs: ['--model', '{model}'], autoArgs: ['--permission-mode', 'acceptEdits', '--allowedTools', 'Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch'], models: ['opus', 'sonnet', 'haiku'], timeoutMs: 900000, traits: ['规划', '架构', '实现', '读代码库'], enabled: true },
+    { id: 'codex', name: 'Codex', adapter: 'cli', command: 'codex', args: ['exec', '--skip-git-repo-check'], promptMode: 'stdin', modelArgs: ['--model', '{model}'], autoArgs: ['--full-auto'], models: ['gpt-5-codex', 'gpt-5', 'o3'], timeoutMs: 900000, traits: ['审查', '测试', '异构视角'], enabled: true },
+    { id: 'workbuddy', name: 'WorkBuddy', adapter: 'cli', command: 'codebuddy', args: ['-p'], promptMode: 'stdin', modelArgs: ['--model', '{model}'], models: ['auto', 'hy3', 'glm-5.3', 'deepseek-v4-pro'], timeoutMs: 900000, traits: ['表格', '文档', '报表'], enabled: true },
+    { id: 'dsh', name: 'DSH', adapter: 'self', models: [], traits: ['调度', '本机工具', '宿主'], enabled: true },
+    { id: 'qwen', name: '千问办公', adapter: 'manual', models: [], traits: ['公文', 'PPT', '会议纪要'], enabled: true },
+    { id: 'coser', name: 'COSER', adapter: 'manual', models: [], traits: ['待配置'], enabled: false },
+  ];
+  const ROLES = {
+    zhongshu: { title: '中书省', duty: '起草方案（拟旨）', agentId: 'cc', model: 'opus' },
+    menxia: { title: '门下省', duty: '审议封驳', agentId: 'codex', model: 'gpt-5-codex' },
+    shangshu: { title: '尚书省', duty: '派单与汇总', agentId: 'dsh', model: '' },
+    personnel: { title: '吏部', duty: '人事与权限', agentId: 'cc', model: 'sonnet' },
+    revenue: { title: '户部', duty: '数据与报表', agentId: 'workbuddy', model: 'auto' },
+    rites: { title: '礼部', duty: '文书与对外', agentId: 'qwen', model: '' },
+    war: { title: '兵部', duty: '工程实现', agentId: 'cc', model: 'sonnet' },
+    justice: { title: '刑部', duty: '测试与合规', agentId: 'codex', model: '' },
+    works: { title: '工部', duty: '界面与基建', agentId: 'coser', model: '' },
+  };
+  const db = {
+    agents: AGENTS, roles: ROLES, rules: { separationOfPowers: true, maxReviewRounds: 3, maxSteps: 8, autonomous: true, maxFixRounds: 2, fallbackAgentId: "cc" },
+    ui: { skin: 'default', theme: 'zijin', background: 'palace', backgroundDim: 0.45 }, edicts: [],
+  };
+
+  // 一次朝会的剧本：秒数 → 阶段与岗位输出
+  const SCRIPT = [
+    { at: 0, stage: 'drafting', note: '中书省拟旨（第 1 轮）', role: 'zhongshu', kind: '拟旨', from: '皇帝', title: '第 1 轮拟旨', out: ['读取 reports/ 目录结构…', '发现 12 个 CSV（2026-09-01 ~ 2026-09-30）', '读取 src/ 最近 7 天 git log…', '拟定方案：户部汇总 → 礼部写周报 → 刑部跑测试', '{"summary":"汇总九月 CSV 为月报，出周报，并验证本周改动的测试","steps":[…]}'] },
+    { at: 7, stage: 'reviewing', note: '门下省封驳（第 1 轮）', role: 'menxia', kind: '送审', from: '中书省', title: '第 1 轮封驳', out: ['审议中书方案…', '检查步骤依赖：户部产物是礼部输入，顺序正确', '风险：测试可能依赖本地数据库', '{"verdict":"approve","issues":[],"risks":["测试依赖本地数据库"]}'], after: { from: '门下省', to: '中书省', kind: '准奏', title: '第 1 轮', summary: '风险：测试依赖本地数据库' } },
+    { at: 12, stage: 'dispatching', note: '尚书省派单' },
+    { at: 14, stage: 'executing', note: '户部执行：汇总 CSV 为月度报表', role: 'revenue', kind: '差事', from: '尚书省', title: '汇总 CSV 为月度报表', out: ['加载 12 个 CSV，共 48,210 行', '按部门 / 周聚合…', '写出 reports/2026-09-月报.xlsx', '完成：3 张表、2 张图'] },
+    { at: 22, stage: 'executing', note: '刑部执行：运行本周改动相关测试', role: 'justice', kind: '差事', from: '尚书省', title: '运行本周改动相关测试', out: ['$ pnpm test --changed', ' ✓ store.test.mjs (14)', ' ✓ court.test.mjs (9)', ' ✗ adapters.test.mjs > windows shim', '   Expected "a b", received "a"', '{"handoff":{"to":"war","reason":"adapters 在 Windows 下参数带空格被拆开，需要修复"}}'], after: { from: '刑部', to: '兵部', kind: '移文', title: '运行本周改动相关测试', summary: 'adapters 在 Windows 下参数带空格被拆开，需要修复' } },
+    { at: 31, stage: 'executing', note: '兵部执行：移文 · 修复参数转义', role: 'war', kind: '差事', from: '尚书省', title: '移文 · 修复参数转义', out: ['定位 lib/adapters.mjs runCli()', 'shell 模式下参数未转义 → 加 cmd 转义', '重新运行 adapters.test.mjs', ' ✓ adapters.test.mjs (6)'] },
+    { at: 38, stage: 'rechecking', note: '门下省复核', role: 'menxia', kind: '复核', from: '尚书省', title: '', out: ['逐条核对验收标准…', '月报文件存在 ✓', '测试全部通过 ✓', '{"verdict":"approve","issues":[]}'] },
+    { at: 43, end: true },
+  ];
+
+  let sim = null; // 正在演示的奏折
+
+  function newId() {
+    const d = new Date();
+    const p = n => String(n).padStart(2, '0');
+    return `edict-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}-${Math.random().toString(36).slice(2, 6)}`;
+  }
+
+  function startSim(brief, workspace) {
+    const edict = {
+      id: newId(), brief, workspace: workspace || 'E:\\work\\project', status: 'running', stage: 'drafting', note: '', rounds: 1,
+      createdAt: Date.now(), updatedAt: Date.now(), steps: [], messages: [], events: [], artifacts: [], error: '', haltedAt: '', autonomous: db.rules.autonomous === true, fixRounds: 0,
+    };
+    db.edicts.unshift(edict);
+    sim = { edict, start: Date.now(), applied: 0 };
+    return edict;
+  }
+
+  function tickSim() {
+    if (!sim) return;
+    const { edict } = sim;
+    if (edict.status !== 'running') { sim = null; return; }
+    const t = (Date.now() - sim.start) / 1000;
+    while (sim.applied < SCRIPT.length && SCRIPT[sim.applied].at <= t) {
+      const phase = SCRIPT[sim.applied];
+      const prev = SCRIPT[sim.applied - 1];
+      if (prev && prev.role) {
+        const roleTitle = db.roles[prev.role].title;
+        pushMsg(edict, { from: roleTitle, to: prev.from, kind: '回文', title: prev.title, summary: prev.out[prev.out.length - 1], artifact: artifactOf(prev), durationMs: (phase.at - prev.at) * 1000, model: db.roles[prev.role].model });
+        edict.artifacts.push(artifactOf(prev));
+        if (prev.after) pushMsg(edict, prev.after);
+        const step = edict.steps.find(s => s.title === prev.title);
+        if (step) step.status = 'done';
+      }
+      if (phase.end) {
+        if (edict.autonomous) { edict.status = 'done'; edict.stage = 'done'; edict.note = '自治：复核通过，已自动归档'; }
+        else { edict.status = 'awaiting-approval'; edict.stage = 'awaiting-approval'; edict.note = '奏折已上呈，等待批红'; }
+        edict.artifacts.push('06-memorial.md');
+        pushMsg(edict, { from: '尚书省', to: '皇帝', kind: '上奏', title: '奏折', summary: '九月月报已出，周报已写，测试全部通过（含一次移文修复）' });
+        event(edict, '上奏', {});
+        sim = null;
+        return;
+      }
+      edict.stage = phase.stage; edict.note = phase.note;
+      event(edict, '阶段', { stage: phase.stage, note: phase.note });
+      if (phase.stage === 'dispatching') {
+        edict.steps = [
+          { seq: 1, ministry: 'revenue', title: '汇总 CSV 为月度报表', status: 'pending' },
+          { seq: 2, ministry: 'rites', title: '撰写周报', status: 'handed-off' },
+          { seq: 3, ministry: 'justice', title: '运行本周改动相关测试', status: 'pending' },
+        ];
+        pushMsg(edict, { from: '尚书省', to: '六部', kind: '派单', title: '3 件差事', summary: '户部、礼部、刑部' });
+      }
+      if (phase.role) {
+        if (phase.title === '移文 · 修复参数转义') edict.steps.push({ seq: 4, ministry: 'war', title: phase.title, status: 'pending' });
+        pushMsg(edict, { from: phase.from, to: db.roles[phase.role].title, kind: phase.kind, title: phase.title, model: db.roles[phase.role].model, summary: phase.kind === '拟旨' ? edict.brief : '' });
+      }
+      sim.applied += 1;
+    }
+  }
+
+  function artifactOf(phase) {
+    return { zhongshu: '01-draft-r1.md', menxia: phase.kind === '复核' ? '05-recheck.md' : '02-review-r1.md' }[phase.role] || `04-exec/0${['revenue', 'justice', 'war'].indexOf(phase.role) + 1}-${phase.role}.md`;
+  }
+
+  function liveNow() {
+    if (!sim || sim.edict.status !== 'running') return [];
+    const t = (Date.now() - sim.start) / 1000;
+    const phase = SCRIPT[sim.applied - 1];
+    if (!phase || !phase.role) return [];
+    const next = SCRIPT[sim.applied];
+    const span = (next ? next.at : phase.at + 5) - phase.at;
+    const shown = Math.max(1, Math.ceil(((t - phase.at) / span) * phase.out.length));
+    const role = db.roles[phase.role];
+    const agent = db.agents.find(a => a.id === role.agentId) || {};
+    return [{
+      edictId: sim.edict.id, roleId: phase.role, role: role.title, agent: agent.name, model: role.model,
+      kind: phase.kind, title: phase.title, status: 'running', startedAt: sim.start + phase.at * 1000,
+      elapsedMs: (t - phase.at) * 1000, tail: phase.out.slice(0, shown).join('\n'),
+    }];
+  }
+
+  function pushMsg(edict, m) {
+    const last = edict.messages[edict.messages.length - 1];
+    edict.messages.push({ seq: last ? last.seq + 1 : 1, at: Date.now(), ok: true, durationMs: 0, model: '', artifact: '', title: '', summary: '', ...m });
+    event(edict, '公文', { from: m.from, to: m.to, kind: m.kind });
+  }
+  function event(edict, type, data) { edict.events.push({ at: Date.now(), type, data }); edict.updatedAt = Date.now(); }
+
+  function seed() {
+    const hour = 3600 * 1000;
+    const done = {
+      id: 'edict-20261027153012-k3x9', brief: '给 sansheng-liubu 的 README 补一节安装排错，并把 Windows 下的路径示例都核对一遍',
+      workspace: 'E:\\work\\dsh-imperial-court', status: 'done', stage: 'done', note: '已批红归档', rounds: 2,
+      createdAt: Date.now() - 20 * hour, updatedAt: Date.now() - 19 * hour, error: '', haltedAt: '',
+      steps: [
+        { seq: 1, ministry: 'rites', title: '撰写安装排错章节', status: 'handed-off' },
+        { seq: 2, ministry: 'war', title: '核对路径示例', status: 'done' },
+      ],
+      messages: [], events: [], artifacts: ['01-draft-r1.md', '01-draft-r2.md', '02-review-r1.md', '02-review-r2.md', '04-exec/01-rites-工单.md', '04-exec/02-war.md', '05-recheck.md', '06-memorial.md'],
+    };
+    pushMsg(done, { from: '皇帝', to: '中书省', kind: '拟旨', title: '第 1 轮拟旨', summary: done.brief, model: 'opus' });
+    pushMsg(done, { from: '门下省', to: '中书省', kind: '封驳', title: '第 1 轮', summary: '方案让兵部直接改 README 正文，与礼部职掌冲突；未说明如何验证路径示例' });
+    pushMsg(done, { from: '门下省', to: '中书省', kind: '准奏', title: '第 2 轮', summary: '' });
+    pushMsg(done, { from: '尚书省', to: '皇帝', kind: '上奏', title: '奏折', summary: '安装排错章节已出工单交礼部，路径示例 6 处已核对修正' });
+    event(done, '批红', {});
+    const failed = {
+      id: 'edict-20261026101544-p7qa', brief: '把 docs/ 下的设计稿导出成 PDF 发给产品组',
+      workspace: 'E:\\work\\design', status: 'failed', stage: 'failed', note: '', rounds: 3, haltedAt: 'reviewing',
+      createdAt: Date.now() - 46 * hour, updatedAt: Date.now() - 45 * hour, error: '门下省 3 次封驳，奏折驳回，请皇帝裁决',
+      steps: [], messages: [], events: [], artifacts: ['01-draft-r1.md', '02-review-r1.md', '01-draft-r2.md', '02-review-r2.md', '01-draft-r3.md', '02-review-r3.md'],
+    };
+    [1, 2, 3].forEach(r => pushMsg(failed, { from: '门下省', to: '中书省', kind: '封驳', title: `第 ${r} 轮`, summary: '「发给产品组」需要对外发送，属于需要人类拍板的步骤' }));
+    db.edicts.push(done, failed);
+    startSim('把 reports/ 里的 CSV 汇总成月度报表，写一份周报，并检查本周改动的测试是否通过。', 'E:\\work\\project');
+  }
+  seed();
+
+  function summary(e) {
+    return { id: e.id, brief: e.brief, status: e.status, stage: e.stage, haltedAt: e.haltedAt, autonomous: e.autonomous, fixRounds: e.fixRounds, note: e.note, createdAt: e.createdAt, updatedAt: e.updatedAt, rounds: e.rounds, steps: e.steps, artifacts: e.artifacts, error: e.error };
+  }
+
+  function route(method, pathname, query, body) {
+    tickSim();
+    const find = id => { const e = db.edicts.find(x => x.id === id); if (!e) throw new Error('奏折不存在'); return e; };
+    if (pathname === '/state' && method === 'GET') {
+      return { root: 'C:\\Users\\you\\.dsh\\sansheng-liubu', agents: db.agents, roles: db.roles, rules: db.rules, ui: db.ui,
+        edicts: db.edicts.map(e => ({ id: e.id, brief: e.brief, status: e.status, stage: e.stage, note: e.note, createdAt: e.createdAt, updatedAt: e.updatedAt })),
+        busy: sim ? [sim.edict.id] : [], live: liveNow(),
+        ministries: ['personnel', 'revenue', 'rites', 'war', 'justice', 'works'].map(id => ({ id, title: db.roles[id].title, duty: db.roles[id].duty })) };
+    }
+    if (pathname === '/ui' && method === 'PUT') { db.ui = { ...db.ui, ...body }; return db.ui; }
+    if (pathname === '/background' && method === 'PUT') { if (!/^data:image\//.test(body.dataUrl || '')) throw new Error('只支持图片'); db.ui = { ...db.ui, background: 'custom', backgroundVersion: Date.now() }; return db.ui; }
+    if (pathname === '/background' && method === 'DELETE') { db.ui = { ...db.ui, background: 'palace', backgroundVersion: Date.now() }; return db.ui; }
+    if (pathname === '/preset' && method === 'PUT') {
+      if (body.roles.zhongshu.agentId && body.roles.zhongshu.agentId === body.roles.menxia.agentId) throw new Error('中书省与门下省不能由同一个 agent 担任（同源互审等于没审）');
+      db.agents = body.agents; db.roles = body.roles; db.rules = body.rules || db.rules; return route('GET', '/state');
+    }
+    if (pathname === '/probe' && method === 'POST') {
+      const a = db.agents.find(x => x.id === body.agentId);
+      return a && a.command === 'codebuddy' ? { ok: false, detail: '未找到 codebuddy（PATH 里没有，或绝对路径不存在）' } : { ok: true, detail: `C:\\Users\\you\\AppData\\Roaming\\npm\\${a ? a.command : ''}.cmd` };
+    }
+    if (pathname === '/edicts' && method === 'POST') {
+      if (!String(body.brief || '').trim()) throw new Error('圣意不能为空');
+      if (sim) throw new Error(`朝堂正在办差（${sim.edict.id}），同一时间只受理一份奏折`);
+      return { id: startSim(body.brief.trim(), body.workspace).id, status: 'running' };
+    }
+    const m = pathname.match(/^\/edicts\/([A-Za-z0-9-]+)(\/[a-z-]+)?$/);
+    if (m) {
+      const e = find(m[1]);
+      if (method === 'GET' && !m[2]) return { ...summary(e), messages: e.messages, events: e.events, live: liveNow().filter(l => l.edictId === e.id) };
+      const stop = (status, note, ev) => { e.status = status; e.stage = status; e.haltedAt = e.haltedAt || (sim && sim.edict === e ? sim.edict.stage : ''); e.note = note; event(e, ev, { note }); if (sim && sim.edict === e) sim = null; return summary(e); };
+      if (m[2] === '/approve') { if (e.status !== 'awaiting-approval') throw new Error(`当前状态不能批红：${e.status}`); e.status = 'done'; e.stage = 'done'; e.note = '已批红归档'; event(e, '批红', {}); return summary(e); }
+      if (m[2] === '/reject') return stop('rejected', body.note || '驳回，未说明理由', '驳回');
+      if (m[2] === '/cancel') return stop('cancelled', '皇帝叫停', '叫停');
+    }
+    if (pathname === '/artifact') {
+      const name = query.get('name');
+      return { name, text: `# ${name}\n\n（预览数据）这里是「${name}」的全文。\n\n- 奏折：${query.get('id')}\n- 真实环境中这里是 agent 的完整输出，或人工工单。\n\n\`\`\`json\n{"summary":"汇总九月 CSV 为月报，出周报，并验证本周改动的测试","steps":[{"ministry":"revenue","title":"汇总 CSV 为月度报表"},{"ministry":"rites","title":"撰写周报"},{"ministry":"justice","title":"运行本周改动相关测试"}]}\n\`\`\`` };
+    }
+    const err = new Error(`未知端点：${method} ${pathname}`); err.status = 404; throw err;
+  }
+
+  const realFetch = window.fetch.bind(window);
+  window.fetch = async (input, init = {}) => {
+    const url = new URL(typeof input === 'string' ? input : input.url, 'http://preview.local');
+    if (!url.pathname.startsWith('/sansheng-liubu')) return realFetch(input, init);
+    const method = (init.method || 'GET').toUpperCase();
+    await new Promise(r => setTimeout(r, 60));
+    try {
+      const data = route(method, url.pathname.slice('/sansheng-liubu'.length) || '/', url.searchParams, init.body ? JSON.parse(init.body) : {});
+      return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    } catch (error) {
+      return new Response(JSON.stringify({ error: error.message }), { status: error.status || 400, headers: { 'Content-Type': 'application/json' } });
+    }
+  };
+
+  // ======================= 假 DSH 客户端：模块加载 / slots / theme / 右侧面板 =======================
+  const slots = {};
+  const themes = {};
+  let overrides = [];
+  let currentTheme = null;
+  const root = document.documentElement;
+  let mode = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  const shellListeners = new Set();
+  const rerender = () => shellListeners.forEach(fn => fn());
+
+  function paintTokens() {
+    root.removeAttribute('style');
+    const t = currentTheme && themes[currentTheme];
+    root.dataset.mode = t ? t.colorScheme : mode;
+    if (t) Object.entries(t.tokens).forEach(([k, v]) => root.style.setProperty(k, v));
+    const scheme = root.dataset.mode;
+    overrides.forEach(o => Object.entries(o.tokens).forEach(([k, v]) => root.style.setProperty(k, v[scheme])));
+  }
+
+  const themeApi = {
+    register(def) { themes[def.id] = def; return () => { delete themes[def.id]; }; },
+    setTheme(id) { currentTheme = themes[id] ? id : null; paintTokens(); },
+    getTheme() { return { preference: mode, id: currentTheme || mode }; },
+    overrideTokens(source, tokens) { const o = { source, tokens }; overrides.push(o); paintTokens(); return () => { overrides = overrides.filter(x => x !== o); paintTokens(); }; },
+  };
+
+  // 右侧面板：类型登记 + 打开的页签
+  const rightTypes = [];
+  const right = { open: true, tabs: [], active: null };
+  const sidebarRightTabs = { register(def) { rightTypes.push(def); rerender(); return () => {}; } };
+  const sidebarRight = {
+    openTab(kind) {
+      const def = rightTypes.find(d => d.kind === kind);
+      if (!def) return;
+      if (!right.tabs.includes(def.id)) right.tabs.push(def.id);
+      right.active = def.id;
+      right.open = true;
+      rerender();
+    },
+  };
+
+  window.__ModuleLoader__ = {
+    load({ factory }) {
+      const mod = factory(name => (name === 'react' ? window.React : null));
+      mod.apply({
+        slots: {
+          inject(name, gen) {
+            const it = gen();
+            let step = it.next();
+            while (!step.done) step = it.next(step.value);
+          },
+          register(opts, component) { (slots[opts.name] = slots[opts.name] || []).push({ opts, component }); return () => {}; },
+        },
+        inject(_deps, cb) { cb({ theme: themeApi, sidebarRightTabs, sidebarRight, effect(fn) { fn(); } }); },
+      });
+    },
+  };
+
+  window.__previewBoot = function () {
+    const h = React.createElement;
+    const entries = name => slots[name] || [];
+    const pick = name => entries(name).map(s => s.component);
+    const [Main] = pick('main');
+    const headerActions = pick('conversation.session.header.actions');
+    const overlays = pick('shell.overlay');
+    const views = entries('conversation.view');
+    const paneBody = key => (entries('sidebar.right.pane.tab').find(e => e.opts.key === key) || {}).component;
+    const paneTitle = key => (entries('sidebar.right.pane.tab.title').find(e => e.opts.key === key) || {}).component;
+
+    function FakeChat() {
+      return h('div', { className: 'pv-chat' },
+        h('div', { className: 'pv-bubble me' }, '帮我做一条 25 秒的 TikTok 早餐视频'),
+        h('div', { className: 'pv-bubble' }, '好的，已经交给朝堂办理。右侧「各部门沟通」里能看到三省六部的往来；头部「确定工作流」可以先排好各部门的顺序。'));
+    }
+
+    function Shell() {
+      const [, force] = React.useState(0);
+      const [page, setPage] = React.useState('conversation');
+      const [view, setView] = React.useState('chat');
+      React.useEffect(() => { const fn = () => force(x => x + 1); shellListeners.add(fn); return () => shellListeners.delete(fn); }, []);
+      const current = views.find(v => v.opts.id === view);
+      const Body = right.active && paneBody(right.active);
+      return h(React.Fragment, null,
+        h('div', { className: 'pv-bar' },
+          h('b', null, '三省六部 · 预览'),
+          h('span', null, '真实 client.js + 模拟宿主，数据是假的'),
+          h('span', { className: 'sp' }),
+          h('button', { onClick: () => { mode = mode === 'dark' ? 'light' : 'dark'; paintTokens(); force(x => x + 1); } }, '明暗：' + (mode === 'dark' ? '深' : '浅')),
+          h('button', { onClick: () => { if (sim) { sim.edict.status = 'cancelled'; sim.edict.stage = 'cancelled'; sim = null; } startSim('做一条 25 秒的 TikTok 竖屏视频，主题「打工人 5 分钟早餐」，轻松搞笑。'); } }, '重新演示朝会')),
+        h('div', { className: 'pv-shell' },
+          h('div', { className: 'pv-rail' },
+            h('div', { className: 'item' + (page === 'conversation' ? ' active' : ''), title: '会话', onClick: () => setPage('conversation') }, '◎'),
+            h('div', { className: 'item' + (page === 'plugin' ? ' active' : ''), title: '三省六部', onClick: () => setPage('plugin') }, h(pick('sidebar.panellist')[0] || 'span'))),
+          page === 'plugin'
+            ? h('div', { className: 'pv-main', style: { overflow: 'auto' } }, h(Main))
+            : h('div', { className: 'pv-main' },
+                h('div', { className: 'pv-convo' },
+                  h('b', { style: { color: 'var(--dsw-alias-label-primary)' } }, 'Who are you introduction'),
+                  h('div', { className: 'pv-views' },
+                    [['chat', '对话'], ['trajectory', '轨迹'], ...views.map(v => [v.opts.id, v.opts.label()])].map(([id, label]) =>
+                      h('button', { key: id, className: view === id ? 'on' : '', onClick: () => setView(id) }, label))),
+                  h('span', { className: 'sp' }),
+                  headerActions.map((C, i) => h(C, { key: i })),
+                  h('button', { className: 'pv-toggle', title: '右侧面板', onClick: () => { right.open = !right.open; force(x => x + 1); } }, '▥')),
+                h('div', { className: 'pv-body' },
+                  h('div', { className: 'pv-view' },
+                    current ? h(current.component, current.opts.inject ? current.opts.inject('demo-session') : {})
+                      : view === 'chat' ? h(FakeChat) : h('div', { className: 'pv-chat' }, '（轨迹视图：DSH 自带）')),
+                  right.open ? h('div', { className: 'pv-right' },
+                    h('div', { className: 'pv-right-tabs' },
+                      right.tabs.map(id => h('button', { key: id, className: right.active === id ? 'on' : '', onClick: () => { right.active = id; force(x => x + 1); } }, h(paneTitle(id) || 'span'))),
+                      h('button', { className: right.active === null ? 'on' : '', title: '添加', onClick: () => { right.active = null; force(x => x + 1); } }, '+')),
+                    h('div', { className: 'pv-right-body' },
+                      Body ? h(Body, {})
+                        : h('div', { className: 'pv-guide' },
+                            h('div', { className: 'pv-guide-t' }, '打开页签（右侧面板的「+」页）'),
+                            ['文件', '浏览器', '终端'].map(t => h('div', { key: t, className: 'pv-guide-item dim' }, h('span', { className: 'ic' }), t)),
+                            rightTypes.flatMap(def => (def.guide || []).map(g => h('button', { key: g.id, className: 'pv-guide-item', onClick: () => sidebarRight.openTab(def.kind) },
+                              h(g.icon, { size: 26 }), h('span', null, h('b', null, g.title()), h('small', null, g.description())))))))) : null))),
+        overlays.map((C, i) => h(C, { key: i })));
+    }
+    paintTokens();
+    sidebarRight.openTab('sansheng-chat');
+    ReactDOM.createRoot(document.getElementById('root')).render(h(Shell));
+  };
+})();
+</script>
+<script src="client.js"></script>
+<script>window.__previewBoot();</script>
+</body>
+</html>
