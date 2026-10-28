@@ -262,6 +262,22 @@
   }
   seed();
 
+  // 截图/调试用：把演示朝会拨到第 N 秒，或者停掉它（停掉后才能试下旨与盖印）
+  window.__preview = {
+    at(seconds) {
+      if (!sim) startSim('做一条 25 秒的 TikTok 竖屏视频，主题「打工人 5 分钟早餐」，轻松搞笑。');
+      sim.start = Date.now() - seconds * 1000;
+      tickSim();
+    },
+    stop() {
+      if (!sim) return;
+      sim.edict.status = 'cancelled';
+      sim.edict.stage = 'cancelled';
+      sim.edict.note = '皇帝叫停';
+      sim = null;
+    },
+  };
+
   function summary(e) {
     return { id: e.id, brief: e.brief, status: e.status, stage: e.stage, haltedAt: e.haltedAt, autonomous: e.autonomous, fixRounds: e.fixRounds, note: e.note, createdAt: e.createdAt, updatedAt: e.updatedAt, rounds: e.rounds, steps: e.steps, artifacts: e.artifacts, error: e.error };
   }

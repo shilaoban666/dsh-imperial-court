@@ -341,6 +341,99 @@ select.ssl-input { cursor: pointer; }
   box-shadow: 0 8px 24px rgba(0,0,0,.12);
 }
 
+/* 奏折式下旨框：锦缎封面 + 经折装宣纸 + 朱丝栏，竖排右起书写，朱印落款即下旨。
+   纸张在任何主题下都是浅色实物，墨色固定，不跟主题走。 */
+.zz { position: relative; }
+.zz-book {
+  position: relative; padding: 9px 13px; border-radius: 7px;
+  background:
+    radial-gradient(circle at 25% 25%, rgba(255, 240, 185, .55) 0 1.5px, transparent 2.5px) 0 0 / 11px 11px,
+    radial-gradient(circle at 75% 75%, rgba(110, 62, 0, .32) 0 1.5px, transparent 2.5px) 0 0 / 11px 11px,
+    linear-gradient(180deg, #ddb03a, #b8821a 55%, #a06d12);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .25) inset, 0 10px 26px rgba(40, 20, 0, .28), 0 2px 5px rgba(40, 20, 0, .2);
+}
+.zz-paper {
+  position: relative; display: flex; flex-direction: row-reverse; height: 232px; overflow: hidden; border-radius: 2px;
+  color: #2b1d12;
+  background:
+    linear-gradient(90deg, rgba(95, 62, 22, .07), transparent 14%, transparent 86%, rgba(95, 62, 22, .07)) 0 0 / 136px 100%,
+    radial-gradient(ellipse at 30% 20%, rgba(255, 252, 240, .7), transparent 60%),
+    #f4e8cf;
+  box-shadow:
+    inset 0 7px 0 #f4e8cf, inset 0 9px 0 rgba(168, 46, 34, .55),
+    inset 0 -7px 0 #f4e8cf, inset 0 -9px 0 rgba(168, 46, 34, .55),
+    inset 0 0 0 1px rgba(95, 62, 22, .18);
+  transition: box-shadow .2s;
+}
+.zz-book:focus-within { box-shadow: 0 1px 0 rgba(255, 255, 255, .25) inset, 0 0 0 3px rgba(224, 180, 70, .35), 0 12px 30px rgba(40, 20, 0, .32); }
+.zz-head, .zz-tail {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  padding: 20px 0 18px; writing-mode: vertical-rl;
+}
+/* 竖排下 flex 会把标题压到一个字高、拆成多列，必须禁止收缩与换行 */
+.zz-head > *, .zz-tail > * { flex: none; white-space: nowrap; }
+.zz-head { width: 62px; border-left: 1px solid rgba(168, 46, 34, .45); flex-direction: row; justify-content: flex-start; gap: 10px; }
+.zz-title { font: 700 23px/1 var(--ssl-serif); letter-spacing: .45em; color: #9c2f24; }
+.zz-sub { font: 12.5px/1.4 var(--ssl-serif); letter-spacing: .18em; color: #8a6a45; }
+.zz-tail { width: 86px; border-right: 1px solid rgba(168, 46, 34, .45); flex-direction: row; justify-content: space-between; padding-left: 12px; padding-right: 12px; }
+.zz-date { font: 12.5px/1.2 var(--ssl-serif); letter-spacing: .12em; color: #8a6a45; }
+.zz-text {
+  flex: 1; min-width: 0; height: 100%; margin: 0; padding: 20px 0 18px; border: 0; outline: none; resize: none;
+  writing-mode: vertical-rl; overflow-x: auto; overflow-y: hidden;
+  font: 400 18px/34px var(--ssl-serif); letter-spacing: .08em; color: #2b1d12; caret-color: #9c2f24;
+  background: repeating-linear-gradient(to left, transparent 0 33px, rgba(168, 46, 34, .32) 33px 34px);
+  background-attachment: local;
+}
+.zz-text::placeholder { color: rgba(110, 76, 40, .42); }
+.zz-text::-webkit-scrollbar { height: 6px; }
+.zz-text::-webkit-scrollbar-thumb { background: rgba(156, 47, 36, .25); border-radius: 3px; }
+.zz-text:disabled { cursor: not-allowed; }
+.zz-seal {
+  writing-mode: horizontal-tb; position: relative; width: 58px; height: 58px; padding: 0; border-radius: 6px; cursor: pointer;
+  display: grid; place-items: center; color: #fff6ea; font: 700 19px/1 var(--ssl-serif);
+  background: radial-gradient(circle at 35% 30%, #d4513f, #a72a1d 70%);
+  border: 0; box-shadow: inset 0 0 0 3px rgba(255, 236, 214, .55), inset 0 0 0 5px #a72a1d, 0 3px 8px rgba(120, 20, 10, .35);
+  transform: rotate(-4deg); transition: transform .15s, filter .15s, opacity .15s;
+}
+.zz-seal span { writing-mode: vertical-rl; letter-spacing: .12em; }
+.zz-seal:hover:not(:disabled) { transform: rotate(-4deg) scale(1.06); filter: brightness(1.08); }
+.zz-seal:active:not(:disabled) { transform: rotate(-4deg) scale(.96); }
+.zz-seal:disabled { cursor: not-allowed; opacity: .38; filter: grayscale(.4); }
+.zz-seal:focus-visible { outline: 2px solid #e0b446; outline-offset: 3px; }
+.zz-stamp {
+  position: absolute; left: 34%; top: 50%; width: 104px; height: 104px; margin: -52px 0 0 -52px; pointer-events: none;
+  display: grid; place-items: center; border: 5px solid #c0392b; border-radius: 10px; color: #c0392b;
+  font: 800 62px/1 var(--ssl-serif); mix-blend-mode: multiply; opacity: 0;
+  box-shadow: inset 0 0 0 3px rgba(244, 232, 207, .9), inset 0 0 0 6px #c0392b;
+  animation: zz-stamp 2.4s cubic-bezier(.2, .8, .3, 1) forwards;
+}
+@keyframes zz-stamp {
+  0% { opacity: 0; transform: scale(2.3) rotate(-14deg); }
+  22% { opacity: .92; transform: scale(.94) rotate(-14deg); }
+  30% { transform: scale(1) rotate(-14deg); }
+  80% { opacity: .9; }
+  100% { opacity: 0; transform: scale(1) rotate(-14deg); }
+}
+.zz-slips { display: flex; flex-wrap: wrap; gap: 0 12px; margin-top: 4px; }
+.zz-slips > * { flex: 1; min-width: 180px; }
+.zz-caption { margin-top: 10px; font-size: 12px; color: var(--ssl-mut); }
+/* 窄处（右侧面板）用横排信笺 */
+.zz--compact .zz-book { padding: 7px 10px; }
+.zz--compact .zz-paper { height: 128px; }
+.zz--compact .zz-head { width: 40px; padding: 14px 0; }
+.zz--compact .zz-title { font-size: 17px; }
+.zz--compact .zz-sub { display: none; }
+.zz--compact .zz-tail { width: 64px; padding: 0 8px; justify-content: center; }
+.zz--compact .zz-date { display: none; }
+.zz--compact .zz-seal { width: 46px; height: 46px; font-size: 15px; }
+.zz--compact .zz-text {
+  writing-mode: horizontal-tb; overflow-x: hidden; overflow-y: auto; padding: 12px 12px 10px;
+  font-size: 14.5px; line-height: 28px;
+  background: repeating-linear-gradient(to bottom, transparent 0 27px, rgba(168, 46, 34, .28) 27px 28px);
+  background-position: 0 12px; background-attachment: local;
+}
+.zz--compact .zz-stamp { width: 70px; height: 70px; margin: -35px 0 0 -35px; font-size: 40px; left: 46%; }
+
 /* 提示条 */
 .ssl-toast {
   position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 90; max-width: min(560px, 90vw);
@@ -374,7 +467,7 @@ select.ssl-input { cursor: pointer; }
 }
 @keyframes ssl-fade { from { opacity: 0; } to { opacity: 1; } }
 .ssl-modal {
-  width: 540px; max-width: 100%; padding: 20px 22px; border-radius: 16px; border: 1px solid var(--ssl-line2);
+  width: 640px; max-width: 100%; padding: 20px 22px; border-radius: 16px; border: 1px solid var(--ssl-line2);
   background: var(--ssl-panel); box-shadow: 0 24px 70px rgba(0,0,0,.3); animation: ssl-up .18s ease-out;
 }
 .ssl-modal-h { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
@@ -412,7 +505,6 @@ select.ssl-input { cursor: pointer; }
 .ssl-chat-head .ssl-input { flex: 1; min-width: 0; height: 30px; padding: 0 8px; }
 .ssl-chat-list { flex: 1; min-height: 0; overflow: auto; padding: 14px 12px 6px; }
 .ssl-chat-compose { padding: 10px 12px 12px; border-top: 1px solid var(--ssl-line); background: var(--ssl-panel); }
-.ssl-chat-compose textarea.ssl-input { min-height: 54px; }
 .ssl-msg { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 14px; }
 .ssl-msg.is-mine { flex-direction: row-reverse; }
 .ssl-avatar {
@@ -983,6 +1075,52 @@ select.ssl-input { cursor: pointer; }
         return m ? `${m}分${String(s).padStart(2, '0')}秒` : `${s}秒`;
       }
 
+      /** 二〇二六年十月廿八日：奏折落款用的汉字日期 */
+      function cnDate(date = new Date()) {
+        const digits = '〇一二三四五六七八九';
+        const year = String(date.getFullYear()).split('').map(d => digits[Number(d)]).join('');
+        const num = n => (n <= 10 ? (n === 10 ? '十' : digits[n])
+          : n < 20 ? `十${digits[n - 10]}`
+          : n === 20 ? '二十' : n < 30 ? `廿${digits[n - 20]}`
+          : n === 30 ? '三十' : `卅${digits[n - 30]}`);
+        return `${year}年${num(date.getMonth() + 1)}月${num(date.getDate())}日`;
+      }
+
+      /** 盖完印再清空：让「准」字落在刚写的圣意上；这期间若又改了内容就不动 */
+      const clearAfterStamp = (setValue, sent) => setTimeout(() => setValue(current => (current === sent ? '' : current)), 1300);
+
+      /**
+       * 奏折式下旨框。竖排右起书写（compact 时横排信笺），朱印即提交按钮；
+       * stamp 每变一次就在纸上盖一个「准」字印。
+       */
+      function Zouzhe({ value, onChange, onSubmit, canSubmit, sending, disabled, placeholder, extra, caption, stamp, compact, autoFocus }) {
+        return h('div', { className: cx('zz', compact && 'zz--compact') },
+          h('div', { className: 'zz-book' },
+            h('div', { className: 'zz-paper' },
+              h('div', { className: 'zz-head', 'aria-hidden': true },
+                h('span', { className: 'zz-title' }, '圣意'),
+                h('span', { className: 'zz-sub' }, '奉天承运 皇帝诏曰')),
+              h('textarea', {
+                className: 'zz-text',
+                value,
+                disabled,
+                placeholder,
+                autoFocus,
+                'aria-label': '圣意',
+                onChange: event => onChange(event.target.value),
+                onKeyDown: event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && canSubmit) onSubmit(); },
+              }),
+              h('div', { className: 'zz-tail' },
+                h('span', { className: 'zz-date', 'aria-hidden': true }, cnDate()),
+                h('button', {
+                  className: 'zz-seal', disabled: !canSubmit, onClick: onSubmit,
+                  title: '下旨（Ctrl + Enter）', 'aria-label': '下旨',
+                }, h('span', null, sending ? '开朝' : '下旨'))),
+              stamp ? h('span', { key: stamp, className: 'zz-stamp', 'aria-hidden': true }, '准') : null)),
+          extra ? h('div', { className: 'zz-slips' }, extra) : null,
+          caption ? h('div', { className: 'zz-caption' }, caption) : null);
+      }
+
       function StatusPill({ status, text }) {
         const [label, tone] = STATUS[status] || [status, 'mut'];
         return h('span', { className: cx('ssl-pill', `ssl-pill--${tone}`) },
@@ -1230,12 +1368,24 @@ select.ssl-input { cursor: pointer; }
             }))))));
       }
 
+      /** 奏折下方的两张附签：工作目录、验收标准 */
+      function EdictSlips({ workspace, setWorkspace, criteria, setCriteria }) {
+        return h(React.Fragment, null,
+          h('label', { className: 'ssl-field' },
+            h('span', { className: 'ssl-label' }, '工作目录'),
+            h('input', { className: 'ssl-input', value: workspace, placeholder: '留空 = DSH 当前目录', onChange: event => setWorkspace(event.target.value) })),
+          setCriteria ? h('label', { className: 'ssl-field' },
+            h('span', { className: 'ssl-label' }, '验收标准（可选）'),
+            h('input', { className: 'ssl-input', value: criteria, placeholder: '如：测试全部通过、时长 22-28 秒', onChange: event => setCriteria(event.target.value) })) : null);
+      }
+
       // ---------- 朝堂：下旨 + 编队 ----------
       function CourtTab({ state, onRefresh, notify, onOpenEdict }) {
         const [brief, setBrief] = useState('');
         const [workspace, setWorkspace] = useState('');
         const [criteria, setCriteria] = useState('');
         const [sending, setSending] = useState(false);
+        const [stamp, setStamp] = useState(0);
         const busy = state.busy && state.busy.length > 0;
         const autonomous = state.rules && state.rules.autonomous === true;
 
@@ -1245,7 +1395,8 @@ select.ssl-input { cursor: pointer; }
           apiJson('/edicts', { method: 'POST', body: JSON.stringify({ brief, workspace: workspace || undefined, criteria: criteria || undefined, workflow: loadWorkflow() }) })
             .then(result => {
               notify(`已开朝：${result.id}`);
-              setBrief('');
+              setStamp(Date.now());
+              clearAfterStamp(setBrief, brief);
               setCriteria('');
               onRefresh();
               openPane(PANE_CHAT);
@@ -1262,26 +1413,20 @@ select.ssl-input { cursor: pointer; }
             h('div', { className: 'ssl-card' },
               h('div', { className: 'ssl-card-h' },
                 h('h4', { className: 'ssl-card-t' }, '下旨'),
-                busy ? h(StatusPill, { status: 'running', text: '朝堂办差中' }) : h('span', { className: 'ssl-caption' }, 'Ctrl + Enter 提交')),
-              h('textarea', {
-                className: 'ssl-input',
+                busy ? h(StatusPill, { status: 'running', text: '朝堂办差中' }) : h('span', { className: 'ssl-caption' }, '竖排右起书写 · 盖印或 Ctrl + Enter 下旨')),
+              h(Zouzhe, {
                 value: brief,
-                placeholder: '圣意：要办成什么事？写清目标、范围和期望结果。\n例：把 reports/ 里的 CSV 汇总成月度报表，写一份周报，并检查 src 里本周改动的测试是否通过。',
-                onChange: event => setBrief(event.target.value),
-                onKeyDown: event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) submit(); },
-              }),
-              h('div', { className: 'ssl-row', style: { flexWrap: 'wrap' } },
-                h('label', { className: 'ssl-field ssl-grow', style: { minWidth: '200px' } },
-                  h('span', { className: 'ssl-label' }, '工作目录'),
-                  h('input', { className: 'ssl-input', value: workspace, placeholder: '留空 = DSH 当前目录', onChange: event => setWorkspace(event.target.value) })),
-                h('label', { className: 'ssl-field ssl-grow', style: { minWidth: '160px' } },
-                  h('span', { className: 'ssl-label' }, '验收标准（可选）'),
-                  h('input', { className: 'ssl-input', value: criteria, placeholder: '如：测试全部通过、有周报文件', onChange: event => setCriteria(event.target.value) }))),
-              h('div', { className: 'ssl-between', style: { marginTop: '14px' } },
-                h('span', { className: 'ssl-caption' }, busy ? '同一时间只受理一份奏折，请等当前这份办完'
+                onChange: setBrief,
+                onSubmit: submit,
+                canSubmit: !busy && !sending && !!brief.trim(),
+                sending,
+                stamp,
+                placeholder: '要办成什么事？写清目标、范围和期望结果。例：把 reports 里的 CSV 汇总成月度报表，写一份周报，并检查本周改动的测试是否通过。',
+                extra: h(EdictSlips, { workspace, setWorkspace, criteria, setCriteria }),
+                caption: busy ? '同一时间只受理一份奏折，请等当前这份办完'
                   : autonomous ? '自治模式：拟旨 → 封驳 → 六部执行 → 复核 → 自我修复 → 自动归档，全程不问你'
-                  : '中书拟旨 → 门下封驳 → 尚书派单 → 六部执行 → 上奏'),
-                h('button', { className: 'ssl-btn ssl-btn--seal', disabled: busy || sending || !brief.trim(), onClick: submit }, sending ? '开朝中…' : '下旨'))),
+                  : '中书拟旨 → 门下封驳 → 尚书派单 → 六部执行 → 上奏',
+              })),
             h('div', { className: 'ssl-card' },
               h('div', { className: 'ssl-card-h' },
                 h('h4', { className: 'ssl-card-t' }, '最近奏折'),
@@ -1547,6 +1692,7 @@ select.ssl-input { cursor: pointer; }
         const [workspace, setWorkspace] = useState('');
         const [msg, setMsg] = useState({ text: '', tone: '' });
         const [busy, setBusy] = useState(false);
+        const [stamp, setStamp] = useState(0);
         useEffect(() => composer.subscribe(setOpen), []);
         useEffect(() => {
           if (!open) return undefined;
@@ -1562,9 +1708,11 @@ select.ssl-input { cursor: pointer; }
           apiJson('/edicts', { method: 'POST', body: JSON.stringify({ brief, workspace: workspace || undefined, workflow: loadWorkflow() }) })
             .then(result => {
               setMsg({ text: `已开朝：${result.id}`, tone: 'ok' });
-              setBrief('');
+              setStamp(Date.now());
+              clearAfterStamp(setBrief, brief);
               openPane(PANE_CHAT);
-              setTimeout(() => { composer.set(false); setMsg({ text: '', tone: '' }); }, 1200);
+              // 等「准」字印盖完再收起
+              setTimeout(() => { composer.set(false); setMsg({ text: '', tone: '' }); setStamp(0); }, 1600);
             })
             .catch(error => setMsg({ text: String(error.message || error), tone: 'err' }))
             .finally(() => setBusy(false));
@@ -1579,21 +1727,20 @@ select.ssl-input { cursor: pointer; }
             h('div', null,
               h('div', { className: 'ssl-role-title', style: { fontSize: '15px' } }, '下旨 · 交给朝堂办理'),
               h('div', { className: 'ssl-caption' }, '中书拟旨 → 门下封驳 → 尚书派单 → 六部执行 → 上奏'))),
-          h('label', { className: 'ssl-field' },
-            h('span', { className: 'ssl-label' }, '圣意'),
-            h('textarea', {
-              className: 'ssl-input', value: brief, autoFocus: true,
-              placeholder: '例：把 reports/ 里的 CSV 汇总成月度报表，写一份周报，并检查本周改动的测试是否通过。',
-              onChange: event => setBrief(event.target.value),
-              onKeyDown: event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) submit(); },
-            })),
-          h('label', { className: 'ssl-field' },
-            h('span', { className: 'ssl-label' }, '工作目录'),
-            h('input', { className: 'ssl-input', value: workspace, placeholder: '留空 = DSH 当前目录', onChange: event => setWorkspace(event.target.value) })),
+          h('div', { style: { marginTop: '14px' } }, h(Zouzhe, {
+            value: brief,
+            onChange: setBrief,
+            onSubmit: submit,
+            canSubmit: !busy && !!brief.trim(),
+            sending: busy,
+            stamp,
+            autoFocus: true,
+            placeholder: '要办成什么事？例：把 reports 里的 CSV 汇总成月度报表，写一份周报，并检查本周改动的测试是否通过。',
+            extra: h(EdictSlips, { workspace, setWorkspace }),
+          })),
           msg.text ? h('div', { className: cx('ssl-alert', msg.tone === 'ok' && 'ssl-alert--info') }, msg.text) : null,
-          h('div', { className: 'ssl-actions', style: { justifyContent: 'flex-end', marginTop: '18px' } },
-            h('button', { className: 'ssl-btn', onClick: () => composer.set(false) }, '取消'),
-            h('button', { className: 'ssl-btn ssl-btn--seal', disabled: busy || !brief.trim(), onClick: submit }, busy ? '开朝中…' : '下旨'))));
+          h('div', { className: 'ssl-actions', style: { justifyContent: 'flex-end', marginTop: '14px' } },
+            h('button', { className: 'ssl-btn ssl-btn--ghost', onClick: () => composer.set(false) }, '取消'))));
       }
 
       // ---------- 往来：公文流 ----------
@@ -2156,6 +2303,7 @@ select.ssl-input { cursor: pointer; }
         const [workspace, setWorkspace] = useState('');
         const [criteria, setCriteria] = useState('');
         const [sending, setSending] = useState(false);
+        const [stamp, setStamp] = useState(0);
         const setSteps = next => {
           setStepsRaw(next);
           saveWorkflow(next);
@@ -2185,7 +2333,8 @@ select.ssl-input { cursor: pointer; }
           })
             .then(result => {
               notify(`已开朝：${result.id}`);
-              setBrief('');
+              setStamp(Date.now());
+              clearAfterStamp(setBrief, brief);
               refresh();
               openPane(PANE_CHAT);
             })
@@ -2234,23 +2383,17 @@ select.ssl-input { cursor: pointer; }
                 onClick: () => setSteps([...steps, { ministry: 'war', title: '' }]),
               }, '+ 添加一步'))),
           h(Section, { title: '下旨', note: '按上面的流程开朝' }),
-          h('div', { className: 'ssl-card' },
-            h('textarea', {
-              className: 'ssl-input', value: brief,
-              placeholder: '圣意：要办成什么事？\n例：做一条 25 秒的 TikTok 竖屏视频，主题「打工人 5 分钟早餐」，轻松搞笑。',
-              onChange: event => setBrief(event.target.value),
-              onKeyDown: event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) submit(); },
-            }),
-            h('div', { className: 'ssl-row', style: { flexWrap: 'wrap' } },
-              h('label', { className: 'ssl-field ssl-grow', style: { minWidth: '200px' } },
-                h('span', { className: 'ssl-label' }, '工作目录'),
-                h('input', { className: 'ssl-input', value: workspace, placeholder: '留空 = DSH 当前目录', onChange: event => setWorkspace(event.target.value) })),
-              h('label', { className: 'ssl-field ssl-grow', style: { minWidth: '160px' } },
-                h('span', { className: 'ssl-label' }, '验收标准（可选）'),
-                h('input', { className: 'ssl-input', value: criteria, placeholder: '如：时长 22-28 秒、1080x1920', onChange: event => setCriteria(event.target.value) }))),
-            h('div', { className: 'ssl-between', style: { marginTop: '14px' } },
-              h('span', { className: 'ssl-caption' }, busy ? '朝堂正在办差，办完后再下旨' : autonomous ? '自治模式：全程不问你，下旨后在右侧「各部门沟通」看进展' : '下旨后在右侧「各部门沟通」看进展'),
-              h('button', { className: 'ssl-btn ssl-btn--seal', disabled: busy || sending || !brief.trim(), onClick: submit }, sending ? '开朝中…' : '下旨'))),
+          h('div', { className: 'ssl-card' }, h(Zouzhe, {
+            value: brief,
+            onChange: setBrief,
+            onSubmit: submit,
+            canSubmit: !busy && !sending && !!brief.trim(),
+            sending,
+            stamp,
+            placeholder: '要办成什么事？例：做一条二十五秒的 TikTok 竖屏视频，主题「打工人五分钟早餐」，轻松搞笑。',
+            extra: h(EdictSlips, { workspace, setWorkspace, criteria, setCriteria }),
+            caption: busy ? '朝堂正在办差，办完后再下旨' : autonomous ? '自治模式：全程不问你，下旨后在右侧「各部门沟通」看进展' : '下旨后在右侧「各部门沟通」看进展',
+          })),
           h(Section, { title: '朝规' }),
           h(RulesCard, { state, onSave: (patch, okText) => savePresetPatch(state, patch, refresh, notify, okText) }));
       }
@@ -2328,6 +2471,7 @@ select.ssl-input { cursor: pointer; }
         const [doc, setDoc] = useState(null);
         const [draft, setDraft] = useState('');
         const [sending, setSending] = useState(false);
+        const [stamp, setStamp] = useState(0);
         const listRef = useRef(null);
         const stick = useRef(true);
         const messages = (detail && detail.messages) || [];
@@ -2347,7 +2491,8 @@ select.ssl-input { cursor: pointer; }
           apiJson('/edicts', { method: 'POST', body: JSON.stringify({ brief: draft, workflow: loadWorkflow() }) })
             .then(result => {
               notify(`已开朝：${result.id}`);
-              setDraft('');
+              setStamp(Date.now());
+              clearAfterStamp(setDraft, draft);
               setPicked('');
               stick.current = true;
               refresh();
@@ -2407,20 +2552,21 @@ select.ssl-input { cursor: pointer; }
               h('div', { className: 'ssl-bubble is-live' },
                 item.tail ? h('div', { className: 'ssl-mono', style: { whiteSpace: 'pre-wrap' } }, item.tail.slice(-260)) : null,
                 h('span', { className: 'ssl-typing', 'aria-label': '正在输出' }, h('i'), h('i'), h('i'))))))),
-          h('div', { className: 'ssl-chat-compose' },
-            h('textarea', {
-              className: 'ssl-input', rows: 2, value: draft,
-              disabled: busy,
-              placeholder: busy ? '朝会进行中，办完后可再下旨' : '写圣意，Ctrl + Enter 下旨',
-              onChange: event => setDraft(event.target.value),
-              onKeyDown: event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) send(); },
-            }),
-            h('div', { className: 'ssl-between', style: { marginTop: '8px' } },
-              h('span', { className: 'ssl-caption' }, (() => {
-                const n = loadWorkflow().length;
-                return n ? `按钦定流程 ${n} 步` : '由中书省自拟流程';
-              })()),
-              h('button', { className: 'ssl-btn ssl-btn--seal ssl-btn--sm', disabled: busy || sending || !draft.trim(), onClick: send }, sending ? '开朝中…' : '下旨'))),
+          h('div', { className: 'ssl-chat-compose' }, h(Zouzhe, {
+            compact: true,
+            value: draft,
+            onChange: setDraft,
+            onSubmit: send,
+            canSubmit: !busy && !sending && !!draft.trim(),
+            disabled: busy,
+            sending,
+            stamp,
+            placeholder: busy ? '朝会进行中，办完后可再下旨' : '写下圣意，盖印或 Ctrl + Enter 下旨',
+            caption: (() => {
+              const n = loadWorkflow().length;
+              return n ? `按钦定流程 ${n} 步` : '由中书省自拟流程';
+            })(),
+          })),
           doc ? h('div', { className: 'ssl-chat-doc' },
             h('div', { className: 'ssl-card-h', style: { padding: '10px 12px', margin: 0, borderBottom: '1px solid var(--ssl-line)' } },
               h('h4', { className: 'ssl-card-t ssl-mono ssl-ellipsis' }, doc.name),
