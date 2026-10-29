@@ -1,54 +1,141 @@
 {
-  "version": 2,
+  "version": 4,
   "agents": [
     {
       "id": "cc",
       "name": "Claude Code",
       "adapter": "cli",
       "command": "claude",
-      "args": ["-p"],
+      "args": [
+        "-p"
+      ],
       "promptMode": "stdin",
-      "modelArgs": ["--model", "{model}"],
-      "autoArgs": ["--permission-mode", "acceptEdits", "--allowedTools", "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch"],
-      "models": ["opus", "sonnet", "haiku"],
+      "modelArgs": [
+        "--model",
+        "{model}"
+      ],
+      "execArgs": [
+        "--permission-mode",
+        "acceptEdits",
+        "--allowedTools",
+        "Bash,Read,Write,Edit,Glob,Grep"
+      ],
+      "autoArgs": [
+        "--permission-mode",
+        "acceptEdits",
+        "--allowedTools",
+        "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch"
+      ],
+      "models": [
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
       "timeoutMs": 900000,
-      "traits": ["规划", "架构", "实现", "读代码库"],
-      "enabled": true
+      "traits": [
+        "规划",
+        "架构",
+        "实现",
+        "读代码库"
+      ],
+      "enabled": true,
+      "outputFormat": "claude-stream",
+      "formatArgs": [
+        "--output-format",
+        "stream-json",
+        "--verbose"
+      ],
+      "resumeArgs": [
+        "--resume",
+        "{session}"
+      ]
     },
     {
       "id": "codex",
       "name": "Codex",
       "adapter": "cli",
       "command": "codex",
-      "args": ["exec", "--skip-git-repo-check"],
+      "args": [
+        "exec",
+        "--skip-git-repo-check"
+      ],
       "promptMode": "stdin",
-      "modelArgs": ["--model", "{model}"],
-      "autoArgs": ["--full-auto", "-c", "sandbox_workspace_write.network_access=true"],
-      "models": ["gpt-5-codex", "gpt-5", "o3"],
+      "modelArgs": [
+        "--model",
+        "{model}"
+      ],
+      "execArgs": [
+        "--sandbox",
+        "workspace-write"
+      ],
+      "autoArgs": [
+        "--full-auto",
+        "-c",
+        "sandbox_workspace_write.network_access=true"
+      ],
+      "models": [
+        "gpt-5-codex",
+        "gpt-5",
+        "o3"
+      ],
       "timeoutMs": 900000,
-      "traits": ["审查", "测试", "异构视角"],
-      "enabled": true
+      "traits": [
+        "审查",
+        "测试",
+        "异构视角"
+      ],
+      "enabled": true,
+      "outputFormat": "codex-json",
+      "formatArgs": [
+        "--json"
+      ],
+      "resumeArgs": []
     },
     {
       "id": "workbuddy",
       "name": "WorkBuddy",
       "adapter": "cli",
       "command": "codebuddy",
-      "args": ["-p"],
+      "args": [
+        "-p"
+      ],
       "promptMode": "stdin",
-      "modelArgs": ["--model", "{model}"],
+      "modelArgs": [
+        "--model",
+        "{model}"
+      ],
+      "execArgs": [],
       "autoArgs": [],
-      "models": ["auto", "hy3", "glm-5.3", "kimi-k3-1", "deepseek-v4-pro", "deepseek-v4-flash"],
+      "models": [
+        "auto",
+        "hy3",
+        "glm-5.3",
+        "kimi-k3-1",
+        "deepseek-v4-pro",
+        "deepseek-v4-flash"
+      ],
       "timeoutMs": 900000,
-      "traits": ["表格", "文档", "报表", "腾讯文档"],
-      "enabled": true
+      "traits": [
+        "表格",
+        "文档",
+        "报表",
+        "腾讯文档"
+      ],
+      "enabled": true,
+      "outputFormat": "text",
+      "formatArgs": [],
+      "resumeArgs": []
     },
     {
       "id": "dsh",
       "name": "DSH",
       "adapter": "self",
       "models": [],
-      "traits": ["调度", "本机工具", "宿主"],
+      "traits": [
+        "调度",
+        "本机工具",
+        "宿主"
+      ],
       "enabled": true
     },
     {
@@ -56,7 +143,11 @@
       "name": "千问办公",
       "adapter": "manual",
       "models": [],
-      "traits": ["公文", "PPT", "会议纪要"],
+      "traits": [
+        "公文",
+        "PPT",
+        "会议纪要"
+      ],
       "enabled": true
     },
     {
@@ -64,20 +155,79 @@
       "name": "COSER",
       "adapter": "manual",
       "models": [],
-      "traits": ["待配置"],
+      "traits": [
+        "待配置"
+      ],
       "enabled": false
     }
   ],
   "roles": {
-    "zhongshu": { "title": "中书省", "duty": "起草方案（拟旨）", "agentId": "cc", "model": "" },
-    "menxia": { "title": "门下省", "duty": "审议封驳", "agentId": "codex", "model": "" },
-    "shangshu": { "title": "尚书省", "duty": "派单与汇总", "agentId": "dsh", "model": "" },
-    "personnel": { "title": "吏部", "duty": "人事、账号、权限、配置", "agentId": "cc", "model": "" },
-    "revenue": { "title": "户部", "duty": "数据、表格、报表、财务", "agentId": "workbuddy", "model": "" },
-    "rites": { "title": "礼部", "duty": "文书、汇报、PPT、对外沟通", "agentId": "qwen", "model": "" },
-    "war": { "title": "兵部", "duty": "写代码、构建、部署", "agentId": "cc", "model": "" },
-    "justice": { "title": "刑部", "duty": "测试、审查、合规", "agentId": "codex", "model": "" },
-    "works": { "title": "工部", "duty": "界面、设计、基础设施", "agentId": "coser", "model": "" }
+    "zhongshu": {
+      "title": "中书省",
+      "duty": "起草方案（拟旨）",
+      "agentId": "cc",
+      "model": ""
+    },
+    "menxia": {
+      "title": "门下省",
+      "duty": "审议封驳",
+      "agentId": "codex",
+      "model": ""
+    },
+    "shangshu": {
+      "title": "尚书省",
+      "duty": "派单与汇总",
+      "agentId": "dsh",
+      "model": ""
+    },
+    "personnel": {
+      "title": "吏部",
+      "duty": "人事、账号、权限、配置",
+      "agentId": "cc",
+      "model": ""
+    },
+    "revenue": {
+      "title": "户部",
+      "duty": "数据、表格、报表、财务",
+      "agentId": "workbuddy",
+      "model": ""
+    },
+    "rites": {
+      "title": "礼部",
+      "duty": "文书、汇报、PPT、对外沟通",
+      "agentId": "qwen",
+      "model": ""
+    },
+    "war": {
+      "title": "兵部",
+      "duty": "写代码、构建、部署",
+      "agentId": "cc",
+      "model": ""
+    },
+    "justice": {
+      "title": "刑部",
+      "duty": "测试、审查、合规",
+      "agentId": "codex",
+      "model": ""
+    },
+    "works": {
+      "title": "工部",
+      "duty": "界面、设计、基础设施",
+      "agentId": "coser",
+      "model": ""
+    },
+    "jinyiwei": {
+      "title": "锦衣卫",
+      "duty": "看守朝会：卡死即拿下、推脱即督办、超支即停朝",
+      "agentId": "",
+      "model": ""
+    },
+    "yushi": {
+      "title": "监察御史",
+      "duty": "巡查各部产出，不实即弹劾重办",
+      "agentId": "cc",
+      "model": "haiku"
+    }
   },
   "rules": {
     "separationOfPowers": true,
@@ -85,6 +235,26 @@
     "maxSteps": 8,
     "autonomous": false,
     "maxFixRounds": 2,
-    "fallbackAgentId": "cc"
+    "fallbackAgentId": "cc",
+    "isolation": "worktree",
+    "autoMerge": false,
+    "execWrites": true,
+    "parallel": 2,
+    "maxConcurrent": 2,
+    "useMemory": true,
+    "maxRetries": 1,
+    "pressure": "standard",
+    "stallSeconds": 300,
+    "mode": "auto",
+    "historian": true,
+    "historianAgentId": "cc",
+    "historianModel": "haiku",
+    "treasury": {
+      "currency": "CNY",
+      "rate": 7.1,
+      "budgetPerEdictUsd": 0,
+      "monthlyBudgetUsd": 0
+    },
+    "prices": {}
   }
 }

@@ -1,10 +1,16 @@
 {
   "name": "dsh-sansheng-liubu",
-  "version": "0.5.0",
+  "version": "0.7.0",
   "type": "module",
   "main": "index.mjs",
-  "description": "三省六部：把本机安装的 Claude Code / Codex / DSH / WorkBuddy 等 AI 工具组织成可配置的朝堂，按三省六部分工协同完成奏折。",
-  "keywords": ["dsh", "dsh-plugin", "deepseek-harness", "multi-agent", "orchestration"],
+  "description": "三省六部 / Imperial Court：把本机的 Claude Code / Codex / WorkBuddy 等 AI CLI 组织成朝堂（或古罗马元老院），拟旨、封驳、并行办差、复核、批红合并，全程在隔离的 git 分支里进行。",
+  "keywords": ["dsh", "dsh-plugin", "deepseek-harness", "multi-agent", "orchestration", "git-worktree"],
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "license": "MIT",
   "homepage": "https://github.com/shilaoban666/dsh-imperial-court#readme",
   "repository": {

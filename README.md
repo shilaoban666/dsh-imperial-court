@@ -1,55 +1,86 @@
-# 三省六部 · DSH 插件（v0.5）
+# 三省六部 · DSH 插件（v0.7）
 
-> **Imperial Court** — a [DeepSeek Harness (DSH)](https://dshbase.com) plugin that organizes the AI CLIs on your machine
-> (Claude Code, Codex, CodeBuddy…) into China's *Three Departments and Six Ministries*: one drafts the plan,
-> another reviews and vetoes it, six ministries execute, and you approve — or let it run fully autonomous.
+> **[English version: Imperial Senate (Roman edition)](README.en.md)**
 
-> 把本机装着的 **Claude Code / Codex / DSH / WorkBuddy / 千问办公 / COSER** 排成一个朝堂：
-> 皇帝（你）下旨 → 中书省拟旨 → 门下省封驳 → 尚书省派单 → 六部办差 → 上奏 → 批红归档。
+> 把本机装着的 **Claude Code / Codex / WorkBuddy / DSH / 千问办公 / COSER** 排成一个朝堂：
+> 皇帝（你）下旨 → 中书省拟旨 → 门下省封驳 → 尚书省派单 → 六部**并行**办差 → 门下复核 → 上奏 → 批红**合并**。
+> 全程在一个**隔离的 git 分支**里进行，批红之前原目录一个字节都不动。
 
-这是一个 **DSH 原生插件**（不是 MCP 桥），宿主半用 Cordis 插件 API，浏览器半同时注册到两处：
+这是一个 **DSH 原生插件**（不是 MCP 桥）：宿主半用 Cordis 插件 API，浏览器半注册到侧栏独立页、设置页、会话头部、右侧面板与浮层。
+界面有两套「国语」：**中文 · 三省六部**，和 **English · 古罗马元老院**（执政官拟旨、保民官否决、行省总督派单）。
 
-- **侧栏独立页**（新版 DSH）：`sidebar.panellist` 导航入口 + `main` 主区页面 —— 点侧栏「三」直接进朝堂；
-- **设置页兜底**：`settings.section` 里的「三省六部」（`dsh-mcp-plus` 同款写法，老版本也能用）。
+> **还没装、想先看看长什么样？** 在仓库目录起一个静态服务（如 `python -m http.server`），打开 `preview.html`：
+> 它加载的就是真正的 `client.js`，只是把 DSH 宿主换成了内存里的假数据，会自动演示一次朝会（含并行、移文、待回填）。
+> 地址参数：`?lang=en` 切英文、`&theme=roma` 换主题、`&at=25` 跳到第 25 秒。
 
-两处是同一个 `App` 组件，注册失败会告警并跳过，不会拖垮插件。
+## v0.7 改了什么
 
-> **还没装、想先看看长什么样？** 直接双击 [`preview.html`](preview.html)：它加载的就是真正的 `client.js`，
-> 只是把 DSH 宿主（模块加载、slots、主题服务、`/sansheng-liubu/*` 接口）换成了内存里的假数据，
-> 会自动演示一次朝会，可切页签、切明暗、试主题。需要联网加载 React。
+| 方面 | v0.7 新增 |
+|---|---|
+| **锦衣卫**（Praetorian Guard） | 插件内置、不耗 token 的看守：**卡死即拿下**（N 分钟无输出就结束进程并重办）、**推脱即督办**（回奏里出现「无法完成 / 请您手动」之类就打回）、**超支即停朝**（单份奏折拨款、每月预算）。重办按仿 [pua](https://github.com/tanweai/pua) 的压力阶梯逐级加码：申饬 → 诏狱问话 → 考成（七条清单）→ 革职留任，每一级都给出可执行的方法，不只是施压 |
+| **监察御史**（Agens in rebus） | 每件差事办完立刻巡查：常朝做确定式检查（写明的产出在不在、回奏空不空，零 token），大朝会再调便宜模型逐件细看；不实就**弹劾**，带着具体问题重办 |
+| **三种朝制**（压编排税） | **急递**：不拟旨、不封驳、不复核，按关键词直接派给一个部，1 次调用起；**常朝**：完整流程；**大朝会**：再加御史逐件巡查。默认「自动」按圣意长短挑；下旨框里实时估价（几次调用、多少钱） |
+| **续接会话** | 同一岗位的后续轮次（重拟、再审、JSON 重申、重办）用 `--resume` 续接上一轮，只发增量提示词，缓存接得上 |
+| **国库** | 每次调用记账：输入 / 输出 / 缓存读写 token、金额（Claude Code 自报花销为准，其余按可改的价目表）、缓存省下多少、**废料**（被封驳的草稿、重办前的一次、失败、作废的奏折）。中文按汉五铢钱（1 钱 = 1 分，1 金 = 10000 钱），英文按罗马币制（aureus / denarius / sestertius），旁边永远写真实金额；户部按数据给建议 |
+| **实录**（仿 LLM Wiki + dsh-memory） | 每个工作目录、每个岗位一页 markdown：事实 / 约定 / 坑，每条带**出处（奏折编号）与可信度**（✓ 已批红、? 未批红、✗ 被驳回）；史官每份奏折上奏前用一次便宜模型提炼；批红升 ✓、驳回剔除；召回时 📌 置顶与 ✓ 先放、整体受字数预算约束；`index.md` 目录、`log.md` 编年、一键体检（去重 / 标陈旧 / 剔除被驳回的）；你在界面上改过的以你为准 |
+| **流程可见** | **朝会全景**：每个岗位一条泳道、每次调用一根条，看得出谁和谁并行、哪里被封驳 / 弹劾 / 重办 / 续接；一句话**旁白**说清此刻谁在干什么；奏折头部显示朝制与花销 |
+| **文书房** | 改了哪些文件（实时读 worktree，办完读分支）、方案写明的产出在不在，点开看全文或补丁 |
+| 测试 | 38 个端到端测试（新增：两种 CLI 的用量解析、急递、废料记账、续接增量、督办阶梯、御史弹劾、卡死拿下、拨款停朝、月度预算、实录出处与升级、文书房、估价） |
+
+## v0.6 改了什么
+
+| 方面 | v0.5 | v0.6 |
+|---|---|---|
+| 常规模式能不能干活 | CLI 没有写权限，六部只能出方案 | 执行差事追加**写入参数**（`execArgs`），在隔离分支里真改文件 |
+| 代码安全 | 直接改原目录，靠自觉开 worktree | 每份奏折自动 `git worktree` + 分支 `court/<编号>`；**批红合并、驳回留快照、可一键丢弃** |
+| 门下审议 | 输出解析失败**默认放行** | **失败即关闭**：先重申格式再问一次，还不行就不放行 |
+| 六部协作 | 严格串行 | 中书给每步写依赖（`after`），互不依赖的**并行**（默认 2 路）；移文超额会公开告示，不再悄悄丢掉 |
+| 人工岗位 | 出工单就算完，流程不等 | **暂停等回填**：奏折页 / 右侧面板 / `sansheng_fill` 填结果或跳过，朝会接着走 |
+| 记忆 | 奏折之间毫无记忆 | **史馆**：自动记下封驳意见、复核不过、办砸的差事、你的驳回理由；相似圣意拟旨与审议时自动带上 |
+| 门下是否走过场 | 无从得知 | 史馆统计**封驳率、首轮准奏率、各部成败**，连续不驳会提醒 |
+| 钦定流程 | 存在浏览器 localStorage | 存在宿主，任何入口（含模型工具）都带上；老存档自动迁移 |
+| 同时开朝 | 1 份 | 隔离的奏折可并行（默认 2 份）；未隔离的同目录奏折互斥 |
+| 安全 | 本地接口无防护 | 改状态的请求只收 `application/json`，并校验 Origin / `Sec-Fetch-Site`，挡住跨站表单 |
+| 可读性 | 群聊里露出原始 JSON | 方案、审议、移文都换成一句人话；公文性质悬停有白话解释；有术语表、上手检查 |
+| 语言 | 仅中文 | 中文 / English（古罗马官制、卷轴下旨框、罗马广场主题），提示词也随语言切换 |
+| 测试 | 无 | `npm test`：21 个端到端测试，真 git 仓库 + 假 CLI |
 
 ## 截图
 
-> 以下截图来自 `preview.html`：插件真实的 `client.js`，跑在一个按 DSH 桌面版布局搭的模拟宿主里（左侧栏、会话头部、右侧面板），数据是演示用的。
+> 截图来自 `preview.html`：真实的 `client.js` 跑在按 DSH 桌面版布局搭的模拟宿主里，数据是演示用的。
 
-**会话页：紫禁城·朝堂主题 + 右侧「各部门沟通」**——三省六部的公文往来排成群聊，正在办差的部门（兵部）实时显示输出；右下是奏折式下旨框。
+**会话页 + 右侧「各部门沟通」**：公文往来排成群聊，正在办差的部门实时输出；最上面两条告示是「隔离分支」与「参考了前朝经验」。
 
 ![各部门沟通](docs/screenshots/01-chat.jpg)
 
-**下旨：奏折式输入框**——锦缎封面、经折装宣纸、朱丝栏，竖排右起书写，按朱印「下旨」即开朝，纸上随即盖一个「准」字。
+**待回填**：礼部（千问办公）没有命令行，朝会暂停；户部、刑部已并行办完，兵部在办刑部的移文。
 
-![奏折下旨](docs/screenshots/03-edict.jpg)
+![待回填](docs/screenshots/08-fill.jpg)
 
-**确定工作流**——自己排部门顺序（这里是短视频模板），中书省必须照此拟旨；右侧「政令执行」看流程条与各部差事。
+**朝会全景**：泳道里看得见户部、刑部并行，兵部第一次被御史弹劾（菱形）、锦衣卫督办后续接会话重办（条纹 → 白框），礼部暂停等回填；下面是文书房，缺的产出标红。
 
-![确定工作流](docs/screenshots/02-workflow.jpg)
+![朝会全景](docs/screenshots/11-panorama.jpg)
 
-<details>
-<summary>更多截图：朝堂职位 / 奏折详情 / 殿宇 / DSH 默认浅色主题</summary>
+**国库**：本月、今日、累计花了多少（五铢钱 + 人民币），缓存命中率与省下的钱、废料占比、每天的花销、各岗位与各工具的账、户部的建议。
 
-**朝堂职位**：朝规（自治模式、代办、自我修复、官制模板）+ 九个岗位的人选、模型、职掌，正在办差的岗位高亮并显示输出。
+![国库](docs/screenshots/10-treasury.jpg)
 
-![朝堂职位](docs/screenshots/04-roster.jpg)
-
-**奏折详情**：自治模式下复核通过、自动归档的一份奏折，公文往来时间线 + 六部差事 + 文书产物。
+**奏折详情**：流程条、旁白、批红并合并、隔离分支的改动清单与补丁、公文往来、差事依赖。
 
 ![奏折](docs/screenshots/05-memorial.jpg)
 
-**殿宇**：整套主题、朝堂背景（内置宫殿插画 / 上传自己的图、压暗三档）、浅改皮肤。
+<details>
+<summary>更多截图：下旨 / 确定工作流 / 朝堂职位 / 史馆 / 殿宇 / 默认浅色主题</summary>
+
+![奏折下旨](docs/screenshots/03-edict.jpg)
+
+![确定工作流](docs/screenshots/02-workflow.jpg)
+
+![朝堂职位](docs/screenshots/04-roster.jpg)
+
+![史馆](docs/screenshots/09-annals.jpg)
 
 ![殿宇](docs/screenshots/06-hall.jpg)
-
-**不换主题也能用**：DSH 默认浅色主题下的「朝堂」页签。
 
 ![默认浅色主题](docs/screenshots/07-default-light.jpg)
 
@@ -57,34 +88,29 @@
 
 ---
 
-## 1. 界面长什么样
+## 1. 界面
 
-设置 → **三省六部**（或侧栏「三」），四个页签：
+设置 → **三省六部**（或侧栏「三」），七个页签：
 
 | 页签 | 内容 |
 |---|---|
-| **朝堂** | 三省 + 六部九张官职卡：换人、**每个岗位单独指定模型**、实时状态；**奏折式下旨框**（竖排宣纸 + 朱印下旨，附工作目录 / 验收标准）；最近奏折 |
-| **值房** | 九张岗位卡的实时视图：谁在办差、办什么、跑了多久、CLI 当前输出的尾巴（2 秒刷新） |
-| **奏折** | 左侧奏折列表，右侧详情：阶段、**公文往来**、六部差事状态、产物（点开看全文）、朝会记录、批红 / 驳回 / 叫停 |
-| **殿宇** | 改 DSH 自己的样子：整套主题（宫廷·朱 / 墨夜·金 / **紫禁城·朝堂**）、朝堂背景图（内置宫殿插画或上传自己的图）、只叠主色的浅改皮肤 |
-| **群臣** | 本机 agent 注册表：命令、基础参数、**模型参数模板与候选模型**、启用停用、一键「探测」、保存 |
+| **朝堂** | 下旨（奏折竖排，可切横排；工作目录记得最近用过的）；在办奏折的流程条；朝规；九张官职卡；上手检查；术语表 |
+| **值房** | 每个岗位此刻在办什么、跑了多久、CLI 输出的尾巴（2 秒刷新）；刚办完的差事 |
+| **奏折** | 列表 + 详情：流程、待回填、隔离分支（改动清单 / 补丁 / 合并 / 丢弃）、公文往来、差事与依赖、文书、朝会记录、批红 / 驳回 / 叫停 |
+| **史馆** | 实录（项目页 / 岗位页，可读可改，带出处与可信度）、编年、体检；封驳率、首轮准奏率、各部成败与教训 |
+| **国库** | 花销（汉五铢 / 罗马币 + 真实金额）、token 与缓存、废料、每日花销、各岗位与工具的账、账本、价目表、拨款与预算 |
+| **殿宇** | 语言与官制、整套主题（宫廷·朱 / 墨夜·金 / 紫禁城 / 大理石·紫 / 帝国之夜·金 / 罗马广场）、背景图、浅改皮肤 |
+| **群臣** | 本机 agent 注册表：命令、基础参数、模型参数、**写入参数**、自治参数、候选模型、一键探测 |
 
-另外还直接长在 DSH 原本的界面里：
+还长在 DSH 原本的界面里：会话头部的「朝堂职位」「确定工作流」视图与「下旨」按钮、右侧面板的「政令执行」「各部门沟通」、右下角的值房胶囊。
 
-| 位置 | 内容 | 扩展点 |
-|---|---|---|
-| 会话头部，与「对话」「轨迹」并列 | **朝堂职位**：朝规 + 九个岗位的人选、模型、职掌 | `conversation.view` |
-| 同上 | **确定工作流**：自己排各部门的先后顺序（钦定流程），按流程下旨 | `conversation.view` |
-| 右侧面板（「+」里打开，下旨后自动打开） | **各部门沟通**：三省六部的公文往来排成群聊，正在办差的部门显示实时输出；底部可直接下旨 | `sidebar.right.pane.tab` |
-| 同上 | **政令执行**：当前奏折的流程条、各部差事、实时输出、批红 / 叫停 | `sidebar.right.pane.tab` |
-| 会话头部右侧 | **「下旨」按钮**：弹窗填圣意就能开朝 | `conversation.session.header.actions` |
-| 右下角 | **值房胶囊**：奏折在办时常驻，右侧面板开着时自动收起 | `shell.overlay` |
+给模型注册了 6 个工具：
 
-另外给模型注册了 4 个工具，可以在对话里直接下旨：
-
-- `sansheng_edict` 下旨（异步开朝，返回奏折编号）
+- `sansheng_edict` 下旨（可带 `workflow`：`default` / `none` / `video` / `dev` / `report` / `war,justice`）
 - `sansheng_status` 看进度 / 列奏折
-- `sansheng_approve` 批红
+- `sansheng_approve` 批红（有分支就合并）
+- `sansheng_reject` 驳回或叫停，理由记进史馆
+- `sansheng_fill` 回填人工岗位的结果，或跳过
 - `sansheng_assign` 任命（把某 agent 调到某官职，可同时指定模型）
 
 ---
@@ -93,167 +119,89 @@
 
 ### 2.1 官职与默认人选
 
-| 官职 | 职掌 | 默认 | 为什么 |
-|---|---|---|---|
-| 中书省 | 起草方案（拟旨） | Claude Code | 规划、架构、能读全库 |
-| 门下省 | 审议封驳 | Codex | **异构模型互审**，同源互审等于没审 |
-| 尚书省 | 派单与汇总 | DSH / 插件内置「都省文书」 | v0.1 由插件确定式完成，不额外烧一次模型 |
-| 吏部 | 人事、账号、权限、配置 | Claude Code | 本机配置类操作 |
-| 户部 | 数据、表格、报表、财务 | WorkBuddy | 表格/文档/腾讯文档生态 |
-| 礼部 | 文书、汇报、PPT、对外沟通 | 千问办公 | 中文公文与办公套件 |
-| 兵部 | 写代码、构建、部署 | Claude Code | 工程实现 |
-| 刑部 | 测试、审查、合规 | Codex | 换一双眼睛挑错 |
-| 工部 | 界面、设计、基础设施 | COSER（待配置） | 前端与原型 |
+| 官职 | 罗马版 | 职掌 | 默认 | 为什么 |
+|---|---|---|---|---|
+| 中书省 | Consul 执政官 | 起草方案 | Claude Code | 规划、能读全库 |
+| 门下省 | Tribune 保民官 | 审议封驳 | Codex | **异构模型互审**，同源互审等于没审 |
+| 尚书省 | Proconsul 行省总督 | 派单与汇总 | 插件本身 | 确定式完成，不烧模型 |
+| 吏部 | Censor 监察官 | 人事、账号、权限、配置 | Claude Code | |
+| 户部 | Quaestor 财务官 | 数据、表格、报表 | WorkBuddy | |
+| 礼部 | Pontifex 大祭司 | 文书、汇报、PPT | 千问办公（人工） | |
+| 兵部 | Legate 军团长 | 写代码、构建、部署 | Claude Code | |
+| 刑部 | Praetor 裁判官 | 测试、审查、合规 | Codex | 换一双眼睛挑错 |
+| 工部 | Aedile 营造官 | 界面、设计、基础设施 | COSER（待配置） | |
 
-内置约束：**中书省与门下省不能是同一个 agent**（保存时校验）；`rules.separationOfPowers: false` 可关。
-
-**模型由岗位决定**，不由 agent 决定：同一个 Claude Code 可以在中书省用 `opus`、在兵部用 `sonnet`。
-朝堂卡上的「模型」输入框留空 = 用该 CLI 默认模型；CLI 侧的拼装模板在 `agents[].modelArgs`
-（如 `["--model", "{model}"]`），群臣页可改。九张卡可以九个不同模型。
+中书与门下不能是同一个 agent（保存时校验）。**模型由岗位决定**：同一个 Claude Code 可以在中书省用 `opus`、在兵部用 `sonnet`。
 
 ### 2.2 一份奏折怎么走
 
 ```mermaid
 flowchart LR
-  E[皇帝下旨] --> Z[中书省拟旨<br/>输出 JSON 方案]
-  Z --> M{门下省封驳}
+  E[皇帝下旨] --> W[建隔离分支<br/>court/编号]
+  W --> Z[中书拟旨<br/>JSON 方案 + 依赖]
+  Z --> M{门下封驳<br/>解析不了就不放行}
   M -- 驳回 --> Z
-  M -- 准奏 --> S[尚书省派单<br/>插件确定式拆到六部]
-  S --> L[六部执行<br/>可并行/按序]
-  L --> R{门下省复核}
-  R --> F[尚书汇总上奏]
-  F --> A{皇帝批红}
-  A -- 准 --> D[归档 done]
-  A -- 驳 --> X[rejected]
+  M -- 准奏 --> S[尚书派单]
+  S --> L[六部按依赖并行<br/>人工岗位暂停等回填]
+  L --> R{门下复核}
+  R -- 自治且不达标 --> F[补救差事] --> L
+  R --> C[提交分支<br/>出补丁]
+  C --> A{皇帝批红}
+  A -- 准 --> G[合并进原分支]
+  A -- 驳 --> X[留快照分支<br/>理由记进史馆]
 ```
 
-阶段落盘：`01-draft-r*.md`、`02-review-r*.md`、`03-dispatch`（在 edict.json）、
-`04-exec/NN-部.md`、`05-recheck.md`、`06-memorial.md`。
+落盘：`01-draft-r*.md`、`02-review-r*.md`、`03-fix-r*.md`、`04-exec/NN-部.md`（人工岗位另有 `-workorder.md`）、`05-recheck*.md`、`06-memorial.md`、`07-changes.patch`。
 
-### 2.3 三种适配器：不是所有工具都能被程序调用
+### 2.3 隔离分支
+
+- 工作目录在 git 仓库里、仓库至少有一次提交时：开朝即 `git worktree add -b court/<编号>`，各部在 worktree 里办差（工作目录是仓库子目录时，映射到 worktree 里同一个子目录）。
+- 办完统一提交（仓库没配身份时用 `Sansheng Court <court@localhost>`），出 `07-changes.patch` 与改动清单，然后收掉 worktree，分支留着。
+- **批红** = 合并进开朝时的分支（`--no-ff`）。主仓库当前不在那个分支、或者合并冲突，就拒绝批红并保持原样，告诉你原因；处理好后再点一次即可。
+- **驳回 / 叫停 / 插件重启**：分支留一份快照，「丢弃分支」才真删。没有改动的分支自动删除。
+- 注意：worktree 只含**已提交**的文件，`node_modules`、`.env` 之类不在里面，提示词里已告诉各部先装依赖。原目录有未提交改动时会在告示里提醒。
+- 不是 git 仓库：照旧直接改原目录，但同一目录同时只允许一份未隔离的奏折。朝规里可以关掉隔离。
+
+### 2.4 三种适配器
 
 | adapter | 适用 | 行为 |
 |---|---|---|
-| `cli` | Claude Code / Codex / CodeBuddy(=WorkBuddy) | `spawn` 子进程，prompt 走 stdin，超时可杀 |
-| `self` | DSH 本体 | 不自动执行，生成待办交回主 agent / 朝堂 |
-| `manual` | 千问办公、COSER 等只有 GUI 的 | 生成**工单**写入产物，人工做完回填 |
+| `cli` | Claude Code / Codex / CodeBuddy | `spawn` 子进程，prompt 走 stdin，超时可杀；执行差事追加 `execArgs`，自治模式追加 `autoArgs` |
+| `self` | DSH 本体 | 出待办并暂停，主 agent 用 `sansheng_fill` 或你回填 |
+| `manual` | 千问办公、COSER 等只有 GUI 的 | 出工单并暂停，人工做完回填；自治模式由代办人选接手 |
 
-这是 v0.1 最诚实的地方：**不假装能驱动没有 CLI 的桌面应用**。千问办公这类，插件负责把活拆好、
-把 prompt 写清楚，你复制过去跑完把结果贴回奏折即可。
+### 2.5 部门往来
 
-### 2.4 部门往来与可见性（v0.2）
+公文性质：拟旨、送审、封驳、准奏、保留、派单、差事、重办、回文、**移文**、**回填**、复核、补救、上奏、**告示**。界面上悬停即见白话解释。
 
-三处可看：
+**移文**：某部在回奏末尾附 `{"handoff":{"to":"justice","reason":"…"}}`，尚书省转办给刑部（只转一层，新差事依赖原差事）。差事数已到上限时不再悄悄丢弃，而是在往来里贴一条告示。移文 JSON 不会出现在群聊里。
 
-| 位置 | 看到什么 |
-|---|---|
-| **值房页签** | 每个岗位此刻：空闲 / 办差中、当前公文（拟旨 / 封驳 / 派单 / 移文…）、已用时、CLI 正在输出的尾巴 |
-| **奏折 → 公文往来** | 一条消息流水：`谁 → 谁`、性质、模型、耗时、结果摘要，点「查看文书」直接看全文 |
-| **朝会记录** | 阶段变化与事件（派单、部务、批红等） |
+### 2.6 并行
 
-公文性质共有：`拟旨`（皇帝→中书）、`送审`（中书→门下）、`封驳`（门下→中书，打回）、
-`准奏`（门下→中书）、`派单`（尚书→六部）、`差事`（尚书→某部）、`回文`（某部→尚书）、
-`移文`（某部→他部）、`复核`（尚书→门下）、`上奏`（尚书→皇帝）。
+中书在方案里给每步写 `after`（依赖的步骤编号）：`[]` 表示可以先办，不写视为依赖上一步。尚书省按依赖图调度，最多 `rules.parallel` 件同时办（默认 2）。并行的步骤必须写不同的文件，这一条写进了拟旨与审议的标准。钦定流程一律按顺序。
 
-**移文**是真·部门间交流：某部在回奏末尾附
+### 2.7 史馆（跨奏折记忆）
 
-```json
-{"handoff":{"to":"justice","reason":"改了鉴权，需要补一组回归测试"}}
-```
+每份奏折结束、批红或驳回时，提炼出教训存进 `annals.json`：门下封驳的具体问题、复核不达标的条目、办砸的差事、你的驳回理由；没有教训的成功奏折记一条「成功先例」。
+新圣意与往事按字词相似度（中文按相邻两字，英文按单词，同目录加分，越旧权重越低）匹配，取最相关的几条，写进拟旨与审议的提示词，奏折上会标注「参考前朝经验 N 条」。不想要可以在朝规里关掉，或在史馆逐条遗忘。
 
-尚书省会把它转办给刑部，界面上出现一条「移文」，然后再出一条「回文」。
-为了不互相踢皮球：只允许转一层、目标必须是六部之一、总步数受 `maxSteps` 限制。
-
-实时状态只在内存里（每 2 秒推给前端），奏折里的公文往来是落盘的（`edict.json`），
-所以**过程可回放、结果可审计**。
-
-### 2.5 改 DSH 自己的样子（v0.4，深做 + 做进）
-
-插件不只是「加一个页面」，还能改 DSH 的外观与结构。做法按官方扩展点分成三档：
-
-| 档位 | 官方入口 | 能改什么 | 风险 |
-|---|---|---|---|
-| **令牌叠加**（已实现） | `ctx.theme.overrideTokens(source, tokens)` | 背景、描边、主色、状态色。每个令牌必须同时给 `{ light, dark }`，用户切明暗都不会花 | 低，注销即还原 |
-| **注册整主题**（已实现） | `ctx.theme.register({ id, colorScheme, tokens })` + `setTheme(id)` | 一整套配色：背景三层、描边四级、文字五级、主色、状态色、侧栏、菜单、代码块、diff、滚动条、气泡、toast/tooltip | 中：令牌集不全会留下没覆盖到的色块；第三方 id 不进设置持久化，需插件每次启动重新 `setTheme` |
-| **结构注入**（已实现） | slot 注册 | 会话头部视图（`conversation.view`）、右侧面板页签（`sidebarRightTabs` + `sidebar.right.pane.tab`）、会话头部按钮（`conversation.session.header.actions`）、浮层弹窗与胶囊（`shell.overlay`）、侧栏入口（`sidebar.panellist` + `main`）、设置页兜底（`settings.section`） | 中：契约随版本变，注册失败要能降级（本插件全部包了 try/catch） |
-
-**不建议**直接注入全局 CSS 去覆盖：官方明确「令牌表是唯一色彩权威」，硬改在主题切换和升级后都会碎。
-
-#### 整套主题（深）
-
-令牌名逐个对照 `ui-theme/src/styles/design-platform.css` 的 alias 表写的，不是猜的：
-
-| 主题 | colorScheme | 取向 |
-|---|---|---|
-| `宫廷 · 朱` | `light` | 宣纸底 `#f7f2e8` + 朱红主色 `#9c2f24` + 松烟墨字 `#2b2118` |
-| `墨夜 · 金` | `dark` | 墨底 `#14100c` + 鎏金 `#e9d8bc` + 暖灰字 `#f3e9d9` |
-
-每套约 80 条令牌，覆盖：`bg-base/layer-1/2/3/overlay/module-platform/document-preview`、
-`border-l1~l4`、`label-primary/secondary/tertiary/caption/dimmed`、`brand-*`、`button-*`、
-`menu-icon`、`link`、`markdown-*`、`scrollbar-*`、`state-*`、`switch-thumb`、`toast/tooltip`、
-`interactive-bg-*`、`turn-trigger-*`、`file-diff-*`、`illustration-*`、`dsw-specific-*` 全套。
-
-两个要说明的点：
-
-1. **它会接管你的明暗设置**——因为 `colorScheme` 是主题自带的。所以「殿宇」里把它和「浅改皮肤」做成了互斥；
-   切回「DSH 默认主题」会按你原来的 `preference`（light/dark/system）还原。
-2. **第三方主题不进 DSH 的设置持久化**。所以选择存在插件自己的 `state.json` 的 `ui.theme`，
-   客户端每次启动重新 `setTheme`；卸载或注销时 disposer 会把注册的主题一起撤掉。
-
-#### 浅改皮肤
-
-- `默认` —— 完全不动
-- `朱批` —— 朱红主色 + 纸色底（暗色偏暖）
-- `黛青` —— 青黛主色 + 冷调背景
-
-只叠 9 条（主色/链接/背景三层/侧栏/两级描边），**跟随你当前明暗偏好**。选择存在 `ui.skin`。
-
-#### 做进 DSH（近）
-
-- **会话头部「下旨」按钮**：注册在 `conversation.session.header.actions`，点开的是渲染在 `shell.overlay`
-  里的弹窗（头部空间有限，弹窗走浮层不容易被裁切）：填圣意 + 工作目录 → `POST /edicts` 直接开朝。
-- **值房浮层**：有奏折在办时右下角常驻胶囊，展开看每个岗位的实时输出尾巴。
-- 侧栏入口 + 独立整页是主入口；设置页那一份是兜底，老版本 DSH 只认设置页也能用。
-
-### 2.6 自治模式：全程无人值守（v0.5）
-
-朝堂页「朝规」里打开**自治模式**后，下旨即走完全程，不问你：
+### 2.8 自治模式
 
 | 环节 | 常规模式 | 自治模式 |
 |---|---|---|
-| 门下封驳到上限 | 奏折失败，等你裁决 | 按最后一版方案执行，封驳意见作为注意事项附在每件差事上 |
-| 岗位上是只有图形界面 / 停用 / 空缺的工具 | 出工单，等人做 | 交给**代办人选**（默认 Claude Code）用命令行或 API 做出同样产出 |
-| 某部办砸了 | 记为失败 | 带着失败原因**重办一次** |
-| 门下复核不达标 | 上奏等批红 | 中书拟补救差事 → 补办 → 再复核，最多 N 轮（**自我修复**） |
-| 复核通过 | 上奏等批红 | **自动归档** |
-| 修了 N 轮仍不达标 | — | 上奏等你裁决（唯一需要你出面的情况） |
+| 门下封驳到上限 | 奏折失败，等你裁决 | 按最后一版执行，封驳意见附在每件差事上 |
+| 门下输出解析不了（重问后） | 不放行，奏折失败 | 照办，但结果仍须通过复核 |
+| 人工 / 停用 / 空缺岗位 | 暂停等回填 | 代办人选（默认 Claude Code）接手 |
+| 某部办砸了 | 记为失败 | 带着失败原因重办一次 |
+| 复核不达标 | 上奏等批红 | 补救 → 补办 → 再复核，最多 N 轮 |
+| 复核通过 | 上奏等批红 | 自动归档（开了「自治归档即合并」才自动合并） |
 
-配套机制：
+> ⚠️ 自治参数意味着 CLI 能不经确认地写文件、执行命令、联网。隔离分支能保护仓库内容，但保护不了仓库之外的东西：只挂你信任的 CLI，API Key 放系统环境变量，不要写进圣意。
 
-- **前序产出**：每个部办差时都能看到前面各部的回文和产出路径；中书拟旨必须给每一步写明产物文件路径（文件契约）。
-- **职掌可改**：卡片上的职掌就是中书派活的依据，点一下就能改；「官制模板」可一键换成「短视频」等编制。
-- **自治参数**（群臣页）：自治模式下追加给 CLI，放开它自己的权限确认，否则写不了文件、跑不了命令。默认 Claude Code 为
-  `--permission-mode acceptEdits --allowedTools Bash,Read,…`，Codex 为 `--full-auto`（并开网络）。WorkBuddy 留空，请按你的版本填写。
+### 2.9 语言与主题
 
-> ⚠️ 自治参数意味着这些 CLI 能在工作目录里**不经确认地写文件、执行命令、联网**。只在专用的工作目录里用，重要仓库先 `git worktree`。
-> 需要的 API Key（生视频、配乐等）放进系统环境变量，CLI 会继承；不要写进圣意。
-
-### 2.7 确定工作流（钦定流程）
-
-会话头部「确定工作流」里自己排好部门顺序，例如短视频：
-
-`户部 对标选题 → 礼部 脚本分镜 → 工部 生成画面 → 吏部 配乐 → 兵部 剪辑合成 → 刑部 成片质检 → 礼部 发布文案`
-
-- 有钦定流程时，中书省**必须**按这个顺序和条数拟旨，只负责把每一步的指令和产物路径写具体；门下省不得以顺序为由封驳。
-- 留空则由中书省按圣意和职掌自拟。流程存在本机，任何入口下旨（朝堂页、头部按钮、各部门沟通）都会带上。
-- 内置模板：短视频 / 研发 / 报告，可增删、上下移动，最多 12 步。
-
-### 2.8 紫禁城 · 朝堂主题
-
-- 「殿宇」里选 **紫禁城 · 朝堂**：DSH 各层背景变成半透明，后面衬一张宫殿图；卡片带磨砂。
-- 默认背景是插件**自绘的原创矢量插画**（不是照片）。可以「上传图片」换成你自己的紫禁城照片（png / jpg / webp / gif，≤10MB，请用你有权使用的图片），
-  并选「浅 / 中 / 深」压暗，保证文字看得清。图片存在数据目录的 `background.*`。
-- 主题服务只管颜色，背景图是插件自己挂在 `body::before` 上的一层样式：只在这个主题下存在，切走或卸载插件即移除。
+「殿宇 → 语言与官制」或页头的「中 / EN」切换：界面、公文、给模型的提示词一起换；已开朝的奏折保持原来的语言。英文版的下旨框是木轴莎草纸卷轴，火漆印 SPQR，盖下去是 APPROBATVM。
+主题走官方 `ctx.theme.register` / `overrideTokens`，罗马三套（大理石·紫、帝国之夜·金、罗马广场）与宫廷三套并列；带背景的主题都可以换成自己上传的图。
 
 ---
 
@@ -261,183 +209,104 @@ flowchart LR
 
 ```
 sansheng-liubu/
-├─ package.json         # dsh.bundle.patch + dsh.client.platform=web
+├─ package.json         # dsh.bundle.patch + dsh.client.platform=web；npm test
 ├─ cordis.patch.yml     # 装进 profile 后自动进配置层
-├─ role-preset.json     # 群臣与官职的默认编制（改这里改默认朝堂）
-├─ index.mjs            # 宿主半：状态、适配器、工具、HTTP 端点
-├─ client.js            # 浏览器半：零构建 IIFE，五页签 + 头部视图 + 右侧面板 + 浮层 + 主题
-├─ preview.html         # 本地预览：真 client.js + 假宿主，可直接双击看界面（window.__preview.at(秒) / stop() 控制演示）
-├─ docs/screenshots/    # README 截图（由 preview.html 截取）
-├─ LICENSE
-└─ lib/
-   ├─ store.mjs         # state.json + 每份奏折一个目录
-   ├─ adapters.mjs      # cli / self / manual + 探测 + 超时取消
-   ├─ prompts.mjs       # 拟旨/封驳/差事/复核的公文模板
-   └─ court.mjs         # 朝堂状态机
+├─ role-preset.json     # 群臣、官职与朝规的默认值
+├─ index.mjs            # 宿主半：状态、隔离、回填、史馆、HTTP 端点、模型工具
+├─ client.js            # 浏览器半：零构建 IIFE，六页签 + 头部视图 + 右侧面板 + 浮层 + 主题 + 中英文案
+├─ preview.html         # 本地预览：真 client.js + 假宿主
+├─ lib/
+│  ├─ court.mjs         # 朝堂状态机：拟旨 / 审议（失败即关闭）/ 依赖图并行 / 回填 / 移文 / 复核 / 补救
+│  ├─ prompts.mjs       # 拟旨 / 封驳 / 差事 / 复核 / 补救的公文模板（中英两版）
+│  ├─ git.mjs           # worktree、提交、补丁、合并、丢弃
+│  ├─ annals.mjs        # 史馆：教训提炼、相似度召回、封驳统计
+│  ├─ i18n.mjs          # 官名、职掌与宿主侧文案（zh / en）
+│  ├─ workflows.mjs     # 钦定流程模板与解析
+│  ├─ adapters.mjs      # cli / self / manual + 探测 + Windows 转义 + 超时取消
+│  └─ store.mjs         # state.json + 每份奏折一个目录
+└─ test/
+   ├─ court.test.mjs    # 端到端：真 git 仓库 + 假 CLI
+   └─ fake-agent.mjs    # 假 CLI：按公文种类吐约定输出、真写文件
 ```
 
-数据在 `$DSH_HOME/sansheng-liubu/`（默认 `~/.dsh/`）：`state.json` 存编制与奏折索引，
-`edicts/<id>/` 存奏折全文、产物、`edict.json`。
+数据在 `$DSH_HOME/sansheng-liubu/`（默认 `~/.dsh/`）：`state.json`、`annals.json`、`edicts/<编号>/`、`worktrees/<编号>/`（办差期间）。
 
 ---
 
 ## 4. 安装
 
-前提：DSH 已初始化过对应 profile。`dsh plugin` 会调用 DSH 自带的 pnpm，不需要另装。
-包名是 `dsh-sansheng-liubu`（仓库名是 dsh-imperial-court）。
-
-### 4.1 桌面版（Electron，profile 名 `desktop`）
-
-先**完全退出 DSH**，然后直接从 GitHub 装：
+前提：DSH 已初始化过对应 profile。包名是 `dsh-sansheng-liubu`（仓库名 dsh-imperial-court）。
 
 ```powershell
 dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court
 ```
 
-或者 clone 下来按本地目录装（方便自己改）：
+本地目录（方便自己改）：
 
 ```powershell
 git clone https://github.com/shilaoban666/dsh-imperial-court.git
 dsh plugin --profile desktop add "link:<clone 下来的绝对路径>"
 ```
 
-`dsh` 不在 PATH 时，用安装目录里的 `<DSH 安装目录>\resources\runtime\cli\bin\dsh.cmd`。
-装完验证一层配置里有没有它：
+Web 版把 `desktop` 换成 `web`。不改 profile 直接跑源码：把 `cordis.patch.yml` 里的 `name` 换成 `index.mjs` 的绝对路径，或 `dsh web --patch ./cordis.patch.yml`。
 
-```powershell
-dsh --profile desktop --dump-config | Select-String sansheng
-```
+验证：重启后打开「三省六部」，在「朝堂」的**上手检查**里点「一键探测」，确认每个岗位的 CLI 都找得到（找不到就去「群臣」填绝对路径，Windows 上是 `xxx.cmd` 的完整路径）。本插件只负责编排：岗位要真干活，本机得装好并登录对应 CLI（`npm i -g @anthropic-ai/claude-code`、`npm i -g @openai/codex`，各运行一次完成登录）。
 
-> 注意：桌面版的插件管理 **GUI 只支持 npm / git 源，没有「选本地文件夹」入口**，本地目录必须走 CLI。
-
-### 4.2 Web 版（profile 名 `web`）
-
-```powershell
-dsh plugin --profile web add github:shilaoban666/dsh-imperial-court
-```
-
-### 4.3 开发模式（不改 profile，直接跑源码）
-
-在 profile 的 `cordis.patch.yml` 里把 patch 的 `name` 换成绝对路径：
-
-```yaml
-- insert:
-    - id: dsh-sansheng-liubu
-      name: '<clone 下来的绝对路径>/index.mjs'
-```
-
-或用 `dsh web --patch ./cordis.patch.yml` 启动。
-
-### 4.4 验证
-
-重启后打开 **设置 → 三省六部**（或侧栏「三」），应该看到九张官职卡。
-「群臣」页点每个 CLI 的**探测**，确认 `claude` / `codex` / `codebuddy` 找得到；
-找不到就填绝对路径（Windows 上是 `xxx.cmd` 的完整路径）。
-
-下旨后切到 **值房**，能看到哪个岗位在跑、模型是谁、输出到哪一步了。
-
-会话头部的「朝堂职位」「确定工作流」可能先收在「···」菜单里，固定后常驻；右侧面板点「+」能找到「政令执行」「各部门沟通」。
-
-**本插件只负责编排**：朝堂里的岗位要真的干活，本机得装好对应的命令行工具并登录过，例如
-`npm i -g @anthropic-ai/claude-code`、`npm i -g @openai/codex`，再各运行一次 `claude`、`codex` 完成登录。
-桌面版 App 自带的 claude.exe / codex.exe 路径带版本号，App 一更新就变，不建议直接填。
+开发：`npm test` 跑端到端测试（需要 Node 20+ 与 git）。
 
 ---
 
 ## 5. 配置要点
 
-- **换人**：朝堂页下拉即改；也可让模型调 `sansheng_assign`。
-- **换模型**：朝堂卡上的模型输入框，改完回车或点别处即保存；候选来自群臣页的「模型候选」。
-  同一个 agent 在不同岗位可以用不同模型，写进 `role-preset.json` 的 `roles[].model` 就是默认值。
-- **改命令/参数**：群臣页改完点「保存群臣配置」。基础参数里可用 `{prompt}` 占位（默认 prompt 走 stdin）；
-  模型参数模板里用 `{model}` 占位，如 `--model {model}`、`-m {model}`、`-c model="{model}"`。
-- **改朝堂风气**：`lib/prompts.mjs`。想让门下更严，就改 `reviewPrompt` 的判定标准。
-- **加工具**：`role-preset.json` 的 `agents` 里加一条，`adapter` 选 `cli`/`manual`/`self`。
-- **改流程**：`lib/court.mjs`。
-
-安全提醒：
-
-- `cli` 适配器**继承你本机的权限**。不要把 `--dangerously-skip-permissions` 配进不受控的任务。
-- 多个部同时改同一个目录会打架；拟旨 prompt 里已要求「不同步骤写不同文件」，但重要仓库建议先 `git worktree`。
-- 这是个人效率工具，不是安全沙箱；只挂你信任的 CLI。
+- **换人 / 换模型**：朝堂卡上直接改，或让模型调 `sansheng_assign`。
+- **写入参数**（`agents[].execArgs`）：常规模式执行差事时追加。默认 Claude Code 为 `--permission-mode acceptEdits --allowedTools Bash,Read,Write,Edit,Glob,Grep`，Codex 为 `--sandbox workspace-write`。拟旨、审议、复核不追加，保持只读。朝规「各部可写文件」可整体关掉。
+- **自治参数**（`agents[].autoArgs`）：自治模式下所有调用追加。
+- **朝规**（`rules`）：`isolation`（`worktree` / `off`）、`autoMerge`、`execWrites`、`parallel`（1-4）、`maxConcurrent`（1-4）、`useMemory`、`maxReviewRounds`、`maxSteps`、`maxFixRounds`、`fallbackAgentId`。
+- **改朝堂风气**：`lib/prompts.mjs`。想让门下更严，就改 `reviewPrompt` 的判定标准；史馆显示门下「从未封驳」时尤其该改。
 
 ---
 
-## 6. 和 MCP 方案的关系
+## 6. 已知限制
 
-| 方案 | 适合 |
-|---|---|
-| workbuddy-mcp / codex mcp-server / claude mcp serve | 「互相当工具」，即插即用，没有流程 |
-| **本插件** | 「统一编排 + 可审计流程 + 可配置官制」，代价是要自己维护 |
-
-两者可以共存：插件里想接 MCP server，后续把适配器扩成 `mcp` 类型即可。
-
----
-
-## 7. 已知限制（v0.5）
-
-1. **还没在真 DSH 里用真 CLI 跑完过一份奏折**。目前做到的是：
-   - 插件契约（模块加载、slot 名称与选项、`sidebarRightTabs`、工具参数写法、路由生命周期）对照了 DSH 桌面版自带的客户端代码
-     和已安装的官方/社区插件（dshmarket、dsh-pet、dsh-openwrite）逐项核对；
-   - 宿主半用假 CLI 做了端到端测试（常规 / 自治 / 叫停 / 驳回 / 重启恢复 / 钦定流程 / 背景上传）；
-   - 浏览器半在 `preview.html`（真 client.js + 模拟宿主）里逐页验证过。
-2. 各扩展点都是可选注入，注册失败只告警：旧版 DSH 没有右侧面板 / 会话视图 / 主题服务时，相应功能自动跳过，其余照常。
-3. 同一时间只受理一份奏折（串行）；六部按顺序执行（不并行）。
-4. **实时输出只存在内存里**：值房、浮层和「此刻在办」的尾巴在 DSH 重启后消失；落盘的是公文往来与文书。
-5. 模型参数是「追加在基础参数后面」的简单拼接，个别 CLI 若不接受该写法，去群臣页改 `modelArgs` 模板。
-6. 常规模式下 `manual` 工单暂不能从界面回填结果继续流程；`self` 步骤不是真执行。自治模式用代办绕开，但代办能做到什么，取决于代办 CLI 能调用的工具和 API。
-7. 移文依赖模型是否按提示输出 `handoff` JSON；不输出就退化成串行派单，不影响主流程。
-8. 整套主题每套约 80 条令牌，仍有少量边缘令牌（如个别 shiki 语法高亮、平台专属菜单底色）沿用基准调色板；
-   官方明确**第三方主题没有完整性校验**，看到不协调的角落就去 `THEMES[...].tokens` 里补。
-9. 整套主题自带 `colorScheme`，会接管你当前的明暗设置（这是 DSH 的主题模型决定的，不是插件越权）；
-   切回「DSH 默认主题」按原 preference 还原。
-10. 图标替换只能随 `register()` 注册整套主题，且必须用 ui-primitives 的 `ICON_SYMBOLS` id；
-    这次没找到该 id 表（`icon-sprite.ts(x)` / `icons.ts` 都不在源仓库里），所以留了注册入口没填。
-11. 工具调用卡片（`tool.call.toolview`）没做：它按工具名 keyed 分发，props 契约没核实，先不动。
-12. 常规模式没有失败重试（自治模式重办一次）；产物不会自动归档到别处。
-13. 紫禁城主题的背景图挂在 `body::before`，并把 `body` 底色设为透明；若某个版本的 DSH 给更外层容器加了不透明底色，背景会被挡住，需要再适配。
+1. **还没在真 DSH 里用真 CLI 跑完过一份奏折**。Claude Code 的 stream-json 与 Codex 的 --json 用量按公开格式解析、用样例测过，没对真 CLI 验证；宿主半由 38 个端到端测试覆盖（真 git 仓库 + 假 CLI：隔离与合并、失败即关闭、并行、移文、回填、叫停、史馆、自治、英文）；浏览器半在 `preview.html` 里逐页验证；插件契约对照 DSH 桌面版客户端与官方 / 社区插件核对过。
+2. 并行的差事共用同一个 worktree，靠「不同步骤写不同文件」的约定避免冲突，没有更细的文件锁。
+3. 回填的等待只存在内存里：等回填时重启 DSH，奏折会标为中断（分支照常保留快照）。
+4. 实时输出只在内存；落盘的是公文往来与文书。
+5. 史馆的相似度是字词重叠，不是语义检索；教训是确定式提炼，不额外调用模型。
+6. 合并只做 `--no-ff` 合并，冲突时不尝试自动解决，原仓库保持原样并提示原因。
+7. 工具调用卡片（`tool.call.toolview`）与产品图标替换（需要 `ICON_SYMBOLS` id 表）仍未做。
 
 ### 路线图
 
-- [x] 每个岗位单独指定模型（`roles[].model` + `modelArgs`）
-- [x] 岗位实时状态与输出尾巴（值房）
-- [x] 部门公文往来流水（落盘，可回放）
-- [x] 部门间移文转办（一层，防踢皮球）
-- [x] 值房浮层：DSH 界面右下角常驻胶囊（`shell.overlay`）
-- [x] 浅改皮肤：`ctx.theme.overrideTokens` 三档切换，随明暗自适应
-- [x] 整套主题：`ctx.theme.register` 注册宫廷·朱 / 墨夜·金（约 80 条令牌/套）
-- [x] 会话头部「下旨」按钮（`conversation.session.header.actions`）+ 浮层弹窗
-- [x] 自治模式：代办、重办、自我修复、自动归档
-- [x] 钦定流程（确定工作流）
-- [x] 会话头部视图「朝堂职位」「确定工作流」（`conversation.view`）
-- [x] 右侧面板「政令执行」「各部门沟通」（`sidebar.right.pane.tab`）
-- [x] 紫禁城 · 朝堂主题 + 自定义背景图
-- [ ] 产品图标替换（需要 `ICON_SYMBOLS` id 表）
+- [x] 每个岗位单独指定模型；值房实时输出；公文往来落盘；移文
+- [x] 自治模式、钦定流程、会话头部视图、右侧面板、主题与背景
+- [x] **隔离分支：批红合并、驳回快照、丢弃**（v0.6）
+- [x] **审议失败即关闭**（v0.6）
+- [x] **依赖图并行；多份奏折并行**（v0.6）
+- [x] **人工 / 本体岗位暂停等回填**（v0.6）
+- [x] **史馆：跨奏折记忆与封驳统计**（v0.6）
+- [x] **中英双语 + 古罗马官制与主题**（v0.6）
+- [x] **跨站请求防护；端到端测试**（v0.6）
+- [x] **锦衣卫看守督办、监察御史巡查弹劾**（v0.7）
+- [x] **急递 / 常朝 / 大朝会；续接会话只发增量；下旨前估价**（v0.7）
+- [x] **国库：token、金额、缓存、废料、拨款与预算**（v0.7）
+- [x] **实录：仿 LLM Wiki 的带出处长期记忆**（v0.7）
+- [x] **朝会全景、旁白、文书房**（v0.7）
+- [ ] 让「某省」跑在 DSH 进程内（`ctx.llm.stream`），不依赖外部 CLI
+- [ ] `ctx.subprocess` / `ctx.jobs` 托管长任务；SSE 推送替代轮询
+- [ ] 回填等待持久化，重启后可续
+- [ ] 每件并行差事一个独立 worktree，办完再合进奏折分支
 - [ ] 工具调用换奏折卡片（`tool.call.toolview`）
-- [ ] 六部并行（按目录/分支隔离）
-- [ ] manual 工单回填后继续流程（暂停态恢复）
-- [ ] 让「某省」跑在 DSH 进程内，不依赖外部 CLI：
-      `inject = ['llm']`，`ctx.llm.stream({ provider, model, messages })`（注意官方
-      「Model-visible ⟺ logged」约束，自发的模型调用要能由 session log 重建）
-- [ ] `ctx.subprocess` / `ctx.jobs` 托管长任务，替代裸 `child_process`
-- [ ] SSE / WebSocket 推送替代轮询
-- [ ] 值房保留最近 N 分钟的已结束任务（现在结束即消失）
-- [ ] 批红后自动 `git commit` / 归档到知识库
-- [ ] 门下省「封驳比例」统计，防止形同虚设
 
 ---
 
-## 8. 参考
+## 7. 参考
 
 - DSH 插件开发：<https://dshbase.com/zh/plugins/>
-- DSH 插件目录与实测：<https://dshbase.com/zh/plugins/directory/>
-- 真实双端插件范例：<https://github.com/sojo-negai/dsh-mcp-plus>（宿主半 + client 半 + HTTP 端点）
+- 真实双端插件范例：<https://github.com/sojo-negai/dsh-mcp-plus>
 - 带独立页面的插件：<https://github.com/dsh-market/dsh-market>
-- 社区模板：<https://github.com/bugmaker2/dsh-plugin-template>、<https://github.com/OneZero-Y/dsh-plugin-kit>
-- Codex 作为 MCP server：<https://mintlify.wiki/openai/codex/cli/mcp-server>
-- `claude mcp serve`：<https://code.claude.com/docs/en/mcp>
-- WorkBuddy MCP 桥：<https://www.npmjs.com/package/workbuddy-mcp>
+- `git worktree`：<https://git-scm.com/docs/git-worktree>
 
-## 9. License
+## 8. License
 
-MIT。欢迎拿去改，改完把「门下省」调得比「中书省」狠一点，这套制度才不至于变成走过场。
+MIT。欢迎拿去改，改完把「门下省」调得比「中书省」狠一点：史馆会告诉你它有没有在走过场。
