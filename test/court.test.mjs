@@ -658,6 +658,10 @@ test('workspace candidates come from DSH’s own sidebar list; an old DSH-itself
 
 test('regime sets power: a figurehead cannot reject, pick the procedure or open two decrees; the rule can turn it off', async () => {
   const { api, court } = makeCourt();
+  // 两家工具 = 两党争霸：各部之间的往来全看得见，也能驳回
+  assert.equal(api.getState().regime.level, 'liangdang');
+  assert.equal(api.getState().regime.power.see, 4);
+  assert.equal(api.getState().regime.power.reject, true);
   const roles = { ...court.store.state.roles, menxia: { ...court.store.state.roles.menxia, agentId: 'fa' } };
   api.savePreset({ agents: court.store.state.agents, roles, rules: court.store.state.rules });
   const state = api.getState();
@@ -681,7 +685,10 @@ test('no folder chosen: each decree gets its own output folder whose files can b
   process.env.SANSHENG_OUTPUT_DIR = base;
   try {
     const { api } = makeCourt({ rules: { mode: 'express' } });
-    const { id } = api.createEdict({ brief: 'write a hello file' });
+    const opened = api.createEdict({ brief: 'write a hello file' });
+    assert.equal(opened.newFolder, true);
+    assert.equal(api.getState().outputRoot, base);
+    const { id } = opened;
     const detail = await waitFor(api, id, ['awaiting-approval', 'failed']);
     assert.ok(detail.workspace.startsWith(base), detail.workspace);
     const files = api.files(id);

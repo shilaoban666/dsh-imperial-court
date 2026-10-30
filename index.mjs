@@ -88,9 +88,12 @@ function dshWorkspaces() {
 }
 
 /** 没选工作目录时给这道旨新建的产出文件夹：文档/SanshengLiubu/<年月日-时分秒>（SANSHENG_OUTPUT_DIR 可改根目录） */
-function newOutputFolder(now = new Date()) {
+function outputRoot() {
   const docs = path.join(os.homedir(), 'Documents');
-  const base = process.env.SANSHENG_OUTPUT_DIR || path.join(fs.existsSync(docs) ? docs : os.homedir(), 'SanshengLiubu');
+  return process.env.SANSHENG_OUTPUT_DIR || path.join(fs.existsSync(docs) ? docs : os.homedir(), 'SanshengLiubu');
+}
+function newOutputFolder(now = new Date()) {
+  const base = outputRoot();
   const p = n => String(n).padStart(2, '0');
   const stamp = `${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}-${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}`;
   let dir = path.join(base, stamp);
@@ -1023,6 +1026,8 @@ export function createCourt(config = {}, { log = console } = {}) {
         workflow: store.state.workflow || [],
         workflowTemplates: WORKFLOW_TEMPLATES,
         recentWorkspaces: workspaces,
+        // 不选工作目录时产出落在这里（每道旨一个子文件夹）；界面会把它登记成 DSH 侧栏里的一个工作区
+        outputRoot: outputRoot(),
         annals: { count: annals.list().length, rubberStamp: annals.stats().rubberStamp },
         regime: regimeWithPuppet(),
         // 没命令行的岗位可以交给谁代办（界面上的「交给 DSH 代办」按钮）
@@ -1252,7 +1257,7 @@ export function createCourt(config = {}, { log = console } = {}) {
             }
           });
       });
-      return { id: edict.id, status: 'running', isolation: edict.isolationNote || '', mode: edict.mode, modeReason: tr(locale, edict.modeReason) };
+      return { id: edict.id, status: 'running', isolation: edict.isolationNote || '', mode: edict.mode, modeReason: tr(locale, edict.modeReason), workspace: edict.workspace, newFolder: !raw };
     },
     getEdict(edictId) {
       const edict = store.getEdict(edictId);
