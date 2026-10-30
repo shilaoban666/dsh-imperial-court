@@ -122,7 +122,7 @@
     { id: 'cc', name: 'Claude Code', adapter: 'cli', command: 'claude', args: ['-p'], promptMode: 'stdin', modelArgs: ['--model', '{model}'], execArgs: ['--permission-mode', 'acceptEdits', '--allowedTools', 'Bash,Read,Write,Edit,Glob,Grep'], autoArgs: ['--permission-mode', 'acceptEdits', '--allowedTools', 'Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch'], models: ['opus', 'sonnet', 'haiku'], timeoutMs: 900000, traits: ['规划', '架构', '实现'], enabled: true },
     { id: 'codex', name: 'Codex', adapter: 'cli', command: 'codex', args: ['exec', '--skip-git-repo-check'], promptMode: 'stdin', modelArgs: ['--model', '{model}'], execArgs: ['--sandbox', 'workspace-write'], autoArgs: ['--full-auto'], models: ['gpt-5-codex', 'gpt-5', 'o3'], timeoutMs: 900000, traits: ['审查', '测试', '异构视角'], enabled: true },
     { id: 'workbuddy', name: 'WorkBuddy', adapter: 'cli', command: 'codebuddy', args: ['-p'], promptMode: 'stdin', modelArgs: ['--model', '{model}'], execArgs: [], autoArgs: [], models: ['auto', 'hy3', 'glm-5.3', 'deepseek-v4-pro'], timeoutMs: 900000, traits: ['表格', '文档', '报表'], enabled: true },
-    { id: 'dsh', name: 'DSH', adapter: 'self', models: [], traits: ['调度', '宿主'], enabled: true },
+    { id: 'dsh', name: 'DSH', adapter: 'cli', command: 'dsh', args: ['headless', '--patch', '{pluginDir}/dsh-headless.patch.yml', '-'], formatArgs: ['--json'], outputFormat: 'dsh-json', modelEnv: 'SANSHENG_DSH_MODEL', permissionEnv: 'DSH_PERMISSION_MODE', resumeArgs: ['--session-id', '{session}'], models: ['deepseek-flash', 'deepseek-v4-pro'], traits: ['中文', '长文本', '便宜'], enabled: true },
     { id: 'qwen', name: '千问办公', adapter: 'manual', models: [], traits: ['公文', 'PPT'], enabled: true },
     { id: 'coser', name: 'COSER', adapter: 'manual', models: [], traits: ['待配置'], enabled: false },
   ];
@@ -450,6 +450,7 @@
       recentWorkspaces: ['E:\\work\\project', 'E:\\work\\dsh-imperial-court', 'E:\\work\\design'],
       annals: { count: annals.length, rubberStamp: false },
       regime: regimeNow(),
+      deputy: { id: 'dsh', name: 'DSH' },
     };
   }
 
@@ -495,6 +496,13 @@
     if (pathname === '/probe-all' && method === 'POST') return Object.fromEntries(db.agents.map(a => [a.id, a.adapter === 'cli' ? probeOne(a) : { ok: true, detail: a.adapter }]));
     if (pathname === '/annals' && method === 'GET') return { entries: annals, stats: annalStats() };
     if (pathname === '/biography' && method === 'GET') return biography();
+    if (pathname === '/workspaces' && method === 'GET') return { workspaces: [
+      { path: 'E:\\work\\dsh-imperial-court', title: 'dsh-imperial-court', source: 'dsh' },
+      { path: 'E:\\work\\QQ 黑话学习', title: 'QQ 黑话学习', source: 'dsh' },
+      { path: 'E:\\work\\demo', title: 'demo', source: 'dsh' },
+      { path: 'E:\\work\\project', title: 'project', source: 'recent' },
+    ] };
+    if (pathname === '/pick-folder' && method === 'POST') return { path: 'E:\\work\\picked-folder' };
     if (pathname === '/estimate' && method === 'POST') {
       const text = String(body.brief || '');
       const clauses = text.split(/[，,。；;、\n]|并且|然后|同时|以及|\band\b|\bthen\b/i).filter(s => s.trim().length > 1).length;
