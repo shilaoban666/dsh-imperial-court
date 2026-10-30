@@ -340,6 +340,11 @@
       recheck: { verdict: 'approve', issues: [] },
       messages: [], events: [], artifacts: ['01-draft-r1.md', '01-draft-r2.md', '02-review-r1.md', '02-review-r2.md', '04-exec/01-rites-workorder.md', '04-exec/02-war.md', '05-recheck.md', '06-memorial.md', '07-changes.patch'],
     };
+    const t0 = done.createdAt;
+    const mk = (roleId, kind, a, b, agentId) => ({ id: `${done.id}:${roleId}:${a}`, roleId, kind, agentId, agentName: agentId, startedAt: t0 + a * 1000, endedAt: t0 + b * 1000, ok: true, costUsd: 0.02 * (b - a) / 10, savedUsd: 0.01, outcome: 'used' });
+    done.calls = [mk('zhongshu', 'draft', 0, 40, 'cc'), mk('menxia', 'submit', 40, 70, 'codex'), mk('zhongshu', 'draft', 70, 100, 'cc'), mk('menxia', 'submit', 100, 120, 'codex'),
+      mk('rites', 'order', 125, 410, 'wb'), mk('war', 'order', 125, 330, 'cc'), mk('menxia', 'audit', 412, 450, 'codex')];
+    done.recheck = { verdict: 'approve', issues: [] };
     pushMsg(done, { from: 'emperor', to: 'zhongshu', kind: 'draft', title: L('第 1 轮拟旨', 'Draft, round 1'), summary: done.brief, model: 'opus' });
     pushMsg(done, { from: 'menxia', to: 'zhongshu', kind: 'veto', title: L('第 1 轮', 'Round 1'), summary: L('方案让兵部直接改 README 正文，与礼部职掌冲突；未说明如何验证路径示例', 'The plan has the Legate rewrite the README, which is the Pontifex\'s remit; it does not say how the paths will be verified') });
     pushMsg(done, { from: 'menxia', to: 'zhongshu', kind: 'assent', title: L('第 2 轮', 'Round 2'), summary: '' });
@@ -511,6 +516,7 @@
       { path: 'E:\\work\\demo', title: 'demo', source: 'dsh' },
       { path: 'E:\\work\\project', title: 'project', source: 'recent' },
     ] };
+    if (pathname === '/impact' && method === 'GET') return window.__impact.impactOf(db.edicts);
     if (pathname === '/pick-folder' && method === 'POST') return { path: 'E:\\work\\picked-folder' };
     if (pathname === '/estimate' && method === 'POST') {
       const text = String(body.brief || '');
@@ -722,8 +728,9 @@
   // 每次都取最新的 client.js（http.server 不带缓存头，浏览器会拿旧的）
   (function () {
     const t = Date.now();
-    import('./lib/regime.mjs?t=' + t).then(m => {
+    Promise.all([import('./lib/regime.mjs?t=' + t), import('./lib/impact.mjs?t=' + t)]).then(([m, impact]) => {
       window.__regime = m;
+      window.__impact = impact;
       const s = document.createElement('script');
       s.src = 'client.js?t=' + t;
       s.onload = () => window.__previewBoot();
