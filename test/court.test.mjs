@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { createCourt, checkRequest, readableReport, handleRequest, chooseMode, routeMinistry } from '../index.mjs';
+import { createCourt, checkRequest, readableReport, handleRequest, chooseMode, routeMinistry, recentFiles, canOpenFile } from '../index.mjs';
 import { parseOutput, tailLine, costOf } from '../lib/treasury.mjs';
 import { parsePage, renderPage } from '../lib/wiki.mjs';
 import { extractJson, splitHandoff } from '../lib/prompts.mjs';
@@ -258,7 +258,7 @@ test('the annals remember vetoes and feed them to the next similar decree', asyn
 });
 
 test('unisolated decrees may not share a folder; isolated ones may', async () => {
-  const { api } = makeCourt({ flags: 'slow', rules: { maxConcurrent: 3 } });
+  const { api } = makeCourt({ flags: 'slow', rules: { maxConcurrent: 3, regimePowers: false } });
   const plain = tmp('court-plain-');
   const first = api.createEdict({ brief: 'one', workspace: plain });
   assert.throws(() => api.createEdict({ brief: 'two', workspace: plain }), /目录|folder/);
@@ -336,6 +336,10 @@ test('chooseMode and routeMinistry keep small jobs cheap', () => {
   assert.equal(routeMinistry('把 reports 里的 CSV 做成报表'), 'revenue');
   assert.equal(routeMinistry('translate the README'), 'rites');
   assert.equal(routeMinistry('随便看看'), 'war');
+  // 写歌写诗是礼部的事；装插件是兵部的事
+  assert.equal(routeMinistry('给我写一首歌'), 'rites');
+  assert.equal(routeMinistry('write me a poem'), 'rites');
+  assert.equal(routeMinistry('给我安装最新版本的插件 https://github.com/x/y'), 'war');
 });
 
 test('express mode is one call: no draft, no review, no audit', async () => {
@@ -650,4 +654,49 @@ test('workspace candidates come from DSH’s own sidebar list; an old DSH-itself
   assert.equal(dsh.adapter, 'cli');
   assert.equal(dsh.outputFormat, 'dsh-json');
   assert.equal(dsh.permissionEnv, 'DSH_PERMISSION_MODE');
+});
+
+test('regime sets power: a figurehead cannot reject, pick the procedure or open two decrees; the rule can turn it off', async () => {
+  const { api, court } = makeCourt();
+  const roles = { ...court.store.state.roles, menxia: { ...court.store.state.roles.menxia, agentId: 'fa' } };
+  api.savePreset({ agents: court.store.state.agents, roles, rules: court.store.state.rules });
+  const state = api.getState();
+  assert.equal(state.regime.level, 'jiuxi');
+  assert.equal(state.regime.power.reject, false);
+  assert.equal(state.regime.power.see, 1);
+  assert.equal(state.capacity, 1);
+  // 朝规里设的是常朝、下旨时要大朝会，傀儡都做不了主：一律按「自动」，短旨走急递
+  const { id, mode } = api.createEdict({ brief: 'write a hello file', workspace: tmp('court-plain-'), mode: 'grand' });
+  assert.equal(mode, 'express');
+  assert.throws(() => api.createEdict({ brief: 'another', workspace: tmp('court-plain-') }), /最多|at most/);
+  await waitFor(api, id, ['awaiting-approval', 'failed']);
+  assert.throws(() => api.reject(id, 'no'), /驳回|reject/);
+  api.savePreset({ agents: court.store.state.agents, roles, rules: { ...court.store.state.rules, regimePowers: false } });
+  assert.equal(api.getState().regime.power.reject, true);
+  assert.equal(api.reject(id, 'no').status, 'rejected');
+});
+
+test('no folder chosen: each decree gets its own output folder whose files can be listed and opened safely', async () => {
+  const base = tmp('court-out-');
+  process.env.SANSHENG_OUTPUT_DIR = base;
+  try {
+    const { api } = makeCourt({ rules: { mode: 'express' } });
+    const { id } = api.createEdict({ brief: 'write a hello file' });
+    const detail = await waitFor(api, id, ['awaiting-approval', 'failed']);
+    assert.ok(detail.workspace.startsWith(base), detail.workspace);
+    const files = api.files(id);
+    assert.equal(files.folder, detail.workspace);
+    assert.ok(files.changed.some(item => item.file === 'hello.txt' && item.openable), JSON.stringify(files.changed));
+    assert.throws(() => api.open(id, '../outside.txt', 'open'));
+    assert.throws(() => api.open(id, 'missing.txt', 'reveal'), /找不到|Not found/);
+  } finally {
+    delete process.env.SANSHENG_OUTPUT_DIR;
+  }
+  const dir = tmp('court-recent-');
+  fs.mkdirSync(path.join(dir, 'node_modules'));
+  fs.writeFileSync(path.join(dir, 'node_modules', 'skip.js'), '');
+  fs.writeFileSync(path.join(dir, 'song.md'), 'la');
+  assert.deepEqual(recentFiles(dir, Date.now() - 60000).map(item => item.file), ['song.md']);
+  assert.equal(canOpenFile('index.html'), true);
+  assert.equal(canOpenFile('run.bat'), false, 'scripts are revealed, never run');
 });
