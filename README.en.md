@@ -89,13 +89,15 @@ It ships in two languages that share one engine: **English · Roman Senate** and
 
 | Regime | See | Decide | Do |
 |---|---|---|---|
-| Dictator Perpetuo | Results | Seal, halt (**no reject**; the procedure is picked for you) | 1 decree, 1 office at a time |
-| Sejanus’ Rome | + flow and orders | + pick procedure | 1 decree, 2 offices in parallel |
+| Dictator Perpetuo | Results, flow and orders | Seal, halt (**no reject**; the procedure is picked for you) | 1 decree, 1 office at a time |
+| Sejanus’ Rome | + what each office is doing | + pick procedure | 1 decree, 2 offices in parallel |
 | East and West | + what each office is doing, dispatches and panorama (two houses watch each other) | + reject / discard | 2 decrees, 2 offices |
 | Triumvirate | same | same | 3 decrees, 3 offices |
 | Tetrarchy | + raw process (commands and output, folded) | same | 4 decrees, 4 offices |
 
 Hidden layers show a curtain naming the regime that unlocks them. **Halting works under every regime**, since a running tool must always be stoppable, and the host enforces the reject rule for the API and tools too. Turn off “Regime sets power” in the rules to opt out. Progress is told in plain words (editing which file, how many files edited, commands run, searches); commands themselves appear only under the Tetrarchy, folded. With no folder chosen, each decree gets its own folder under Documents/SanshengLiubu (registered in the DSH sidebar as the workspace “Senate output”, as are folders picked with the system dialog), and the Tabularium can open that folder, open documents and media with the default app, or reveal any file (scripts are only revealed, never run). Express decrees about songs, poems or stories now go to the Pontifex, and every order says to deliver text results in the report rather than building programs or web pages for them.
+
+**The Gains tab** compares the same work against one tool doing it alone: how many times faster the orders ran in parallel, how many points the pass rate rose before the work reached you, how many problems were caught first (vetoes, impeachments, admonitions, guards, remedies), and a quality score. The time ledger also shows what review cost, so the net figure is honest, and every number explains how it is measured (recorded data only, no model calls). **Res Gestae** adds twelve honours with progress bars. A single-tool court sees the flow and gets a one-click card to add a second tool as the Tribune, and new decrees offer starters (fix a bug, review changes, weekly report…).
 
 **Any office can go to any agent**, DSH itself included (it runs through `dsh headless`). The Consul and the Tribune may be the same agent, but that is *Dictator Perpetuo*: a house reviewing itself, and the Offices tab suggests recusal. **Models belong to offices**, not agents: the same Claude Code can run `opus` as Consul and `sonnet` as Legate.
 

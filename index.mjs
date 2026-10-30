@@ -14,6 +14,7 @@ import { runEdict, normalizeVerdict, deliverablePath } from './lib/court.mjs';
 import { ministriesOf, splitHandoff, extractJson } from './lib/prompts.mjs';
 import { tr, fail, errorText, normalizeLocale, roleTitle, MINISTRY_IDS, ROLE_IDS } from './lib/i18n.mjs';
 import { createAnnals, tokens } from './lib/annals.mjs';
+import { impactOf } from './lib/impact.mjs';
 import * as git from './lib/git.mjs';
 import { WORKFLOW_TEMPLATES, resolveWorkflow, cleanWorkflow } from './lib/workflows.mjs';
 import { createTreasury, costOf, savedOf, DEFAULT_PRICES } from './lib/treasury.mjs';
@@ -1050,6 +1051,11 @@ export function createCourt(config = {}, { log = console } = {}) {
       return pickFolderDialog(String(start || ''));
     },
     /** 帝王传记：朝局、架空指数、任务雷达、皇帝能力雷达、在位纪年。全部来自已有的账，不调模型 */
+    /** 成效：与一个工具单干相比，快了多少、交到你手上前的合格率高了多少（最近 200 份奏折） */
+    impact() {
+      const edicts = store.listEdicts().slice(0, 200).map(item => store.getEdict(item.id)).filter(Boolean);
+      return impactOf(edicts);
+    },
     biography() {
       const regime = regimeWithPuppet();
       const entries = annals.list();
@@ -1600,6 +1606,7 @@ export async function handleRequest(api, req, res, uiLocale = () => 'zh') {
     if (route === '/edicts' && method === 'POST') return sendJson(res, 200, api.createEdict({ locale, ...(await body(25 * 1024 * 1024)) }));
     if (route === '/annals' && method === 'GET') return sendJson(res, 200, api.annals());
     if (route === '/biography' && method === 'GET') return sendJson(res, 200, api.biography());
+    if (route === '/impact' && method === 'GET') return sendJson(res, 200, api.impact());
     if (route === '/workspaces' && method === 'GET') return sendJson(res, 200, api.workspaces());
     if (route === '/pick-folder' && method === 'POST') return sendJson(res, 200, await api.pickFolder((await body()).start));
     if (route === '/estimate' && method === 'POST') return sendJson(res, 200, api.estimate({ locale, ...(await body()) }));
