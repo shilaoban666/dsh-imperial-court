@@ -1,202 +1,228 @@
-# Imperial Senate · a DSH plugin (v0.7)
+<div align="center">
 
-> **[中文版：三省六部](README.md)**
+<img src="docs/brand/banner.jpg" alt="Imperial Senate: a multi-tool DSH plugin" width="100%">
 
-> Turn the AI command-line tools on your machine (**Claude Code, Codex, WorkBuddy**, and GUI-only tools) into a Roman Senate.
-> **Caesar** (you) issues a decree → the **Consul** drafts a plan → the **Tribune** reviews it and may veto → the **Proconsul** dispatches orders →
-> six **magistrates** work, **in parallel** where they can → the Tribune audits the results → you **seal** it, and only then is the work **merged**.
-> Everything happens on an **isolated git branch**; your folder is untouched until you seal.
+### Turn the AI tools on your machine into a Roman Senate: one drafts, another vetoes, magistrates work in parallel, and nothing merges until you seal it
 
-This is a native **DeepSeek Harness (DSH)** plugin, not an MCP bridge. The host half uses the Cordis plugin API; the browser half adds a full page, header views, right-hand panes and an overlay to DSH.
-It ships in two languages that share one engine: **English · Roman Senate** and **中文 · 三省六部** (the Chinese *Three Departments and Six Ministries*). Prompts sent to the models switch language too.
+[![Release](https://img.shields.io/github/v/release/shilaoban666/dsh-imperial-court?color=b4362b&label=release)](https://github.com/shilaoban666/dsh-imperial-court/releases)
+[![DSH plugin](https://img.shields.io/badge/DSH-plugin-e9c46a)](https://dshbase.com/zh/plugins/)
+[![Tests](https://img.shields.io/badge/tests-48%20passing-1f8a70)](test/court.test.mjs)
+[![Node](https://img.shields.io/badge/node-%E2%89%A520-3c873a)](package.json)
+[![Languages](https://img.shields.io/badge/English-%E4%B8%AD%E6%96%87-2e6f9e)](README.md)
+[![License](https://img.shields.io/badge/license-MIT-5d5348)](LICENSE)
 
-> **Just want to look?** Serve the repo folder (`python -m http.server`) and open `preview.html?lang=en`.
-> It runs the real `client.js` against an in-memory mock host and replays a session with parallel orders, a referral and a manual step.
-> URL options: `&theme=roma|marble|nox`, `&at=25` to jump to second 25.
+[中文](README.md) · **English** · [Quick start](#quick-start) · [Screenshots](#screenshots) · [Guide](docs/GUIDE.en.md) · [Changelog](CHANGELOG.md)
 
-## New in v0.7
-
-| Area | What changed |
-|---|---|
-| **Praetorian Guard** (锦衣卫) | A built-in watchman that costs no tokens: it **seizes stalled work** (no output for N minutes → kill and redo), **admonishes shirking** ("I cannot", "you can manually run…" → sent back) and **halts overspending** (per-decree allotment, monthly budget). Redos escalate on a ladder modeled on [pua](https://github.com/tanweai/pua): admonition → interrogation → review (seven-point checklist) → last chance, each level with concrete methods, not just pressure |
-| **Agentes in rebus** (监察御史) | Every finished order is inspected at once: free deterministic checks in the Senate procedure (does the named deliverable exist, is the report empty), plus a cheap model inspection in the Comitia; failures are **impeached** and redone with the findings |
-| **Three procedures** (the orchestration tax) | **Cursus publicus**: no draft, review or audit; routed by keywords straight to one magistrate, from one call. **Senate**: the full procedure. **Comitia**: plus per-order inspection. "Auto" picks by brief size; the composer shows a live estimate of calls and cost |
-| **Session resume** | Later rounds of the same office (redraft, re-review, JSON reminder, redo) resume the previous session with `--resume` and send only the delta, so the cache carries over |
-| **Aerarium** (国库) | Every call is booked: input / output / cache read-write tokens, cost (Claude Code's own report wins, others use an editable price table), cache savings and **waste** (vetoed drafts, attempts before a redo, failures, failed decrees). Shown in aurei, denarii and sestertii (Han wuzhu coins in Chinese) with real money alongside; the Quaestor gives advice from the data |
-| **Chronicle** (LLM-Wiki + dsh-memory) | One markdown page per working folder and per office: facts / conventions / pitfalls, each with its **source decree and trust mark** (✓ sealed, ? not sealed, ✗ rejected). An annalist extracts facts with one cheap call per report; sealing upgrades to ✓, rejection drops them; recall puts 📌 pinned and ✓ first within a character budget; `index.md`, `log.md`, one-click lint; your edits win |
-| **Visibility** | **Session panorama**: one lane per office, one bar per call; parallelism, vetoes, impeachments, redos and resumed sessions at a glance. A one-line **narrator** says who is doing what right now |
-| **Tabularium** | Which files changed (live from the worktree, then from the branch), whether each named deliverable exists, and the content or diff of any file |
-| Tests | 38 end-to-end tests |
-
-## Screenshots
-
-> From `preview.html`: the real `client.js` on a mock host laid out like the DSH desktop app. Demo data.
-
-**Forum Romanum theme and the "Senate floor" pane.** Dispatches between offices read like a group chat; live output streams in while an office works.
-
-![Senate floor](docs/screenshots/en-01-forum.jpg)
-
-**The Aerarium**: this month, today and all time in Roman coin and real money; tokens, cache hit rate and savings, waste, daily spend, spend by office and tool, the Quaestor’s advice.
-
-![Aerarium](docs/screenshots/en-07-aerarium.jpg)
-
-**A decree awaiting your seal.** Flow bar, *Seal and merge*, the isolated branch with its changed files and patch, dispatches, and orders with their dependencies.
-
-![Decree](docs/screenshots/en-02-decree.jpg)
-
-<details>
-<summary>More: the scroll composer, awaiting input, the Annals, the Marble theme</summary>
-
-**Issue a decree**: a papyrus scroll on wooden rods; press the SPQR wax seal (or Ctrl + Enter) and an APPROBATVM stamp lands on it.
-
-![Scroll](docs/screenshots/en-03-scroll.jpg)
-
-**Awaiting input**: the Pontifex is a GUI-only tool, so the session pauses until you fill in the result (or skip it). The Quaestor and the Praetor already ran in parallel; the Legate is handling the Praetor's referral.
-
-![Acta](docs/screenshots/en-04-acta.jpg)
-
-**Annals**: veto rate, first-pass rate, each magistrate's record, and the lessons each decree left behind.
-
-![Annals](docs/screenshots/en-05-annals.jpg)
-
-**Marble · Tyrian purple** (light) with the standing orders and the three offices.
-
-![Marble](docs/screenshots/en-06-marble.jpg)
-
-</details>
+</div>
 
 ---
 
-## The offices
+An AI tool that writes and reviews its own work has not been reviewed. **Imperial Senate** is a native [DeepSeek Harness (DSH)](https://dshbase.com/zh/plugins/) plugin that seats the tools on your machine (**Claude Code, Codex, WorkBuddy and DSH itself**) in a Roman Senate. The **Consul** drafts a plan, the **Tribune** (a different tool) reviews it and may veto, the **Proconsul** dispatches orders, six **magistrates** work **in parallel** where they can, inspectors check the results, the Tribune audits, and only your **seal** merges it. Everything happens on an **isolated git branch**; your folder is untouched until you seal.
 
-| Office | Chinese original | Remit | Default holder | Why |
-|---|---|---|---|---|
-| **Consul** | 中书省 | Drafts the plan (the decree) | Claude Code | Planning; reads the whole repo |
-| **Tribune** | 门下省 | Reviews the plan; wields the veto | Codex | **A different model reviews**: a model checking itself is no check |
-| **Proconsul** | 尚书省 | Dispatches orders and reports back | the plugin itself | Deterministic; no model call |
-| **Censor** | 吏部 | People, accounts, permissions, configuration | Claude Code | |
-| **Quaestor** | 户部 | Data, spreadsheets, reports, finance | WorkBuddy | |
-| **Pontifex** | 礼部 | Documents, briefings, slides | Qwen Office (manual) | |
-| **Legate** | 兵部 | Code, builds, deployment | Claude Code | |
-| **Praetor** | 刑部 | Tests, review, compliance | Codex | A second pair of eyes |
-| **Aedile** | 工部 | UI, design, infrastructure | COSER (to configure) | |
+It ships in two languages that share one engine: **English · Roman Senate** and **中文 · 三省六部** (the Tang dynasty's *Three Departments and Six Ministries*). Prompts switch language too.
 
-**The regime** is read from who holds office (no model calls): one tool with one model house is *Dictator Perpetuo*, one tool calling several model houses is *Sejanus’ Rome*, two tools are *East and West*, three a *Triumvirate*, four or more a *Tetrarchy*. The fewer houses, the cheaper and faster, but the less you can see or step in. The Offices tab shows the ladder, who holds what and which idle tool to appoint where to move up a rung; the **Res Gestae** tab adds a puppet index (are you a figurehead?), a radar of each magistrate's success rate and a radar of your six virtues (Appointments, Oversight, Thrift, Clarity, Diligence, Results).
+## Why
 
-**The Senate tab is a three-column workbench**, laid out like the Claude Code desktop app: decrees on the left; in the middle the decree, the Consul's plan, **each magistrate's full report** (Markdown), live output, awaiting input, seal / reject / halt and the isolated branch, with the composer at the bottom so the result is in view without scrolling; on the right the flow, the orders, a mini panorama, recent dispatches and documents. Narrow windows fold the right column into a *Flow* drawer, then the list into a dropdown. The **Forum** tab holds the full panorama and every dispatch between offices as a group chat.
+<table>
+<tr>
+<td width="33%" valign="top">
 
-**The regime sets your power.** The fewer tools at court, the less Caesar sees, decides and gets done:
+**🔍 A second house reviews**
 
-| Regime | See | Decide | Do |
-|---|---|---|---|
-| Dictator Perpetuo | Results, flow and orders | Seal, halt (**no reject**; the procedure is picked for you) | 1 decree, 1 office at a time |
-| Sejanus’ Rome | + what each office is doing | + pick procedure | 1 decree, 2 offices in parallel |
-| East and West | + what each office is doing, dispatches and panorama (two houses watch each other) | + reject / discard | 2 decrees, 2 offices |
-| Triumvirate | same | same | 3 decrees, 3 offices |
-| Tetrarchy | + raw process (commands and output, folded) | same | 4 decrees, 4 offices |
+Drafting and review go to two different tools, so their blind spots differ. An unparsable review lets **nothing through** (fail-closed); inspectors check every order and impeach false reports.
 
-Hidden layers show a curtain naming the regime that unlocks them. **Halting works under every regime**, since a running tool must always be stoppable, and the host enforces the reject rule for the API and tools too. Turn off “Regime sets power” in the rules to opt out. Progress is told in plain words (editing which file, how many files edited, commands run, searches); commands themselves appear only under the Tetrarchy, folded. With no folder chosen, each decree gets its own folder under Documents/SanshengLiubu (registered in the DSH sidebar as the workspace “Senate output”, as are folders picked with the system dialog), and the Tabularium can open that folder, open documents and media with the default app, or reveal any file (scripts are only revealed, never run). Express decrees about songs, poems or stories now go to the Pontifex, and every order says to deliver text results in the report rather than building programs or web pages for them.
+</td>
+<td width="33%" valign="top">
 
-**The Gains tab** compares the same work against one tool doing it alone: how many times faster the orders ran in parallel, how many points the pass rate rose before the work reached you, how many problems were caught first (vetoes, impeachments, admonitions, guards, remedies), and a quality score. The time ledger also shows what review cost, so the net figure is honest, and every number explains how it is measured (recorded data only, no model calls). **Res Gestae** adds twelve honours with progress bars. A single-tool court sees the flow and gets a one-click card to add a second tool as the Tribune, and new decrees offer starters (fix a bug, review changes, weekly report…).
+**⚡ Parallel where it can be**
 
-**Any office can go to any agent**, DSH itself included (it runs through `dsh headless`). The Consul and the Tribune may be the same agent, but that is *Dictator Perpetuo*: a house reviewing itself, and the Offices tab suggests recusal. **Models belong to offices**, not agents: the same Claude Code can run `opus` as Consul and `sonnet` as Legate.
+The Consul writes dependencies; independent orders run together. Small jobs go **express** to one magistrate: a real poem request came back in 16 seconds for about $0.001.
+
+</td>
+<td width="33%" valign="top">
+
+**🛡️ Your code is untouched until you seal**
+
+Each decree gets a `git worktree` and branch, a patch and a change list. Seal to merge; reject to keep a snapshot; discard in one click. Halting always works.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+**📊 Worth it? It shows you**
+
+The **Gains** tab compares the same work with **one tool alone**: how much faster, how many points the pass rate rose before it reached you, how many problems were caught. Review time is on the ledger too, so the net is honest.
+
+</td>
+<td valign="top">
+
+**💰 Every coin on the books**
+
+The **Aerarium** books tokens, cache hits, cost and **waste** (vetoed drafts, redos) for every call. Per-decree allotments and monthly budgets; the Guard halts overspending.
+
+</td>
+<td valign="top">
+
+**🏛️ Fun, and useful**
+
+Five regimes: the more tools, the safer your throne; one tool alone makes you *Dictator Perpetuo*'s puppet. Res Gestae, a puppet index, radars, twelve honours, two languages and six themes.
+
+</td>
+</tr>
+</table>
+
+## Screenshots
+
+> From [`preview.html`](preview.html): the real `client.js` on a mock host laid out like the DSH desktop app. Demo data.
+
+<table>
+<tr>
+<td width="50%"><b>Senate</b>: decrees, each magistrate's full report, the flow<br><img src="docs/screenshots/en-09-senate.jpg" alt="Senate"></td>
+<td width="50%"><b>Gains</b>: the same work against one tool alone<br><img src="docs/screenshots/en-08-gains.jpg" alt="Gains"></td>
+</tr>
+<tr>
+<td><b>Senate floor</b>: dispatches read like a group chat<br><img src="docs/screenshots/en-01-forum.jpg" alt="Senate floor"></td>
+<td><b>Aerarium</b>: tokens, cache, cost and waste<br><img src="docs/screenshots/en-07-aerarium.jpg" alt="Aerarium"></td>
+</tr>
+</table>
+
+<details>
+<summary>More: a decree awaiting your seal, the scroll composer, Acta, Annals, the Marble theme</summary>
+
+<br>
+
+| | |
+|---|---|
+| ![Decree](docs/screenshots/en-02-decree.jpg) | ![Scroll](docs/screenshots/en-03-scroll.jpg) |
+| ![Acta](docs/screenshots/en-04-acta.jpg) | ![Annals](docs/screenshots/en-05-annals.jpg) |
+| ![Marble](docs/screenshots/en-06-marble.jpg) | ![Panorama](docs/screenshots/11-panorama.jpg) |
+
+</details>
 
 ## How a decree flows
 
 ```mermaid
 flowchart LR
-  E[Caesar's decree] --> W[Isolated branch<br/>court/id]
-  W --> Z[Consul drafts<br/>JSON plan + dependencies]
-  Z --> M{Tribune reviews<br/>unparsable = no pass}
+  E([You issue]) --> Z[Consul drafts<br/>plan + dependencies]
+  Z --> M{Tribune reviews<br/>a different tool}
   M -- veto --> Z
   M -- assent --> S[Proconsul dispatches]
-  S --> L[Magistrates work in parallel<br/>GUI-only offices pause for input]
-  L --> R{Tribune audits}
-  R -- autonomy, failing --> F[Remedial orders] --> L
-  R --> C[Commit branch<br/>write patch]
-  C --> A{Caesar's seal}
-  A -- seal --> G[Merge into original branch]
-  A -- reject --> X[Keep snapshot branch<br/>reason goes to the Annals]
+  S --> L[Magistrates in parallel<br/>on an isolated branch]
+  L --> Y[Inspectors<br/>impeach false reports]
+  Y --> R{Tribune audits}
+  R --> A{Your seal}
+  A -- seal --> G([Merge])
+  A -- reject --> X([Snapshot])
 ```
 
-### What keeps it honest
+Small jobs go **express** (straight to one magistrate); long ones go to the **Comitia** (plus per-order inspection). *Auto* picks by brief size and estimates calls and cost before you issue.
 
-- **Isolation.** If the folder is in a git repo with at least one commit, each decree gets `git worktree add -b court/<id>`. Magistrates edit the worktree; at the end the work is committed, a `07-changes.patch` is written, and the worktree is removed while the branch stays. **Seal** merges it (`--no-ff`) into the branch that was checked out when the decree began. If you have switched branches or the merge conflicts, sealing is refused, the repository is left exactly as it was, and you are told why. **Reject / halt / restart** keep a snapshot branch; **Discard branch** deletes it. Branches with no changes delete themselves.
-- **Fail-closed review.** If the Tribune's answer is not valid JSON, it is asked once more with a format reminder. If it still cannot be parsed, nothing is let through.
-- **Write permission only where it belongs.** Executing orders get the agent's `execArgs` (Claude Code: `--permission-mode acceptEdits --allowedTools Bash,Read,Write,Edit,Glob,Grep`; Codex: `--sandbox workspace-write`). Drafting, review and audit stay read-only.
-- **Parallelism with dependencies.** The Consul gives each step an `after` list; independent steps run together (2 by default, up to 4). A fixed procedure always runs in order.
-- **Referrals.** A magistrate can end its report with `{"handoff":{"to":"justice","reason":"…"}}` and the Proconsul forwards it once. If the order limit is reached, a public notice is posted instead of silently dropping it. The JSON never shows up in the chat.
-- **Manual offices pause.** A GUI-only (or DSH-itself) office issues a work order and the session waits until you fill in the result on the decree page, in the right pane, or through `sansheng_fill`.
-- **The Annals remember.** Every decree leaves lessons: what the Tribune vetoed, which audit criteria failed, which orders broke, why you rejected it. Similar future decrees get the relevant lessons in their drafting and review prompts. The Annals also show the veto rate and warn when the Tribune has vetoed nothing in five or more decrees.
-- **CSRF guard.** State-changing requests must be `application/json` and same-origin, so a random web page cannot start CLIs on your machine with a form post.
+## Quick start
 
-### Autonomy
+**1. Install** (DSH, Node 20+ and git)
 
-| Step | Standard | Autonomous |
+```bash
+dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v0.9.0
+```
+
+Use `--profile web` for the web build; drop `#v0.9.0` to follow the latest code.
+
+**2. Open**: restart DSH, click the seal in the sidebar, switch to **EN**, and press **Probe all** in the *Cohort* tab.
+
+**3. Issue your first decree**: write what you need in the *Senate* tab and press **Enter**, or click a **starter** (fix a bug, review changes, weekly report…).
+
+DSH alone works: DSH itself can hold any office. For a real cross-check, add a second tool:
+
+```bash
+npm i -g @anthropic-ai/claude-code   # or npm i -g @openai/codex; run it once to sign in
+```
+
+The Senate tab then offers to seat it as the Tribune in one click, lifting you to *East and West*.
+
+> **Just want to look?** Run `python -m http.server` in the repo and open `http://localhost:8000/preview.html?lang=en` for a full replayed session.
+
+## Features
+
+| | Feature | What it does |
 |---|---|---|
-| Vetoed up to the limit | Fails; your call | Executes the last draft, vetoes become cautions |
-| Tribune unparsable (after retry) | Fails closed | Goes ahead; the audit must still pass |
-| GUI-only / disabled / vacant office | Pauses for your input | The deputy (Claude Code by default) stands in |
-| An order fails | Recorded as failed | Retried once with the error |
-| Audit fails | Reported for your seal | Remedy → redo → re-audit, up to N rounds |
-| Audit passes | Waits for your seal | Archived (merged too if *Merge on auto-archive* is on) |
+| 🏛️ | **Three-column Senate** | Decrees, the full reports, the flow; the composer mirrors DSH: attachments, three permission levels, working folder |
+| 🔀 | **Dependency-graph parallelism** | Independent orders run together; referrals, fill-ins, session resume with deltas only |
+| ⚖️ | **Fail-closed review** | No parsable verdict, no pass; recusal when one house drafts and reviews |
+| 🌿 | **Isolated branches** | `git worktree` + branch and a patch; seal to merge, reject to snapshot, discard |
+| 🗡️ | **Guard and inspectors** | Seize stalls, admonish shirking, halt overspending; impeach false reports |
+| 👑 | **Five regimes** | What you see, whether you can reject and how much runs in parallel depend on how many tools hold office |
+| 📈 | **Gains** | Speed, pass rate, problems caught and a quality score against one tool alone, with transparent methods |
+| 🪙 | **Aerarium** | Tokens, cache, cost and waste; allotments and budgets |
+| 📜 | **Annals and Chronicle** | Lessons feed the next decree; a sourced notebook per folder |
+| 🧭 | **DSH in office** | Any office via `dsh headless`, with your desktop sign-in and a model per office |
+| 📂 | **Open the output** | Open the output folder, open documents and media, reveal files |
+| 🌏 | **Two languages** | Roman Senate / 三省六部, six themes, prompts in either language |
 
-> ⚠️ Autonomy arguments let CLIs write files, run commands and use the network without confirmation. The branch protects your repository, not the rest of your machine. Only attach CLIs you trust, keep API keys in environment variables, never in the brief.
+Every tab and setting is explained in the **[guide](docs/GUIDE.en.md)**.
 
-## Model tools
+## Regimes
 
-`sansheng_edict` (issue; optional `workflow`: `default`, `none`, `video`, `dev`, `report`, or `war,justice`), `sansheng_status`, `sansheng_approve` (seal and merge), `sansheng_reject`, `sansheng_fill`, `sansheng_assign`.
+| Regime | When | See | Decide | Do |
+|---|---|---|---|---|
+| Dictator Perpetuo | One tool, one model house | Results, flow and orders | Seal, halt (no reject) | 1 decree · 1 office |
+| Sejanus’ Rome | One tool, several houses | + what each office is doing | + pick procedure | 1 decree · 2 offices |
+| East and West | Two tools | + dispatches and panorama | + reject / discard | 2 · 2 |
+| Triumvirate | Three tools | same | same | 3 · 3 |
+| Tetrarchy | Four or more | + raw process (folded) | same | 4 · 4 |
 
-## DSH itself can hold any office
+Halting works under every regime. Turn off *Regime sets power* in the standing orders to opt out.
 
-DSH ships a one-shot task mode, `dsh headless`; the plugin uses it so DSH does real work like Claude Code or Codex (older versions only issued a to-do for someone to fill in).
+## FAQ
 
-- **Found without PATH**: the plugin locates `resources/runtime/cli/bin/dsh.cmd` from the DSH install folder, including the location recorded in Windows' uninstall entries.
-- **Your login**: headless only reads `DEEPSEEK_API_KEY` by default; the bundled [`dsh-headless.patch.yml`](dsh-headless.patch.yml) re-enables the desktop sign-in. With `DEEPSEEK_API_KEY` set, it uses the API key.
-- **Model per office**: `deepseek-flash` / `deepseek-v4-pro`, passed to the patch through `SANSHENG_DSH_MODEL`.
-- **Permission per decree**: read only / edit in workspace / full access map to DSH's own `DSH_PERMISSION_MODE`; drafting and review are always read-only.
-- **Real accounts, resumable**: usage from the `--json` events (cache hits included) goes into the Aerarium; redos continue the same session with `--session-id`.
+<details>
+<summary><b>Can it break my code?</b></summary>
 
-**Tools without a command line** (GUI-only): the order pauses for you to fill in, skip, or **hand it to DSH** in one click (the deputy is set in the rules; DSH by default).
+In a git repo every decree works in its own `git worktree` and branch; your folder is untouched until you seal. If you switched branches or the merge conflicts, sealing is refused and nothing changes. Outside git it edits the folder directly, so keep important work in a repository. *Read only* permission is one click away.
 
-The decree box mirrors DSH's input: **＋ attach files**, **permission**, **working folder** (DSH's own workspaces plus recent ones, or a native folder dialog) and criteria on the left, the procedure on the right. Attachments are kept in the decree's own folder, never on the isolated branch, and their paths go into every order.
+</details>
 
-## Install
+<details>
+<summary><b>How much does it cost, and is it slow?</b></summary>
 
-```powershell
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court
-```
+The plugin makes no model calls itself; you pay your CLIs, and the Aerarium books every call. Express decrees are one call (16 s and about $0.001 in a real test); the full procedure adds drafting, review and audit rounds, slower and dearer, in exchange for a cross-check. The Gains tab nets review time against what it saved.
 
-Or from a local clone: `dsh plugin --profile desktop add "link:<absolute path>"`. Use `--profile web` for the web build.
-After restarting DSH, open the plugin, switch to **EN**, and press **Probe all** in the *Readiness check* to confirm each CLI is found (set an absolute path in the *Cohort* tab if not).
-The plugin only orchestrates: install and log in to the CLIs yourself (`npm i -g @anthropic-ai/claude-code`, `npm i -g @openai/codex`, then run each once).
+</details>
 
-Development: `npm test` runs 38 end-to-end tests against real git repositories and a fake CLI (Node 20+, git).
+<details>
+<summary><b>I only have DSH. Does it work?</b></summary>
 
-## Layout
+Yes. DSH itself can hold every office through `dsh headless`. But one house reviewing itself is *Dictator Perpetuo*: no reject, one decree at a time. Add Claude Code or Codex and upgrade in one click.
 
-| Path | Role |
-|---|---|
-| `index.mjs` | Host half: state, isolation, fill-in, annals, HTTP endpoints, model tools |
-| `client.js` | Browser half: zero-build IIFE with all views and both languages |
-| `lib/court.mjs` | The state machine: draft, fail-closed review, dependency-graph scheduling, referrals, audit, remedy |
-| `lib/prompts.mjs` | Prompt templates in Chinese and English |
-| `lib/git.mjs` | Worktrees, commits, patches, merges, discards |
-| `lib/annals.mjs` | Lessons, similarity recall, veto statistics |
-| `lib/regime.mjs` | The regime: tools and model houses in office, five rungs, upgrade tips, puppet index |
-| `lib/i18n.mjs` | Office names, remits and host-side strings |
-| `test/` | End-to-end tests and the fake CLI |
+</details>
 
-Data lives in `$DSH_HOME/sansheng-liubu/` (`~/.dsh/` by default): `state.json`, `annals.json`, `edicts/<id>/`, and `worktrees/<id>/` while a decree runs.
+<details>
+<summary><b>How is this different from just using Claude Code?</b></summary>
+
+One tool hands you whatever it wrote. The Senate adds three gates (a second tool reviews the plan, every order is inspected, the result is audited), so problems are sent back before you see them, and independent work runs in parallel. It costs extra calls: use it for work that matters, send small jobs express.
+
+</details>
+
+<details>
+<summary><b>Where is my data? Is anything uploaded?</b></summary>
+
+Everything stays on your machine in `~/.dsh/sansheng-liubu/`. The plugin serves a local HTTP endpoint for its own page only, accepts state changes only as same-origin JSON, and calls models only through the CLIs you installed.
+
+</details>
 
 ## Known limits
 
-1. Not yet run end to end inside a real DSH with real CLIs. The host half is covered by the end-to-end tests, the browser half was checked page by page in `preview.html`, and the plugin contracts were checked against the DSH desktop client and published plugins.
-2. Parallel orders share one worktree and rely on "different steps write different files"; there is no file locking.
-3. Waiting for input lives in memory: restarting DSH during a pause ends the decree (its snapshot branch is kept).
-4. Annals recall is word overlap, not semantic search.
-5. Merges are plain `--no-ff`; conflicts are reported, never auto-resolved.
+- Verified on a real machine up to express decrees; a multi-tool Senate procedure has not yet run end to end on a real machine.
+- Parallel orders share one worktree and rely on writing different files.
+- Restarting DSH while waiting for input ends the decree (the snapshot branch is kept).
+- DSH's sidebar session list is closed to plugins, so decrees are listed in the Senate tab.
+
+Full list and roadmap: [guide · known limits](docs/GUIDE.en.md#15-known-limits-and-roadmap).
+
+## Contributing
+
+Issues and PRs are welcome. Run `npm test` first (48 end-to-end tests against real git repositories and a fake CLI); check UI changes in `preview.html`.
 
 ## License
 
-MIT. Make the Tribune harsher than the Consul, and let the Annals tell you whether it is rubber-stamping.
+[MIT](LICENSE). Make the Tribune harsher than the Consul, and let the Annals tell you whether it is rubber-stamping.
