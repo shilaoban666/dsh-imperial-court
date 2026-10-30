@@ -450,7 +450,7 @@
     return {
       root: 'C:\\Users\\you\\.dsh\\sansheng-liubu', locale: db.ui.locale, agents: db.agents, roles: db.roles, rules: db.rules, ui: db.ui,
       edicts: db.edicts.map(e => ({ id: e.id, brief: e.brief, workspace: e.workspace, status: e.status, stage: e.stage, note: e.note, createdAt: e.createdAt, updatedAt: e.updatedAt, haltedAt: e.haltedAt })),
-      busy: sim ? [sim.edict.id] : [], capacity: db.rules.maxConcurrent, full: false, live,
+      busy: sim ? [sim.edict.id] : [], capacity: regimeNow().power.concurrent, full: false, live,
       recent: db.edicts[0] && db.edicts[0].messages.filter(m => m.kind === 'report' && m.durationMs).slice(-3).map(m => ({ edictId: db.edicts[0].id, roleId: m.from, agent: 'Claude Code', kind: 'order', title: m.title, ok: true, endedAt: m.at, durationMs: m.durationMs })) || [],
       ministries: ['personnel', 'revenue', 'rites', 'war', 'justice', 'works'].map(id => ({ id, title: TITLES[db.ui.locale][id], duty: db.roles[id].duty })),
       workflow: db.workflow, workflowTemplates: TEMPLATES,
@@ -464,9 +464,11 @@
   // 朝局用插件自己的 lib/regime.mjs 算（启动时载入），与宿主一模一样
   function regimeNow() {
     const m = window.__regime;
-    const regime = m.regimeOf(db);
+    const real = m.regimeOf(db);
+    const forced = m.REGIMES.includes(params.get('regime')) ? params.get('regime') : '';
+    const regime = forced ? { ...real, level: forced, rank: m.REGIMES.indexOf(forced) + 1 } : real;
     const score = m.puppetIndex(regime, annals);
-    return { ...regime, puppet: { score, verdict: m.puppetVerdict(score) } };
+    return { ...regime, puppet: { score, verdict: m.puppetVerdict(score) }, power: m.powerOf(regime.level, db.rules), powers: m.POWERS };
   }
   function biography() {
     const settled = annals.filter(e => ['done', 'rejected', 'cancelled', 'failed'].includes(e.outcome));
@@ -538,8 +540,9 @@
       if (method === 'GET' && !m[2]) return { ...summary(e), plan: e.plan || null, recheck: e.recheck || null, results: (e.steps || []).filter(s => s.summary).map(s => ({ seq: s.seq, summary: s.summary })), recalledLessons: e.recalledLessons || [], calls: e.calls || [], messages: e.messages, events: e.events, live: liveNow().filter(l => l.edictId === e.id) };
       if (method === 'GET' && m[2] === '/files') {
         const changed = e.git && e.git.stat ? e.git.stat.files : (e.steps || []).filter(s => s.status === 'done').map(s => ({ file: s.deliverable || 'out.txt', add: 12, del: 2 }));
-        return { source: e.git && e.git.finalized ? 'branch' : e.git ? 'worktree' : 'workspace', changed, deliverables: (e.steps || []).filter(s => s.deliverable).map(s => ({ path: s.deliverable, exists: s.status === 'done' })) };
+        return { folder: e.git && e.git.finalized && !e.git.merged ? '' : e.workspace, workspace: e.workspace, source: e.git && e.git.finalized ? 'branch' : e.git ? 'worktree' : 'workspace', changed: changed.map(item => ({ ...item, openable: /\.(md|txt|html|xlsx|docx|pdf)$/i.test(item.file) })), deliverables: (e.steps || []).filter(s => s.deliverable).map(s => ({ path: s.deliverable, exists: s.status === 'done' })) };
       }
+      if (method === 'POST' && m[2] === '/open') return { ok: true, how: body.how || 'folder' };
       if (method === 'GET' && m[2] === '/file') {
         const rel = query.get('path');
         if (query.get('diff') === '1') return { path: rel, diff: true, text: `diff --git a/${rel} b/${rel}\n--- a/${rel}\n+++ b/${rel}\n@@ -96,7 +96,11 @@\n-  return { file: command, args, shell: true };\n+  const isBatch = /\\.(cmd|bat)$/i.test(resolved);\n+  return {\n+    file: escapeCmdCommand(resolved || command),\n+    args: args.map(arg => escapeCmdArg(arg, isBatch)),\n+    shell: true,\n+  };\n` };

@@ -85,6 +85,18 @@ It ships in two languages that share one engine: **English · Roman Senate** and
 
 **The Senate tab is a three-column workbench**, laid out like the Claude Code desktop app: decrees on the left; in the middle the decree, the Consul's plan, **each magistrate's full report** (Markdown), live output, awaiting input, seal / reject / halt and the isolated branch, with the composer at the bottom so the result is in view without scrolling; on the right the flow, the orders, a mini panorama, recent dispatches and documents. Narrow windows fold the right column into a *Flow* drawer, then the list into a dropdown. The **Forum** tab holds the full panorama and every dispatch between offices as a group chat.
 
+**The regime sets your power.** The fewer tools at court, the less Caesar sees, decides and gets done:
+
+| Regime | See | Decide | Do |
+|---|---|---|---|
+| Dictator Perpetuo | Results | Seal, halt (**no reject**; the procedure is picked for you) | 1 decree, 1 office at a time |
+| Sejanus’ Rome | + flow and orders | + pick procedure | 1 decree, 2 offices in parallel |
+| East and West | + what each office is doing | + reject / discard | 2 decrees, 2 offices |
+| Triumvirate | + dispatches and panorama | same | 3 decrees, 3 offices |
+| Tetrarchy | + raw process (commands and output, folded) | same | 4 decrees, 4 offices |
+
+Hidden layers show a curtain naming the regime that unlocks them. **Halting works under every regime**, since a running tool must always be stoppable, and the host enforces the reject rule for the API and tools too. Turn off “Regime sets power” in the rules to opt out. Progress is told in plain words (editing which file, how many files edited, commands run, searches); commands themselves appear only under the Tetrarchy, folded. With no folder chosen, each decree gets its own folder under Documents/SanshengLiubu, and the Tabularium can open that folder, open documents and media with the default app, or reveal any file (scripts are only revealed, never run). Express decrees about songs, poems or stories now go to the Pontifex, and every order says to deliver text results in the report rather than building programs or web pages for them.
+
 **Any office can go to any agent**, DSH itself included (it runs through `dsh headless`). The Consul and the Tribune may be the same agent, but that is *Dictator Perpetuo*: a house reviewing itself, and the Offices tab suggests recusal. **Models belong to offices**, not agents: the same Claude Code can run `opus` as Consul and `sonnet` as Legate.
 
 ## How a decree flows
