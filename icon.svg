@@ -1,0 +1,18 @@
+<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 三省六部：朱红印章上三道金横，即「三」字 -->
+  <rect x="2" y="2" width="32" height="32" rx="8" fill="url(#seal)" />
+  <rect x="3.5" y="3.5" width="29" height="29" rx="6.5" stroke="#FFE7B0" stroke-opacity="0.35" />
+  <rect x="11" y="10" width="14" height="2.6" rx="1.3" fill="url(#gold)" />
+  <rect x="12.5" y="16.7" width="11" height="2.6" rx="1.3" fill="url(#gold)" />
+  <rect x="9" y="23.4" width="18" height="2.8" rx="1.4" fill="url(#gold)" />
+  <defs>
+    <linearGradient id="seal" x1="4" y1="3" x2="32" y2="34" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E2614B" />
+      <stop offset="1" stop-color="#9E2A20" />
+    </linearGradient>
+    <linearGradient id="gold" x1="9" y1="10" x2="27" y2="26" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF1C9" />
+      <stop offset="1" stop-color="#E9C46A" />
+    </linearGradient>
+  </defs>
+</svg>

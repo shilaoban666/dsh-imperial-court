@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Imperial Senate",
+    "description": "Turns Claude Code, Codex, WorkBuddy and DSH into a Roman Senate: one drafts, another vetoes, magistrates work in parallel, an audit follows and you seal the merge, all on an isolated git branch."
+  }
+}

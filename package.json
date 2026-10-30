@@ -1,10 +1,24 @@
 {
   "name": "dsh-sansheng-liubu",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "type": "module",
   "main": "index.mjs",
-  "description": "三省六部 / Imperial Court：把本机的 Claude Code / Codex / WorkBuddy 等 AI CLI 组织成朝堂（或古罗马元老院），拟旨、封驳、并行办差、复核、批红合并，全程在隔离的 git 分支里进行。",
-  "keywords": ["dsh", "dsh-plugin", "deepseek-harness", "multi-agent", "orchestration", "git-worktree"],
+  "icon": "./icon.svg",
+  "description": "三省六部 / Imperial Senate：把本机的 Claude Code / Codex / WorkBuddy / DSH 排成朝堂（或古罗马元老院），拟旨、封驳、并行办差、复核、批红合并，全程在隔离的 git 分支里进行。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "dsh-bundle",
+    "deepseek-harness",
+    "deepseek",
+    "claude-code",
+    "codex",
+    "multi-agent",
+    "orchestration",
+    "code-review",
+    "git-worktree"
+  ],
+  "author": "shilaoban666",
   "scripts": {
     "test": "node --test \"test/*.test.mjs\""
   },
@@ -20,10 +34,25 @@
   "bugs": {
     "url": "https://github.com/shilaoban666/dsh-imperial-court/issues"
   },
+  "files": [
+    "index.mjs",
+    "client.js",
+    "lib/*.mjs",
+    "role-preset.json",
+    "cordis.patch.yml",
+    "dsh-headless.patch.yml",
+    "icon.svg",
+    "locale/*.json",
+    "README.md",
+    "README.en.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
   "exports": {
     ".": "./index.mjs",
     "./client": "./client.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
     "./package.json": "./package.json"
   },
   "dsh": {
