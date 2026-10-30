@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "三省六部",
+    "description": "把本机的 Claude Code、Codex、WorkBuddy 和 DSH 排成朝堂：中书拟旨、门下封驳、六部并行办差、复核后批红合并，全程在隔离的 git 分支里进行。"
+  }
+}
