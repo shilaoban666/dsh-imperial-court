@@ -1,0 +1,19 @@
+# 三省六部让 DSH 本体担任官职时，给 `dsh headless` 叠加的 patch（dsh --profile headless --patch 本文件）。
+# 1. headless 默认不用桌面端保存的登录，只认 DEEPSEEK_API_KEY；这里恢复已保存的凭据，桌面登录过就能直接用。
+# 2. 模型与路由由插件按岗位通过环境变量传入：
+#    SANSHENG_DSH_MODEL     岗位上配的模型（空 = deepseek-flash）
+#    SANSHENG_DSH_PROVIDER  路由（空 = 有 DEEPSEEK_API_KEY 走 deepseek-official，否则走桌面登录的 deepseek-account）
+# 权限由 DSH 自己的 DSH_PERMISSION_MODE 决定（read-only / workspace-write / danger-full-access），插件按下旨时选的权限传入。
+- id: credentials
+  disabled: false
+- id: authorization
+  disabled: false
+- id: deepseek-account
+  disabled: false
+- id: agent-default-model
+  config:
+    provider: !!js >-
+      process.env.SANSHENG_DSH_PROVIDER ||
+      (process.env.DEEPSEEK_API_KEY ? 'deepseek-official' : 'deepseek-account')
+    model: !!js >-
+      process.env.SANSHENG_DSH_MODEL || 'deepseek-flash'

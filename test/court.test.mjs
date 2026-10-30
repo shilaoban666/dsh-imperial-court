@@ -35,12 +35,14 @@ function makeRepo() {
   return dir;
 }
 
-function makeCourt({ flags = '', rules = {}, manualRites = false, locale = '', execArgs = [], format = 'text' } = {}) {
+function makeCourt({ flags = '', rules = {}, manualRites = false, locale = '', execArgs = [], autoArgs = [], format = 'text' } = {}) {
   const dataDir = tmp('court-data-');
   const log = path.join(dataDir, 'fake.log');
   const court = createCourt({ dataDir }, { log: { info() {}, error() {} } });
   const fake = id => ({
-    id, name: id, adapter: 'cli', command: process.execPath, args: [FAKE], execArgs,
+    id, name: id, adapter: 'cli', command: process.execPath, args: [FAKE], execArgs, autoArgs,
+    // 像 dsh headless 一样靠环境变量定权限、选模型
+    permissionEnv: 'FAKE_PERM', modelEnv: 'FAKE_MODEL',
     outputFormat: format, resumeArgs: format === 'claude-stream' ? ['--resume', '{session}'] : [],
     env: { FAKE_FLAGS: flags, FAKE_LOG: log, FAKE_FORMAT: format }, timeoutMs: 30000,
   });
@@ -538,4 +540,111 @@ test('the biography knows who ruled: sealing by hand counts, the regime is recor
   assert.equal(bio.reign.regimes.liangdang, 1);
   assert.ok(bio.tasks.war && bio.tasks.war.done >= 1);
   assert.ok(bio.regime.puppet.score >= 0 && bio.regime.puppet.verdict);
+});
+
+test('DSH headless --json is parsed: answer, session, usage; its stray log lines are skipped', () => {
+  // 真实 dsh headless --json 的输出形状（中间夹着一行 DSH 自己的日志）
+  const raw = [
+    '{"type":"session","sessionId":"session-1","cwd":"C:\\\\work"}',
+    '{"type":"status","phase":"turn_start","turn":1}',
+    '[llm-deepseek-account] model listing from https://api.deepseek.com/models loaded 2 model(s), skipped 0 row(s)',
+    '{"type":"text","text":"OK"}',
+    '{"type":"status","phase":"step_end","turn":1,"step":1,"usage":{"inputTokens":713,"outputTokens":2,"cacheReadTokens":5760,"cacheWriteTokens":0,"totalTokens":6475}}',
+    '{"type":"status","phase":"turn_end","turn":1,"reason":{"kind":"completed"}}',
+    '{"type":"final","text":"OK"}',
+  ].join('\n');
+  const parsed = parseOutput('dsh-json', raw);
+  assert.equal(parsed.text, 'OK');
+  assert.equal(parsed.sessionId, 'session-1');
+  assert.deepEqual(parsed.usage, { input: 713, output: 2, cacheRead: 5760, cacheWrite: 0, costUsd: null, estimated: false });
+  assert.ok(!parsed.isError);
+  // 值房尾巴：正文与工具动作，final 不重复
+  assert.equal(tailLine('dsh-json', '{"type":"final","text":"OK"}'), '');
+  assert.equal(tailLine('dsh-json', '{"type":"tool_call","tool":"bash","input":{"command":"npm test"}}'), '▸ bash npm test');
+  const failed = parseOutput('dsh-json', '{"type":"session","sessionId":"s"}\n{"type":"status","phase":"turn_end","turn":1,"reason":{"kind":"error"}}\n{"type":"final","text":""}');
+  assert.ok(failed.isError);
+});
+
+test('the decree permission reaches the tools: read-only never writes, full lifts confirmations', async () => {
+  const repo = makeRepo();
+  const { api, entries } = makeCourt({ execArgs: ['--may-write'], autoArgs: ['--full-auto'], flags: 'single' });
+  const { id } = api.createEdict({ brief: 'look around', workspace: repo, permission: 'read' });
+  await waitFor(api, id, ['awaiting-approval', 'failed']);
+  const readTasks = entries().filter(entry => entry.kind === 'task');
+  assert.ok(readTasks.length, 'a magistrate ran');
+  assert.ok(readTasks.every(entry => !entry.args.includes('--may-write') && !entry.args.includes('--full-auto') && entry.perm === 'read-only'));
+  assert.ok(entries().filter(entry => entry.kind === 'draft').every(entry => entry.perm === 'read-only'), 'drafting is always read-only');
+  assert.equal(api.getEdict(id).permission, 'read');
+
+  // 岗位模型走环境变量（dsh headless 没有 --model 参数）
+  const state = api.getState();
+  api.savePreset({ agents: state.agents, roles: { ...state.roles, war: { ...state.roles.war, model: 'deepseek-flash' } }, rules: state.rules });
+  const second = api.createEdict({ brief: 'fix it', workspace: repo, permission: 'full' });
+  await waitFor(api, second.id, ['awaiting-approval', 'failed']);
+  const fullTasks = entries().filter(entry => entry.kind === 'task').slice(readTasks.length);
+  assert.ok(fullTasks.length && fullTasks.every(entry => entry.args.includes('--full-auto') && entry.perm === 'danger-full-access'));
+  assert.ok(fullTasks.every(entry => entry.envModel === 'deepseek-flash'));
+});
+
+test('attachments travel with the decree, and a GUI-only office can be handed to the deputy', async () => {
+  const repo = makeRepo();
+  const { api, entries, dataDir } = makeCourt({ flags: 'manual', manualRites: true, rules: { fallbackAgentId: 'fb' } });
+  const data = Buffer.from('a,b\n1,2\n').toString('base64');
+  const { id } = api.createEdict({ brief: 'make slides', workspace: repo, attachments: [{ name: '../evil/data.csv', data: `data:text/csv;base64,${data}` }] });
+  // 附件只留文件名，存进奏折目录，不进工作目录
+  const saved = path.join(dataDir, 'edicts', id, 'attachments', 'data.csv');
+  assert.equal(fs.readFileSync(saved, 'utf8'), 'a,b\n1,2\n');
+  assert.ok(!fs.existsSync(path.join(repo, 'data.csv')));
+  const waiting = await waitFor(api, id, ['awaiting-input', 'failed']);
+  assert.equal(waiting.status, 'awaiting-input', waiting.error);
+  assert.deepEqual(waiting.attachments, [{ name: 'data.csv', size: 8 }]);
+  assert.ok(entries().find(entry => entry.kind === 'draft').attach, 'the drafter saw the attachment');
+  assert.equal(api.getState().deputy.id, 'fb');
+
+  const step = waiting.steps.find(item => item.status === 'awaiting-input');
+  api.fill(id, step.seq, '', false, true);
+  const detail = await waitFor(api, id, ['awaiting-approval', 'failed']);
+  assert.equal(detail.status, 'awaiting-approval', detail.error);
+  assert.equal(detail.steps.find(item => item.seq === step.seq).status, 'done');
+  assert.ok(entries().some(entry => entry.kind === 'task' && entry.ministry === 'rites'), 'the deputy did the Rites order');
+});
+
+test('one agent may both draft and review: allowed, and read as the jiuxi regime', () => {
+  const { api } = makeCourt();
+  const state = api.getState();
+  api.savePreset({ agents: state.agents, roles: { ...state.roles, menxia: { ...state.roles.menxia, agentId: 'fa' } }, rules: state.rules });
+  const regime = api.getState().regime;
+  assert.equal(regime.level, 'jiuxi');
+  assert.ok(regime.suggestions.some(item => item.kind === 'appoint' && item.agentId === 'fb'));
+});
+
+test('workspace candidates come from DSH’s own sidebar list; an old DSH-itself agent becomes the headless CLI', () => {
+  const home = tmp('dsh-home-');
+  const ws = tmp('ws-');
+  fs.mkdirSync(path.join(home, 'storages'), { recursive: true });
+  fs.writeFileSync(path.join(home, 'storages', 'workspace.json'), JSON.stringify({
+    global: { workspaceIds: ['a', 'b'] },
+    tables: { workspaces: { a: { path: ws, title: 'Demo' }, b: { path: path.join(ws, 'missing'), title: 'Gone' } } },
+  }));
+  const previous = process.env.DSH_HOME;
+  process.env.DSH_HOME = home;
+  try {
+    const { api } = makeCourt();
+    const list = api.workspaces().workspaces;
+    assert.equal(list[0].path, ws);
+    assert.equal(list[0].title, 'Demo');
+    assert.ok(!list.some(item => item.title === 'Gone'), 'missing folders are skipped');
+  } finally {
+    if (previous === undefined) delete process.env.DSH_HOME;
+    else process.env.DSH_HOME = previous;
+  }
+
+  // 老存档：DSH 本体是 self（只出待办）→ 升级成 dsh headless
+  const dataDir = tmp('court-old-');
+  fs.writeFileSync(path.join(dataDir, 'state.json'), JSON.stringify({ agents: [{ id: 'dsh', name: 'DSH', adapter: 'self', enabled: true }] }));
+  const court = createCourt({ dataDir }, { log: { info() {}, error() {} } });
+  const dsh = court.api.getState().agents.find(agent => agent.id === 'dsh');
+  assert.equal(dsh.adapter, 'cli');
+  assert.equal(dsh.outputFormat, 'dsh-json');
+  assert.equal(dsh.permissionEnv, 'DSH_PERMISSION_MODE');
 });

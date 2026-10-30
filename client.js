@@ -815,6 +815,32 @@ select.ssl-input { cursor: pointer; }
   .zz-tail { width: 72px; padding-left: 7px; padding-right: 7px; justify-content: center; }
 }
 
+/* 下旨工具条：照 DSH 输入框 */
+.ssl-decree { width: 100%; }
+.ssl-decree-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.ssl-tool {
+  position: relative; display: inline-flex; align-items: center; gap: 5px; max-width: 100%; height: 30px; padding: 0 10px; border-radius: 8px;
+  border: 1px solid var(--ssl-line); background: var(--ssl-panel); color: var(--ssl-fg2); font: inherit; font-size: 12.5px; cursor: pointer; white-space: nowrap;
+}
+.ssl-tool:hover, .ssl-tool:focus-within { border-color: var(--ssl-line2); color: var(--ssl-fg); }
+.ssl-tool.is-on { color: var(--ssl-fg); border-color: var(--ssl-line2); background: var(--ssl-sunken); }
+.ssl-tool--icon { width: 30px; padding: 0; justify-content: center; font-size: 17px; line-height: 1; }
+.ssl-tool-ic { font-size: 12px; opacity: .75; }
+.ssl-tool-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ssl-tool--folder { max-width: min(320px, 100%); }
+/* 原生下拉盖在整块按钮上：点哪里都能选，样式由按钮自己画 */
+.ssl-tool select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font: inherit; }
+.ssl-decree-files { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ssl-file-chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 260px; height: 26px; padding: 0 4px 0 9px; border-radius: 7px;
+  background: var(--ssl-sunken); border: 1px solid var(--ssl-line); font-size: 12px; color: var(--ssl-fg2);
+}
+.ssl-file-chip i { font-style: normal; font-size: 11px; color: var(--ssl-mut); flex: none; }
+.ssl-file-chip button { flex: none; width: 20px; height: 20px; border: 0; border-radius: 5px; background: transparent; color: var(--ssl-mut); cursor: pointer; font-size: 14px; line-height: 1; }
+.ssl-file-chip button:hover { background: var(--ssl-line); color: var(--ssl-fg); }
+.ssl-decree-criteria { margin-top: 8px; }
+.ssl-decree-estimate { display: flex; margin: 8px 0 0; }
+
 /* 朝局 */
 .ssl-regime-chip {
   display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 11px; border-radius: 9px; cursor: pointer;
@@ -2262,18 +2288,156 @@ select.ssl-input { cursor: pointer; }
               h('span', null, kindGloss(kind)))))));
       }
 
+      // ---------- 下旨框里的工具条：照 DSH 输入框——左边附件、权限、工作目录，右边朝制 ----------
+      const PERMISSION_INFO = {
+        read: [['仅可查看', '各部只读不写：适合查问题、出报告'], ['Read only', 'Magistrates read but never write: good for investigating and reporting']],
+        workspace: [['工作区内修改', '各部可在工作目录（隔离分支）里改文件'], ['Edit in workspace', 'Magistrates may edit files inside the working folder (on the isolated branch)']],
+        full: [['完全权限', '放开各工具自己的确认，可跑命令、联网、改工作目录外的文件'], ['Full access', 'Lifts each tool’s own confirmations: commands, network and files outside the folder']],
+      };
+      const permissionInfo = key => {
+        const row = (PERMISSION_INFO[key] || PERMISSION_INFO.workspace)[isEn() ? 1 : 0];
+        return { name: row[0], desc: row[1] };
+      };
+      const MODE_KEYS = ['', 'express', 'standard', 'grand'];
+      const defaultPermission = state => (state && state.rules && state.rules.execWrites === false ? 'read' : 'workspace');
+      const emptyDecree = () => ({ workspace: '', permission: '', attachments: [], criteria: '', mode: '' });
+      const fmtSize = bytes => (bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
+
+      /** 工作目录候选：DSH 侧栏的工作区 + 朝堂最近用过的（宿主读 DSH 自己的 workspace.json） */
+      function useWorkspaces() {
+        const [list, setList] = useState([]);
+        const reload = () => apiJson('/workspaces').then(result => setList(result.workspaces || [])).catch(() => setList([]));
+        useEffect(() => { reload(); }, []);
+        return [list, reload];
+      }
+
+      /** 把选中的文件读成 data URL（随下旨一起交给宿主存进奏折目录） */
+      function readFiles(files) {
+        return Promise.all([...files].map(file => new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve({ name: file.name, size: file.size, data: String(reader.result || '') });
+          reader.onerror = () => reject(reader.error || new Error(file.name));
+          reader.readAsDataURL(file);
+        })));
+      }
+
+      /** 朝制估算：会走哪种朝制、大约几次调用、多少钱 */
+      function useEstimate(brief, mode) {
+        const [estimate, setEstimate] = useState(null);
+        useEffect(() => {
+          if (!String(brief || '').trim()) { setEstimate(null); return undefined; }
+          const timer = setTimeout(() => {
+            apiJson('/estimate', { method: 'POST', body: JSON.stringify({ brief, mode: mode || undefined, locale: currentLocale }) })
+              .then(setEstimate)
+              .catch(() => setEstimate(null));
+          }, 450);
+          return () => clearTimeout(timer);
+        }, [brief, mode]);
+        return estimate;
+      }
+
+      function DecreeBar({ state, value, onChange, brief, notify, withMode = true }) {
+        const set = patch => onChange({ ...value, ...patch });
+        const [workspaces, reload] = useWorkspaces();
+        const fileRef = useRef(null);
+        const [showCriteria, setShowCriteria] = useState(!!value.criteria);
+        const permission = value.permission || defaultPermission(state);
+        const estimate = useEstimate(withMode ? brief : '', value.mode);
+        const tell = (text, tone) => (notify ? notify(text, tone) : null);
+
+        const addFiles = files => {
+          if (!files || !files.length) return;
+          readFiles(files)
+            .then(list => {
+              const next = [...value.attachments, ...list].slice(0, 12);
+              const total = next.reduce((sum, item) => sum + item.size, 0);
+              if (next.some(item => item.size > 10 * 1048576) || total > 20 * 1048576) {
+                tell(zhEn('附件太大：单个不超过 10 MB，合计不超过 20 MB', 'Attachments too large: at most 10 MB each and 20 MB in total'), 'err');
+                return;
+              }
+              set({ attachments: next });
+            })
+            .catch(error => tell(String(error.message || error), 'err'));
+        };
+        const pickFolder = () => apiJson('/pick-folder', { method: 'POST', body: JSON.stringify({ start: value.workspace }) })
+          .then(result => {
+            if (result.path) { set({ workspace: result.path }); reload(); } else if (result.unsupported) tell(zhEn('这台机器弹不出选文件夹的对话框，请直接选列表里的目录', 'No folder dialog is available here; pick a folder from the list'), 'err');
+          })
+          .catch(error => tell(String(error.message || error), 'err'));
+        const known = workspaces.some(item => item.path === value.workspace);
+        const folderName = value.workspace ? (workspaces.find(item => item.path === value.workspace) || {}).title || value.workspace.split(/[\\/]/).filter(Boolean).pop() : zhEn('DSH 当前目录', 'DSH folder');
+
+        return h('div', { className: 'ssl-decree' },
+          h('div', { className: 'ssl-decree-bar' },
+            h('button', {
+              type: 'button', className: 'ssl-tool ssl-tool--icon', title: zhEn('添加附件（随旨交给各部）', 'Attach files (handed to the magistrates)'),
+              'aria-label': zhEn('添加附件', 'Attach files'), onClick: () => fileRef.current && fileRef.current.click(),
+            }, '+'),
+            h('input', { ref: fileRef, type: 'file', multiple: true, hidden: true, onChange: event => { addFiles(event.target.files); event.target.value = ''; } }),
+            h('label', { className: 'ssl-tool', title: permissionInfo(permission).desc },
+              h('span', { className: 'ssl-tool-ic', 'aria-hidden': true }, '◈'),
+              h('span', { className: 'ssl-tool-text' }, permissionInfo(permission).name),
+              h('select', { value: permission, 'aria-label': zhEn('权限', 'Permission'), onChange: event => set({ permission: event.target.value }) },
+                Object.keys(PERMISSION_INFO).map(key => h('option', { key, value: key }, permissionInfo(key).name)))),
+            h('label', { className: 'ssl-tool ssl-tool--folder', title: value.workspace || zhEn('留空 = DSH 当前目录；git 仓库会自动隔离到分支', 'Empty = the DSH folder; git repos are isolated on a branch') },
+              h('span', { className: 'ssl-tool-ic', 'aria-hidden': true }, '▤'),
+              h('span', { className: 'ssl-tool-text' }, folderName),
+              h('select', {
+                value: value.workspace, 'aria-label': t('fieldWorkspace'),
+                onChange: event => (event.target.value === '::pick::' ? pickFolder() : set({ workspace: event.target.value })),
+              },
+              h('option', { value: '' }, zhEn('DSH 当前目录', 'DSH folder')),
+              value.workspace && !known ? h('option', { value: value.workspace }, value.workspace) : null,
+              workspaces.length ? h('optgroup', { label: zhEn('DSH 工作区与最近用过的', 'DSH workspaces and recent folders') },
+                workspaces.map(item => h('option', { key: item.path, value: item.path }, `${item.title} — ${item.path}`))) : null,
+              h('option', { value: '::pick::' }, zhEn('选择其他文件夹…', 'Choose another folder…')))),
+            h('button', {
+              type: 'button', className: cx('ssl-tool', (showCriteria || value.criteria) && 'is-on'), title: zhEn('写明怎样算办成（可选）', 'Say what “done” means (optional)'),
+              onClick: () => setShowCriteria(!showCriteria),
+            }, h('span', { className: 'ssl-tool-ic', 'aria-hidden': true }, '✓'), h('span', { className: 'ssl-tool-text' }, t('fieldCriteria').replace(/（.*|\(.*/, ''))),
+            h('span', { className: 'ssl-grow' }),
+            withMode ? h('label', { className: 'ssl-tool', title: t(`modeDesc_${value.mode || 'auto'}`) },
+              h('span', { className: 'ssl-tool-text' }, `${t('fieldMode')} · ${t(`mode_${value.mode || 'auto'}`)}`),
+              h('select', { value: value.mode, 'aria-label': t('fieldMode'), onChange: event => set({ mode: event.target.value }) },
+                MODE_KEYS.map(key => h('option', { key: key || 'auto', value: key }, t(`mode_${key || 'auto'}`))))) : null),
+          value.attachments.length ? h('div', { className: 'ssl-decree-files' }, value.attachments.map((file, index) => h('span', { key: `${file.name}-${index}`, className: 'ssl-file-chip', title: file.name },
+            h('span', { className: 'ssl-ellipsis' }, file.name),
+            h('i', null, fmtSize(file.size)),
+            h('button', { type: 'button', 'aria-label': zhEn(`移除 ${file.name}`, `Remove ${file.name}`), onClick: () => set({ attachments: value.attachments.filter((_, i) => i !== index) }) }, '×')))) : null,
+          showCriteria || value.criteria ? h('input', {
+            className: 'ssl-input ssl-decree-criteria', value: value.criteria, placeholder: t('criteriaPh'), 'aria-label': t('fieldCriteria'),
+            onChange: event => set({ criteria: event.target.value }),
+          }) : null,
+          withMode && estimate ? h('div', { className: 'ssl-estimate ssl-decree-estimate' },
+            t('estimateLine', {
+              mode: t(`mode_${estimate.mode}`),
+              calls: estimate.calls[0] === estimate.calls[1] ? estimate.calls[0] : `${estimate.calls[0]}–${estimate.calls[1]}`,
+              ministry: estimate.ministry ? ` → ${roleName(estimate.ministry)}` : '',
+            }),
+            h(Money, { usd: estimate.usd[0], compact: true }), '–', h(Money, { usd: estimate.usd[1], compact: true }),
+            h('i', { title: estimate.reason }, estimate.basis === 'history' ? t('basisHistory') : t('basisDefault'))) : null);
+      }
+
+      /** 下旨时一并交给宿主的字段 */
+      const decreePayload = value => ({
+        workspace: value.workspace || undefined,
+        permission: value.permission || undefined,
+        criteria: value.criteria || undefined,
+        mode: value.mode || undefined,
+        attachments: value.attachments.length ? value.attachments.map(file => ({ name: file.name, data: file.data })) : undefined,
+      });
+
       // ---------- 朝堂：下旨 + 编队 ----------
       function CourtTab({ state, onRefresh, notify, onGo }) {
         const [brief, setBrief] = useState('');
-        const [workspace, setWorkspace] = useState('');
-        const [criteria, setCriteria] = useState('');
+        const [decree, setDecree] = useState(emptyDecree);
         const full = state.full === true;
         const autonomous = state.rules && state.rules.autonomous === true;
         const { sending, stamp, submit } = useEdictSubmit({ notify, onDone: () => { onRefresh(); openPane(PANE_CHAT); } });
-        const [mode, setMode] = useState('');
         const send = () => {
           if (!brief.trim() || full) return;
-          submit({ brief, workspace: workspace || undefined, criteria: criteria || undefined, mode: mode || undefined }, () => { clearAfterStamp(setBrief, brief); setCriteria(''); });
+          // 附件、验收标准只跟这一道旨；工作目录、权限、朝制留着给下一道
+          submit({ brief, ...decreePayload(decree) }, () => { clearAfterStamp(setBrief, brief); setDecree(prev => ({ ...prev, attachments: [], criteria: '' })); });
         };
 
         const runningCount = state.busy ? state.busy.length : 0;
@@ -2300,7 +2464,7 @@ select.ssl-input { cursor: pointer; }
               sending,
               stamp,
               placeholder: t('briefPh'),
-              extra: h(EdictSlips, { workspace, setWorkspace, criteria, setCriteria, workspaces: state.recentWorkspaces || [], mode, setMode, brief }),
+              extra: h(DecreeBar, { state, value: decree, onChange: setDecree, brief, notify }),
               caption: full ? t('fullCaption', { n: state.capacity || 2 })
                 : autonomous ? t('autoCaption')
                 : t('normalCaption'),
@@ -2608,7 +2772,7 @@ select.ssl-input { cursor: pointer; }
         useLocale();
         const [open, setOpen] = useState(composer.open);
         const [brief, setBrief] = useState('');
-        const [workspace, setWorkspace] = useState('');
+        const [decree, setDecree] = useState(emptyDecree);
         const [msg, setMsg] = useState({ text: '', tone: '' });
         const { state } = useCourtState(open);
         useEffect(() => composer.subscribe(setOpen), []);
@@ -2631,7 +2795,7 @@ select.ssl-input { cursor: pointer; }
         const send = () => {
           if (!brief.trim()) return;
           setMsg({ text: '', tone: '' });
-          submit({ brief, workspace: workspace || undefined }, () => clearAfterStamp(setBrief, brief));
+          submit({ brief, ...decreePayload(decree) }, () => { clearAfterStamp(setBrief, brief); setDecree(prev => ({ ...prev, attachments: [], criteria: '' })); });
         };
         return h('div', {
           className: 'ssl-overlay ssl-mask',
@@ -2652,7 +2816,7 @@ select.ssl-input { cursor: pointer; }
             stamp,
             autoFocus: true,
             placeholder: t('briefPh'),
-            extra: h(EdictSlips, { workspace, setWorkspace, workspaces: (state && state.recentWorkspaces) || [] }),
+            extra: state ? h(DecreeBar, { state, value: decree, onChange: setDecree, brief, notify }) : null,
           })),
           msg.text ? h('div', { className: cx('ssl-alert', msg.tone === 'ok' && 'ssl-alert--info'), style: { whiteSpace: 'pre-wrap' } }, msg.text) : null,
           h('div', { className: 'ssl-actions', style: { justifyContent: 'flex-end', marginTop: '14px' } },
@@ -2732,10 +2896,16 @@ select.ssl-input { cursor: pointer; }
       function FillCard({ edictId, step, notify, onDone, onOpen, compact }) {
         const [text, setText] = useState('');
         const [busy, setBusy] = useState(false);
-        const send = skip => {
+        const { state } = useCourtState();
+        const deputy = state && state.deputy;
+        const send = (skip, delegate = false) => {
           setBusy(true);
-          apiJson(`/edicts/${edictId}/fill`, { method: 'POST', body: JSON.stringify({ seq: step.seq, text, skip }) })
-            .then(() => { notify(skip ? t('skippedToast') : t('filledToast')); setText(''); if (onDone) onDone(); })
+          apiJson(`/edicts/${edictId}/fill`, { method: 'POST', body: JSON.stringify({ seq: step.seq, text, skip, delegate }) })
+            .then(() => {
+              notify(delegate ? zhEn(`已交给 ${deputy.name} 代办`, `Handed to ${deputy.name}`) : skip ? t('skippedToast') : t('filledToast'));
+              setText('');
+              if (onDone) onDone();
+            })
             .catch(error => notify(String(error.message || error), 'err'))
             .finally(() => setBusy(false));
         };
@@ -2752,6 +2922,8 @@ select.ssl-input { cursor: pointer; }
           }),
           h('div', { className: 'ssl-actions', style: { marginTop: '10px' } },
             h('button', { className: 'ssl-btn ssl-btn--primary ssl-btn--sm', disabled: busy || !text.trim(), onClick: () => send(false) }, t('fillSubmit')),
+            deputy ? h('button', { className: 'ssl-btn ssl-btn--sm', disabled: busy, title: zhEn('这个岗位没有命令行：让代办照原差事去办', 'This office has no command line: let the deputy do the order'), onClick: () => send(false, true) },
+              zhEn(`交给 ${deputy.name} 代办`, `Hand to ${deputy.name}`)) : null,
             h('button', { className: 'ssl-btn ssl-btn--sm', disabled: busy, onClick: () => send(true) }, t('fillSkip')),
             step.workOrder && onOpen ? h('button', { className: 'ssl-link', onClick: () => onOpen(step.workOrder) }, t('viewWorkOrder')) : null));
       }
@@ -2832,6 +3004,8 @@ select.ssl-input { cursor: pointer; }
                     h('span', { className: 'ssl-mono' }, detail.id),
                     h('span', null, dateTimeText(detail.createdAt)),
                     detail.autonomous ? h('span', { className: 'ssl-pill ssl-pill--ok' }, t('autoPill')) : null,
+                    detail.permission ? h('span', { className: 'ssl-pill ssl-pill--plain', title: permissionInfo(detail.permission).desc }, permissionInfo(detail.permission).name) : null,
+                    (detail.attachments || []).length ? h('span', { className: 'ssl-pill ssl-pill--plain', title: detail.attachments.map(file => file.name).join(', ') }, zhEn(`附件 ${detail.attachments.length}`, `${detail.attachments.length} attached`)) : null,
                     h(ModePill, { detail }),
                     detail.spend && detail.spend.calls ? h(Money, { usd: detail.spend.costUsd, estimated: detail.spend.estimated, compact: true }) : null,
                     detail.rounds ? h('span', null, t('draftRounds', { n: detail.rounds })) : null,
@@ -3576,8 +3750,7 @@ select.ssl-input { cursor: pointer; }
         const [toastNode, notify] = useToast();
         const [steps, setStepsRaw] = useState(null);
         const [brief, setBrief] = useState('');
-        const [workspace, setWorkspace] = useState('');
-        const [criteria, setCriteria] = useState('');
+        const [decree, setDecree] = useState(emptyDecree);
         const saveTimer = useRef(null);
         const { sending, stamp, submit } = useEdictSubmit({ notify, onDone: () => { refresh(); openPane(PANE_CHAT); } });
 
@@ -3618,7 +3791,7 @@ select.ssl-input { cursor: pointer; }
         const send = () => {
           if (!brief.trim() || full) return;
           clearTimeout(saveTimer.current);
-          submit({ brief, workspace: workspace || undefined, criteria: criteria || undefined, workflow: steps }, () => clearAfterStamp(setBrief, brief));
+          submit({ brief, ...decreePayload({ ...decree, mode: '' }), workflow: steps }, () => { clearAfterStamp(setBrief, brief); setDecree(prev => ({ ...prev, attachments: [], criteria: '' })); });
         };
         const templates = state.workflowTemplates || {};
         const lang = isEn() ? 'en' : 'zh';
@@ -3672,7 +3845,7 @@ select.ssl-input { cursor: pointer; }
             sending,
             stamp,
             placeholder: t('briefPhVideo'),
-            extra: h(EdictSlips, { workspace, setWorkspace, criteria, setCriteria, workspaces: state.recentWorkspaces || [] }),
+            extra: h(DecreeBar, { state, value: decree, onChange: setDecree, brief, notify, withMode: false }),
             caption: full ? t('fullCaption', { n: state.capacity || 2 }) : autonomous ? t('flowAutoCaption') : t('flowCaption'),
           })),
           h(Section, { title: t('rulesTitle') }),
@@ -4398,7 +4571,7 @@ select.ssl-input { cursor: pointer; }
           roleVacantShort: '此职空缺', roleDisabledShort: '{name} 已停用', roleNoCliShort: '{name} 没有命令行',
           roleVacant: '此职空缺，派到这里的差事会直接失败', roleDisabled: '{name} 已停用，请换人或去「群臣」启用',
           roleSelf: '由 DSH 本体处理：出待办，主 agent（sansheng_fill）或你回填后继续',
-          roleManual: '人工办理：出工单，朝会暂停等你回填结果',
+          roleManual: '没有命令行：出工单，朝会暂停等你回填，或一键交给 DSH 代办',
           readyTitle: '上手检查', readyHint: '先点「一键探测」，确认每个岗位的 CLI 都找得到。',
           readyProblems: '{n} 个岗位有问题，派到那里的差事会失败', readyAllGood: '每个岗位都能办差', probeAll: '一键探测', probing: '探测中…',
           readyVacant: '空缺', readyDisabled: '{name} 已停用', readyDeputy: '{name} 没有命令行，由代办接手', readyManual: '{name} 没有命令行，到时暂停等你回填',
@@ -4456,7 +4629,7 @@ select.ssl-input { cursor: pointer; }
           fieldExecArgs: '写入参数（常规模式执行差事时追加，允许改文件）', execArgsPh: '如 --permission-mode acceptEdits；留空则只能出方案',
           fieldAutoArgs: '无人值守参数（丞相模式下追加，放开这个 CLI 自己的权限确认）', autoArgsPh: '如 --full-auto；留空则无人值守时可能写不了文件',
           adapterSelfNote: 'DSH 本体：相关差事出待办，主 agent 用 sansheng_fill 或你在奏折页回填后继续。',
-          adapterManualNote: '人工适配器：这个工具只有图形界面，派到它的差事会出工单并暂停，等你回填。',
+          adapterManualNote: '人工适配器：这个工具只有图形界面。派到它的差事会出工单并暂停：你可以回填结果、跳过，或交给 DSH 代办。',
           unsavedN: '{n} 个 agent 有未保存的修改', allSaved: '所有修改已保存', undo: '撤销', saving: '保存中…', saveAgents: '保存群臣配置', agentsSaved: '群臣配置已保存',
           viewRoster: '朝堂职位', viewRosterSub: '三省六部的人选、模型与职掌，改完立即生效',
           viewFlow: '确定工作流', viewFlowSub: '排好各部门的先后顺序再下旨，中书省必须照此拟旨（存在宿主，任何入口下旨都带上）',
@@ -4521,7 +4694,7 @@ select.ssl-input { cursor: pointer; }
           roleVacantShort: 'Vacant', roleDisabledShort: '{name} is disabled', roleNoCliShort: '{name} has no command line',
           roleVacant: 'Vacant: orders sent here will fail', roleDisabled: '{name} is disabled. Appoint someone else or enable it in the Cohort tab',
           roleSelf: 'Handled by DSH itself: the main agent (sansheng_fill) or you fill in the result, then the session continues',
-          roleManual: 'Manual: a work order is issued and the session pauses for your input',
+          roleManual: 'No command line: a work order is issued and the session pauses for your input, or hand it to DSH in one click',
           readyTitle: 'Readiness check', readyHint: 'Press "Probe all" to confirm every office\'s CLI can be found.',
           readyProblems: '{n} offices have problems; orders sent there will fail', readyAllGood: 'Every office is ready', probeAll: 'Probe all', probing: 'Probing…',
           readyVacant: 'vacant', readyDisabled: '{name} is disabled', readyDeputy: '{name} has no CLI; the deputy covers it', readyManual: '{name} has no CLI; will pause for your input',
@@ -4579,7 +4752,7 @@ select.ssl-input { cursor: pointer; }
           fieldExecArgs: 'Write arguments (added to executing orders in standard mode, allow editing files)', execArgsPh: 'e.g. --permission-mode acceptEdits; empty = advice only',
           fieldAutoArgs: 'Autonomy arguments (added in autonomy, lift the CLI\'s own permission prompts)', autoArgsPh: 'e.g. --full-auto; empty = may not be able to write unattended',
           adapterSelfNote: 'DSH itself: its orders become to-dos; the main agent (sansheng_fill) or you fill in the result on the decree page.',
-          adapterManualNote: 'Manual adapter: this tool only has a GUI. Orders sent to it issue a work order and pause for your input.',
+          adapterManualNote: 'Manual adapter: this tool only has a GUI. Orders sent to it issue a work order and pause: fill in the result, skip it, or hand it to DSH.',
           unsavedN: '{n} agents have unsaved changes', allSaved: 'All changes saved', undo: 'Undo', saving: 'Saving…', saveAgents: 'Save cohort', agentsSaved: 'Cohort saved',
           viewRoster: 'Offices', viewRosterSub: 'Who holds each office, with which model and remit. Changes apply at once',
           viewFlow: 'Procedure', viewFlowSub: 'Fix the order of the magistrates before issuing; the Consul must follow it (stored on the host, used by every entry point)',
