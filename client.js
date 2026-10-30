@@ -929,7 +929,9 @@ select.ssl-input { cursor: pointer; }
 .ssl-bench-title { font-weight: 600; font-size: 13.5px; }
 .ssl-bench-pick { display: none; flex: 1 1 auto; min-width: 0; height: 30px; padding: 0 8px; }
 .ssl-bench-flowbtn { display: none; }
-.ssl-bench-flowbtn.is-on { color: var(--ssl-fg); background: var(--ssl-sunken); }
+.ssl-bench-flowbtn { height: 34px; padding: 0 16px; gap: 6px; font-size: 13.5px; font-weight: 600; flex: none; }
+.ssl-bench-flowbtn span { font-size: 16px; line-height: 1; }
+.ssl-bench-flowbtn.is-on { color: var(--ssl-fg); background: var(--ssl-sunken); border-color: var(--ssl-seal); }
 .ssl-bench-thread { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 18px 18px 10px; }
 .ssl-bench-blank { max-width: 980px; margin: 0 auto; }
 .ssl-bench-compose { padding: 10px 14px 12px; border-top: 1px solid var(--ssl-line); }
@@ -1988,8 +1990,11 @@ select.ssl-input { cursor: pointer; }
         return isEn() ? h(Scroll, props) : h(Zouzhe, props);
       }
 
-      const submitOnCtrlEnter = (canSubmit, onSubmit) => event => {
-        if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && canSubmit) onSubmit();
+      const submitOnEnter = (canSubmit, onSubmit) => event => {
+        if (event.key !== 'Enter' || event.shiftKey || event.altKey) return;
+        if (event.isComposing || event.keyCode === 229) return;
+        event.preventDefault();
+        if (canSubmit) onSubmit();
       };
 
       /**
@@ -2008,7 +2013,7 @@ select.ssl-input { cursor: pointer; }
               h('textarea', {
                 className: 'zz-text', value, disabled, placeholder, autoFocus, 'aria-label': t('briefLabel'),
                 onChange: event => onChange(event.target.value),
-                onKeyDown: submitOnCtrlEnter(canSubmit, onSubmit),
+                onKeyDown: submitOnEnter(canSubmit, onSubmit),
               }),
               h('div', { className: 'zz-tail' },
                 h('span', { className: 'zz-date', 'aria-hidden': true }, cnDate()),
@@ -2036,7 +2041,7 @@ select.ssl-input { cursor: pointer; }
               h('textarea', {
                 className: 'sc-text', value, disabled, placeholder, autoFocus, 'aria-label': t('briefLabel'),
                 onChange: event => onChange(event.target.value),
-                onKeyDown: submitOnCtrlEnter(canSubmit, onSubmit),
+                onKeyDown: submitOnEnter(canSubmit, onSubmit),
               }),
               h('div', { className: 'sc-foot' },
                 h('span', { className: 'sc-date', 'aria-hidden': true }, romanDate()),
@@ -2393,6 +2398,8 @@ select.ssl-input { cursor: pointer; }
           apiJson('/edicts', { method: 'POST', body: JSON.stringify({ ...input, locale: currentLocale, ...(workflow !== undefined ? { workflow } : {}) }) })
             .then(result => {
               notify(t('opened', { id: result.id }), 'ok', result.isolation);
+              // 新建的产出文件夹都在同一个根目录下：把这个根目录登记成 DSH 侧栏的工作区，产出在侧栏里就找得到
+              if (result.newFolder && courtStore.state && courtStore.state.outputRoot) registerWorkspace(courtStore.state.outputRoot, zhEn('三省六部产出', 'Senate output'));
               setStamp(Date.now());
               if (clear) clear();
               if (onDone) onDone(result);
@@ -2530,7 +2537,8 @@ select.ssl-input { cursor: pointer; }
         };
         const pickFolder = () => apiJson('/pick-folder', { method: 'POST', body: JSON.stringify({ start: value.workspace }) })
           .then(result => {
-            if (result.path) { set({ workspace: result.path }); reload(); } else if (result.unsupported) tell(zhEn('这台机器弹不出选文件夹的对话框，请直接选列表里的目录', 'No folder dialog is available here; pick a folder from the list'), 'err');
+            // 选中的文件夹同时登记成 DSH 工作区：侧栏里也找得到，下次 DSH 自己的会话也能直接用
+            if (result.path) { set({ workspace: result.path }); registerWorkspace(result.path); setTimeout(reload, 600); } else if (result.unsupported) tell(zhEn('这台机器弹不出选文件夹的对话框，请直接选列表里的目录', 'No folder dialog is available here; pick a folder from the list'), 'err');
           })
           .catch(error => tell(String(error.message || error), 'err'));
         const known = workspaces.some(item => item.path === value.workspace);
@@ -2693,9 +2701,9 @@ select.ssl-input { cursor: pointer; }
             : runningCount ? h(StatusPill, { status: 'running', text: t('inSessionN', { n: runningCount, cap: state.capacity || 2 }) })
             : h('span', { className: 'ssl-caption' }, t('issueHint')),
           h('button', {
-            className: cx('ssl-btn ssl-btn--ghost ssl-btn--sm ssl-bench-flowbtn', sideOpen && 'is-on'), 'aria-expanded': sideOpen,
+            className: cx('ssl-btn ssl-bench-flowbtn', sideOpen && 'is-on'), 'aria-expanded': sideOpen,
             onClick: () => setSideOpen(value => !value),
-          }, zhEn('流程', 'Flow')));
+          }, h('span', { 'aria-hidden': true }, sideOpen ? '›' : '‹'), sideOpen ? zhEn('收起流程', 'Hide flow') : zhEn('流程', 'Flow')));
 
         const thread = !selected
           ? h('div', { className: 'ssl-bench-blank' },
@@ -2723,7 +2731,7 @@ select.ssl-input { cursor: pointer; }
             ...composerProps,
             compact: true,
             disabled: full,
-            placeholder: full ? t('fullShort') : zhEn('再下一道旨……（Ctrl + Enter 下旨）', 'Another decree… (Ctrl + Enter)'),
+            placeholder: full ? t('fullShort') : zhEn('再下一道旨……（Enter 下旨，Shift + Enter 换行）', 'Another decree… (Enter to issue, Shift + Enter for a new line)'),
           })) : null,
           doc ? h('div', { className: 'ssl-chat-doc' },
             h('div', { className: 'ssl-card-h', style: { padding: '10px 12px', margin: 0, borderBottom: '1px solid var(--ssl-line)' } },
@@ -3879,12 +3887,18 @@ select.ssl-input { cursor: pointer; }
         .filter(Boolean).join(isEn() ? ', ' : '、');
       const doText = power => zhEn(`同时 ${power.concurrent} 份奏折，一份里 ${power.parallel} 个部同时办`, `${power.concurrent} decree${power.concurrent > 1 ? 's' : ''} at once, ${power.parallel} office${power.parallel > 1 ? 's' : ''} in parallel`);
 
+      /** 最低哪一级朝局有这项皇权（看得见第 n 层 / 能驳回……） */
+      const unlockAt = (state, key, need = true) => {
+        const powers = (state && state.regime && state.regime.powers) || {};
+        return REGIME_KEYS.find(level => powers[level] && (key === 'see' ? powers[level].see >= need : powers[level][key] === need)) || 'qiangang';
+      };
+
       /** 看不见的那一层：说明为什么看不见、升到哪个朝局能看见 */
       function Veil({ state, need, what, onGo, compact }) {
         const power = powerOfState(state);
         if (power.see >= need) return null;
         const now = regimeInfo(state.regime && state.regime.level).name;
-        const unlock = regimeInfo(REGIME_KEYS[need - 1]).name;
+        const unlock = regimeInfo(unlockAt(state, 'see', need)).name;
         return h('div', { className: cx('ssl-veil', compact && 'is-compact') },
           h('span', { className: 'ssl-veil-ic', 'aria-hidden': true }, '帘'),
           h('span', { className: 'ssl-grow' },
@@ -3907,10 +3921,20 @@ select.ssl-input { cursor: pointer; }
             h('div', { className: 'ssl-power-row' }, h('b', null, zhEn('看得见', 'See')), h('span', null, seeList(power.see))),
             h('div', { className: 'ssl-power-row' }, h('b', null, zhEn('能决定', 'Decide')), h('span', null, decideList(power), power.reject ? '' : h('em', null, zhEn('；不能驳回', '; no reject')))),
             h('div', { className: 'ssl-power-row' }, h('b', null, zhEn('能办成', 'Do')), h('span', null, doText(power))),
-            next ? h('div', { className: 'ssl-caption ssl-power-next' },
-              zhEn(`再任用一家工具升到「${regimeInfo(next).name}」：多看见${seeName(Math.min(5, power.see + 1))}`, `One more tool lifts you to “${regimeInfo(next).name}”: you also see ${seeName(Math.min(5, power.see + 1)).toLowerCase()}`),
-              nextPower && nextPower.reject && !power.reject ? zhEn('，并拿回驳回之权', ', and win the right to reject') : '',
+            next && nextPower ? h('div', { className: 'ssl-caption ssl-power-next' },
+              zhEn(`再任用一家工具升到「${regimeInfo(next).name}」：`, `One more tool lifts you to “${regimeInfo(next).name}”: `),
+              gainsOf(power, nextPower).join(isEn() ? ', ' : '，'),
               isEn() ? '.' : '。') : null));
+      }
+
+      /** 升一级多得什么：多看见哪几层、拿回哪些权、多办几份 */
+      function gainsOf(from, to) {
+        const gains = [];
+        if (to.see > from.see) gains.push(zhEn(`多看见${[...Array(to.see - from.see)].map((_, i) => seeName(from.see + i + 1)).join('、')}`, `see ${[...Array(to.see - from.see)].map((_, i) => seeName(from.see + i + 1).toLowerCase()).join(', ')}`));
+        if (to.mode && !from.mode) gains.push(zhEn('能亲选朝制', 'pick the procedure'));
+        if (to.reject && !from.reject) gains.push(zhEn('拿回驳回之权', 'win the right to reject'));
+        if (to.concurrent > from.concurrent || to.parallel > from.parallel) gains.push(zhEn(`同时能办 ${to.concurrent} 份、${to.parallel} 个部并行`, `${to.concurrent} decrees at once, ${to.parallel} offices in parallel`));
+        return gains;
       }
 
       /** 五级朝局各自的皇权，当前这一级高亮（官职页） */
@@ -3920,12 +3944,15 @@ select.ssl-input { cursor: pointer; }
         return h('table', { className: 'ssl-table ssl-power-table' },
           h('thead', null, h('tr', null,
             h('th', null, zhEn('朝局', 'Regime')), h('th', null, zhEn('看得见', 'See')), h('th', null, zhEn('能决定', 'Decide')), h('th', null, zhEn('能办成', 'Do')))),
-          h('tbody', null, REGIME_KEYS.map(key => {
+          h('tbody', null, REGIME_KEYS.map((key, index) => {
             const power = powers[key];
             if (!power) return null;
+            const before = index ? (powers[REGIME_KEYS[index - 1]] || { see: 0 }).see : 0;
+            // 这一级比上一级多看见的几层；一样多就写「同上」
+            const added = [...Array(Math.max(0, power.see - before))].map((_, i) => seeName(before + i + 1));
             return h('tr', { key, className: cx(regime && regime.level === key && 'is-current') },
               h('td', null, h('b', null, regimeInfo(key).name)),
-              h('td', null, power.see === 1 ? seeName(1) : `+ ${seeName(power.see)}`),
+              h('td', null, !before ? added.join(isEn() ? ', ' : '、') : added.length ? `+ ${added.join(isEn() ? ', ' : '、')}` : zhEn('同上', 'Same')),
               h('td', null, decideList(power)),
               h('td', null, doText(power)));
           })));
@@ -4280,6 +4307,27 @@ select.ssl-input { cursor: pointer; }
       }
 
       const SID = 'sansheng-liubu';
+
+      // ---------- DSH 侧栏「工作区」：三省六部用到的文件夹登记进去，在侧栏里就能找到、能开会话 ----------
+      // 侧栏的工作区列表只列 DSH 自己的会话，插件加不了行、也写不进会话；能做的是把文件夹登记成工作区（ctx.workspaces，可选服务）
+      let workspacesApi = null;
+      const registeredDirs = new Set();
+      function registerWorkspace(dir, title) {
+        if (!workspacesApi || !dir || registeredDirs.has(dir)) return;
+        registeredDirs.add(dir);
+        Promise.resolve()
+          .then(() => workspacesApi.create({ path: dir }))
+          .then(view => {
+            // 只给新登记、还叫文件夹名的起个名字；用户自己改过名的不动
+            const base = String(dir).split(/[\\/]/).filter(Boolean).pop();
+            if (title && view && view.id && (!view.title || view.title === base)) return workspacesApi.rename(view.id, title);
+            return null;
+          })
+          .catch(error => {
+            registeredDirs.delete(dir);
+            console.warn('[sansheng-liubu] register workspace failed:', error);
+          });
+      }
 
       // ================= 做进 DSH：会话头部视图 + 右侧面板 =================
       let sidebarRightApi = null; // ctx.sidebarRight（可选服务，旧版 DSH 没有）
@@ -5155,10 +5203,10 @@ select.ssl-input { cursor: pointer; }
           hostLost: '与宿主的连接中断：{error}（显示的是最后一次拿到的状态）',
           loading: '加载中…', today: '今天', working: '处理中', waitingOutput: '等待输出…', vacant: '空缺', none: '暂无',
           close: '关闭', cancel: '取消', collapse: '收起', expand: '展开', applied: '已应用', inUse: '使用中', emptyDoc: '（空）', noSummary: '（无摘要）',
-          issue: '下旨', issueTitle: '下旨', briefLabel: '圣意', sealTitle: '下旨（Ctrl + Enter）',
+          issue: '下旨', issueTitle: '下旨', briefLabel: '圣意', sealTitle: '下旨（Enter）',
           orientTitle: '奏折竖排右起书写；写路径、英文或代码时可以切成横排',
           orientVertical: '改竖排', orientHorizontal: '改横排',
-          issueHint: '盖印或 Ctrl + Enter 下旨',
+          issueHint: 'Enter 下旨 · Shift + Enter 换行',
           briefPh: '要办成什么事？写清目标、范围和期望结果。例：把 reports 里的 CSV 汇总成月度报表，写一份周报，并检查本周改动的测试是否通过。',
           briefPhVideo: '要办成什么事？例：做一条二十五秒的 TikTok 竖屏视频，主题「打工人五分钟早餐」，轻松搞笑。',
           fieldWorkspace: '工作目录', workspacePh: '留空 = 在「文档/SanshengLiubu」下新建文件夹；git 仓库会自动隔离到分支',
@@ -5266,7 +5314,7 @@ select.ssl-input { cursor: pointer; }
           paneExecEmpty: '朝堂清静。到头部「确定工作流」下旨，这里会显示执行进度。', openChat: '看各部门沟通',
           pickEdictAria: '选择奏折', noEdictsShort: '还没有奏折', chatEmpty: '在下面写圣意下旨，三省六部的往来会像群聊一样出现在这里。',
           waitingReports: '等待各部回文…', workingFor: '办差中 {t}', typing: '正在输出',
-          fullShort: '朝堂满额，办完一份后可再下旨', chatPh: '写下圣意，盖印或 Ctrl + Enter 下旨',
+          fullShort: '朝堂满额，办完一份后可再下旨', chatPh: '写下圣意，Enter 下旨，Shift + Enter 换行',
           chatFlowN: '按钦定流程 {n} 步', chatFlowFree: '由中书省自拟流程',
         },
         en: {
@@ -5279,9 +5327,9 @@ select.ssl-input { cursor: pointer; }
           hostLost: 'Lost contact with the host: {error} (showing the last known state)',
           loading: 'Loading…', today: 'Today', working: 'Working', waitingOutput: 'Waiting for output…', vacant: 'Vacant', none: 'None',
           close: 'Close', cancel: 'Cancel', collapse: 'Hide', expand: 'Show', applied: 'Applied', inUse: 'In use', emptyDoc: '(empty)', noSummary: '(no summary)',
-          issue: 'Decree', issueTitle: 'Issue a decree', briefLabel: 'Caesar\'s will', sealTitle: 'Seal the decree (Ctrl + Enter)',
+          issue: 'Decree', issueTitle: 'Issue a decree', briefLabel: 'Caesar\'s will', sealTitle: 'Seal the decree (Enter)',
           orientTitle: 'Switch writing direction', orientVertical: 'Vertical', orientHorizontal: 'Horizontal',
-          issueHint: 'Press the seal or Ctrl + Enter',
+          issueHint: 'Enter to issue · Shift + Enter for a new line',
           briefPh: 'What must be done? State the goal, the scope and the expected result. E.g. Combine the CSVs in reports/ into a monthly report, write a weekly summary, and check that this week\'s changed tests pass.',
           briefPhVideo: 'What must be done? E.g. Make a 25-second vertical TikTok video: "a five-minute breakfast for busy workers", light and funny.',
           fieldWorkspace: 'Working folder', workspacePh: 'Empty = a new folder under Documents/SanshengLiubu; a git repo is isolated on its own branch',
@@ -5389,7 +5437,7 @@ select.ssl-input { cursor: pointer; }
           paneExecEmpty: 'The Senate is quiet. Issue a decree from the "Procedure" header view and progress appears here.', openChat: 'Senate floor',
           pickEdictAria: 'Pick a decree', noEdictsShort: 'No decrees yet', chatEmpty: 'Write Caesar\'s will below. The offices\' dispatches appear here like a group chat.',
           waitingReports: 'Waiting for reports…', workingFor: 'at work {t}', typing: 'writing',
-          fullShort: 'The Senate is full; issue again once one finishes', chatPh: 'Write Caesar\'s will; press the seal or Ctrl + Enter',
+          fullShort: 'The Senate is full; issue again once one finishes', chatPh: 'Write Caesar\'s will; Enter to issue, Shift + Enter for a new line',
           chatFlowN: 'Fixed procedure: {n} steps', chatFlowFree: 'The Consul plans the procedure',
         },
       };
@@ -5608,6 +5656,16 @@ select.ssl-input { cursor: pointer; }
           });
         } catch (error) {
           console.warn('[sansheng-liubu] right pane service unavailable; Acta / Senate floor skipped:', error);
+        }
+
+        // 4b) DSH 工作区服务：把三省六部的产出文件夹、用系统对话框选的文件夹登记进侧栏
+        try {
+          ctx.inject(['workspaces'], scope => {
+            workspacesApi = scope.workspaces;
+            scope.effect(() => () => { workspacesApi = null; }, 'sansheng-liubu: workspaces');
+          });
+        } catch (error) {
+          console.warn('[sansheng-liubu] workspaces service unavailable; folders are not added to the sidebar:', error);
         }
 
         // 5) 主题：注册整套主题（宫廷 / 墨夜 / 紫禁城 / 大理石 / 帝国之夜 / 罗马广场）+ 令牌叠加皮肤（官方 ctx.theme 扩展点，缺失就跳过）
