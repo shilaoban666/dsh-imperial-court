@@ -39,7 +39,9 @@
     --dsw-specific-sidebar-fill: #0d0d0f;
     color-scheme: dark;
   }
-  * { box-sizing: border-box; }
+  /* 只给预览自己的外壳设 border-box：DSH 不会替插件设，预览也不能，否则会把插件的溢出问题藏起来 */
+  :where(.pv-bar, .pv-shell, .pv-rail, .pv-main, .pv-convo, .pv-body, .pv-view, .pv-right, .pv-right-tabs, .pv-guide, .pv-chat),
+  :where(.pv-bar, .pv-rail, .pv-convo, .pv-right-tabs, .pv-guide, .pv-chat) * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
   body {
     background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary);
@@ -347,9 +349,9 @@
     [1, 2, 3].forEach(r => pushMsg(failed, { from: 'menxia', to: 'zhongshu', kind: 'veto', title: L(`第 ${r} 轮`, `Round ${r}`), summary: L('「发给产品组」需要对外发送，属于需要人类拍板的步骤', '"Send to the product team" is an outward step that needs a human decision') }));
     db.edicts.push(done, failed);
     annals.push(
-      { id: done.id, at: done.createdAt, brief: done.brief, outcome: 'done', reviewRounds: 2, vetoes: 1, fixRounds: 0, steps: [{ ministry: 'rites', status: 'done' }, { ministry: 'war', status: 'done' }], lessons: [{ kind: 'veto', text: L('门下封驳: 方案让兵部直接改 README 正文，与礼部职掌冲突', 'Vetoed: the plan has the Legate rewrite the README, which is the Pontifex\'s remit') }] },
-      { id: failed.id, at: failed.createdAt, brief: failed.brief, outcome: 'failed', reviewRounds: 3, vetoes: 3, fixRounds: 0, steps: [], lessons: [{ kind: 'veto', text: L('门下封驳: 「发给产品组」需要对外发送，属于需要人类拍板的步骤', 'Vetoed: "send to the product team" is an outward step that needs a human decision') }] },
-      { id: 'edict-20261024', at: Date.now() - 100 * hour, brief: L('给 store.mjs 补单元测试', 'Add unit tests for store.mjs'), outcome: 'done', reviewRounds: 1, vetoes: 0, fixRounds: 1, steps: [{ ministry: 'war', status: 'done' }, { ministry: 'justice', status: 'failed' }, { ministry: 'justice', status: 'done' }], lessons: [{ kind: 'audit', text: L('复核未过: test/store.test.mjs 没覆盖 state.json 损坏时的回退', 'Failed audit: test/store.test.mjs does not cover the fallback when state.json is corrupt') }] },
+      { id: done.id, at: done.createdAt, brief: done.brief, outcome: 'done', ruledBy: 'emperor', regime: 'sanju', reviewRounds: 2, vetoes: 1, fixRounds: 0, steps: [{ ministry: 'rites', status: 'done' }, { ministry: 'war', status: 'done' }], lessons: [{ kind: 'veto', text: L('门下封驳: 方案让兵部直接改 README 正文，与礼部职掌冲突', 'Vetoed: the plan has the Legate rewrite the README, which is the Pontifex\'s remit') }] },
+      { id: failed.id, at: failed.createdAt, brief: failed.brief, outcome: 'failed', regime: 'liangdang', reviewRounds: 3, vetoes: 3, fixRounds: 0, steps: [], lessons: [{ kind: 'veto', text: L('门下封驳: 「发给产品组」需要对外发送，属于需要人类拍板的步骤', 'Vetoed: "send to the product team" is an outward step that needs a human decision') }] },
+      { id: 'edict-20261024', at: Date.now() - 100 * hour, brief: L('给 store.mjs 补单元测试', 'Add unit tests for store.mjs'), outcome: 'done', ruledBy: 'regent', regime: 'sanju', reviewRounds: 1, vetoes: 0, fixRounds: 1, steps: [{ ministry: 'war', status: 'done' }, { ministry: 'justice', status: 'failed' }, { ministry: 'justice', status: 'done' }], lessons: [{ kind: 'audit', text: L('复核未过: test/store.test.mjs 没覆盖 state.json 损坏时的回退', 'Failed audit: test/store.test.mjs does not cover the fallback when state.json is corrupt') }] },
     );
     const seconds = Number(params.get('at'));
     startSim(BRIEF(), 'E:\\work\\project');
@@ -447,6 +449,32 @@
       workflow: db.workflow, workflowTemplates: TEMPLATES,
       recentWorkspaces: ['E:\\work\\project', 'E:\\work\\dsh-imperial-court', 'E:\\work\\design'],
       annals: { count: annals.length, rubberStamp: false },
+      regime: regimeNow(),
+    };
+  }
+
+  // 朝局用插件自己的 lib/regime.mjs 算（启动时载入），与宿主一模一样
+  function regimeNow() {
+    const m = window.__regime;
+    const regime = m.regimeOf(db);
+    const score = m.puppetIndex(regime, annals);
+    return { ...regime, puppet: { score, verdict: m.puppetVerdict(score) } };
+  }
+  function biography() {
+    const settled = annals.filter(e => ['done', 'rejected', 'cancelled', 'failed'].includes(e.outcome));
+    const done = settled.filter(e => e.outcome === 'done').length;
+    const regimes = {};
+    annals.forEach(e => { if (e.regime) regimes[e.regime] = (regimes[e.regime] || 0) + 1; });
+    return {
+      regime: regimeNow(),
+      abilities: { zhiren: regimeNow().rank * 20, mingcha: 67, jiejian: 74, shengming: 58, qinzheng: 32, zhiji: settled.length ? Math.round(100 * done / settled.length) : null },
+      tasks: annalStats().ministries,
+      reign: {
+        since: annals.length ? Math.min(...annals.map(e => e.at)) : 0, edicts: annals.length, done,
+        rejected: settled.filter(e => e.outcome === 'rejected').length, cancelled: settled.filter(e => e.outcome === 'cancelled').length,
+        failed: settled.filter(e => e.outcome === 'failed').length, ruled: annals.filter(e => e.ruledBy === 'emperor').length,
+        regent: annals.filter(e => e.ruledBy === 'regent').length, costUsd: 3.36, regimes,
+      },
     };
   }
 
@@ -466,6 +494,7 @@
     if (pathname === '/probe' && method === 'POST') return probeOne(db.agents.find(x => x.id === body.agentId));
     if (pathname === '/probe-all' && method === 'POST') return Object.fromEntries(db.agents.map(a => [a.id, a.adapter === 'cli' ? probeOne(a) : { ok: true, detail: a.adapter }]));
     if (pathname === '/annals' && method === 'GET') return { entries: annals, stats: annalStats() };
+    if (pathname === '/biography' && method === 'GET') return biography();
     if (pathname === '/estimate' && method === 'POST') {
       const text = String(body.brief || '');
       const clauses = text.split(/[，,。；;、\n]|并且|然后|同时|以及|\band\b|\bthen\b/i).filter(s => s.trim().length > 1).length;
@@ -674,10 +703,14 @@
 <script>
   // 每次都取最新的 client.js（http.server 不带缓存头，浏览器会拿旧的）
   (function () {
-    const s = document.createElement('script');
-    s.src = 'client.js?t=' + Date.now();
-    s.onload = () => window.__previewBoot();
-    document.body.appendChild(s);
+    const t = Date.now();
+    import('./lib/regime.mjs?t=' + t).then(m => {
+      window.__regime = m;
+      const s = document.createElement('script');
+      s.src = 'client.js?t=' + t;
+      s.onload = () => window.__previewBoot();
+      document.body.appendChild(s);
+    });
   })();
 </script>
 </body>

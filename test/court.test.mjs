@@ -15,6 +15,7 @@ import { normalizeSteps } from '../lib/court.mjs';
 import { tokens } from '../lib/annals.mjs';
 import { ROLE_IDS, MINISTRY_IDS } from '../lib/i18n.mjs';
 import { resolveWorkflow } from '../lib/workflows.mjs';
+import { regimeOf, familyOf, puppetIndex, actualRegimeOf, OFFICES } from '../lib/regime.mjs';
 
 const FAKE = fileURLToPath(new URL('./fake-agent.mjs', import.meta.url));
 const tmp = prefix => fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -477,4 +478,64 @@ test('estimate predicts the procedure and a cost range before issuing', () => {
   const big = api.estimate({ brief: '汇总数据，然后写报告，并且检查结论，再做一页 PPT' });
   assert.equal(big.mode, 'standard');
   assert.ok(big.calls[1] > small.calls[1]);
+});
+
+test('the regime follows who holds office: tools, then model houses', () => {
+  const dsh = { id: 'dsh', name: 'DSH', adapter: 'self' };
+  const cc = { id: 'cc', name: 'Claude Code', adapter: 'cli', command: 'claude', traits: ['实现'] };
+  const codex = { id: 'codex', name: 'Codex', adapter: 'cli', command: 'codex', traits: ['审查', '测试'] };
+  const wb = { id: 'wb', name: 'WorkBuddy', adapter: 'cli', command: 'codebuddy', traits: ['表格'] };
+  const qwen = { id: 'qwen', name: 'Qwen Office', adapter: 'manual' };
+  const all = (agentId, model = '') => Object.fromEntries(OFFICES.map(id => [id, { agentId, model }]));
+  const agents = [dsh, cc, codex, wb, qwen];
+  const run = (roles, rules = {}) => regimeOf({ agents, roles, rules });
+
+  // 只用 DSH、模型同出一家：加九锡；换了别家模型：权倾朝野
+  const jiuxi = run({ ...all('dsh', 'deepseek-chat'), menxia: { agentId: 'dsh', model: 'deepseek-reasoner' } });
+  assert.equal(jiuxi.level, 'jiuxi');
+  assert.equal(jiuxi.dominant.share, 1);
+  assert.equal(run({ ...all('dsh', 'deepseek-chat'), menxia: { agentId: 'dsh', model: 'qwen-max' } }).level, 'quanchen');
+  // DSH + 一家：两党争霸；三家：三巨头；四家：乾纲独断
+  const two = run({ ...all('dsh'), war: { agentId: 'cc' } });
+  assert.equal(two.level, 'liangdang');
+  assert.equal(run({ ...all('dsh'), war: { agentId: 'cc' }, justice: { agentId: 'codex' } }).level, 'sanju');
+  const four = run({ ...all('dsh'), war: { agentId: 'cc' }, justice: { agentId: 'codex' }, rites: { agentId: 'qwen' } });
+  assert.equal(four.level, 'qiangang');
+  assert.equal(four.rank, 5);
+  // 丞相模式下人工岗位由代办接手：千问不再算一家
+  const regent = run({ ...all('dsh'), war: { agentId: 'cc' }, justice: { agentId: 'codex' }, rites: { agentId: 'qwen' } }, { autonomous: true, fallbackAgentId: 'cc' });
+  assert.equal(regent.level, 'sanju');
+  assert.equal(regent.holders.rites.deputy, true);
+  // 升级建议：把对口的岗位从权柄最重那家分给闲着的工具
+  const tip = two.suggestions.find(item => item.kind === 'appoint' && item.agentId === 'codex');
+  assert.ok(tip && ['menxia', 'justice'].includes(tip.roleId) && tip.to === 'sanju', JSON.stringify(two.suggestions));
+  // 回避：拟旨与封驳同出一家，而朝中另有别家
+  assert.ok(two.suggestions.some(item => item.kind === 'recuse' && item.agentId === 'cc'));
+  // 模型认家
+  assert.equal(familyOf('claude-sonnet-4-5', cc), 'anthropic');
+  assert.equal(familyOf('', codex), 'openai');
+  assert.equal(familyOf('glm-5.3', wb), 'zhipu');
+  assert.equal(familyOf('auto', wb), 'tool:wb');
+  // 一家独大、丞相代办，比四家分权、亲自批红更像傀儡
+  assert.ok(puppetIndex({ ...jiuxi, autonomous: true }, []) > puppetIndex(four, [{ outcome: 'done', ruledBy: 'emperor' }]));
+  assert.equal(actualRegimeOf([{ agentId: 'dsh', model: 'deepseek-chat' }, { agentId: 'cc', model: '' }], agents), 'liangdang');
+});
+
+test('the biography knows who ruled: sealing by hand counts, the regime is recorded', async () => {
+  const repo = makeRepo();
+  const { api } = makeCourt();
+  assert.equal(api.getState().regime.level, 'liangdang');
+  const { id } = api.createEdict({ brief: 'write a hello file', workspace: repo, criteria: 'hello.txt exists' });
+  await waitFor(api, id, ['awaiting-approval']);
+  api.approve(id);
+  const detail = api.getEdict(id);
+  assert.equal(detail.ruledBy, 'emperor');
+  assert.deepEqual(detail.regime, { appointed: 'liangdang', actual: 'liangdang' });
+  const bio = api.biography();
+  assert.equal(bio.reign.edicts, 1);
+  assert.equal(bio.reign.ruled, 1);
+  assert.equal(bio.abilities.mingcha, 100);
+  assert.equal(bio.reign.regimes.liangdang, 1);
+  assert.ok(bio.tasks.war && bio.tasks.war.done >= 1);
+  assert.ok(bio.regime.puppet.score >= 0 && bio.regime.puppet.verdict);
 });

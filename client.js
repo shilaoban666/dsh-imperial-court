@@ -61,7 +61,8 @@
   font-size: 13px;
   line-height: 1.55;
 }
-.ssl *, .ssl-overlay * { box-sizing: border-box; }
+/* DSH 不给插件元素设 border-box：外层自己也要设，否则 width:100% 再加内边距会把右边挤出窗口 */
+.ssl, .ssl *, .ssl-root, .ssl-scroll, .ssl-overlay, .ssl-overlay *, [class*="ssl-"] { box-sizing: border-box; }
 /* min-width: 0：宿主容器若是 flex，单行省略的长标题会按全文宽度撑开整页 */
 .ssl { padding: 22px 28px 96px; max-width: 1200px; min-width: 0; width: 100%; margin: 0 auto; }
 /* 外壳自己滚动，并作为容器查询的基准：宽窄按插件实际拿到的宽度算，而不是整个窗口（DSH 侧栏、右侧面板都会吃掉宽度） */
@@ -342,6 +343,16 @@ select.ssl-input { cursor: pointer; }
 
 /* 群臣 */
 .ssl-agent.is-off { opacity: .66; }
+/* 群臣卡片默认收起成一行，点名字或 ▾ 展开 */
+.ssl-agents { grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); align-items: start; }
+.ssl-agent { padding: 12px 14px; }
+.ssl-agent.is-open { grid-column: 1 / -1; padding: 16px 18px; }
+.ssl-agent .ssl-role-head { align-items: center; }
+.ssl-agent-toggle { display: block; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.ssl-agent-toggle .ssl-role-title { display: flex; align-items: center; gap: 6px; }
+.ssl-agent-toggle .ssl-dot.is-ok { color: var(--ssl-ok); }
+.ssl-agent-toggle .ssl-dot.is-err { color: var(--ssl-err); }
+.ssl-chevron { width: 28px; padding: 0; justify-content: center; font-size: 15px; }
 .ssl-agent-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 0 12px; }
 .ssl-probe { margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 12px; }
 .ssl-switch { position: relative; width: 34px; height: 20px; flex: 0 0 34px; }
@@ -802,6 +813,65 @@ select.ssl-input { cursor: pointer; }
   .zz-sub, .zz-date { display: none; }
   .zz-head { width: 46px; }
   .zz-tail { width: 72px; padding-left: 7px; padding-right: 7px; justify-content: center; }
+}
+
+/* 朝局 */
+.ssl-regime-chip {
+  display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 11px; border-radius: 9px; cursor: pointer;
+  border: 1px solid var(--ssl-line); background: var(--ssl-panel); color: var(--ssl-fg); font: inherit; font-size: 12.5px; white-space: nowrap;
+}
+.ssl-regime-chip:hover { border-color: var(--ssl-line2); }
+.ssl-regime-dots { display: inline-flex; gap: 3px; }
+.ssl-regime-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--ssl-line2); }
+.ssl-regime-dots i.on { background: var(--ssl-seal); }
+.ssl-ladder { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; }
+.ssl-ladder li {
+  position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 8px 10px; border-radius: 9px;
+  border: 1px solid var(--ssl-line); background: var(--ssl-sunken); color: var(--ssl-mut);
+}
+.ssl-ladder li b { font-size: 11px; font-weight: 600; }
+.ssl-ladder-name { font: 600 13.5px/1.3 var(--ssl-serif); color: var(--ssl-fg2); }
+.ssl-ladder-when { font-size: 11px; line-height: 1.35; }
+.ssl-ladder li.is-past { color: var(--ssl-mut); }
+.ssl-ladder li.is-current { border-color: var(--ssl-seal); background: color-mix(in srgb, var(--ssl-seal) 10%, var(--ssl-panel)); color: var(--ssl-fg2); }
+.ssl-ladder li.is-current .ssl-ladder-name { color: var(--ssl-seal); }
+.ssl-regime-body { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; margin-top: 12px; }
+.ssl-regime-story { margin: 0 0 8px; font: 13px/1.6 var(--ssl-serif); color: var(--ssl-fg2); }
+.ssl-regime-row { display: flex; align-items: flex-start; gap: 8px; margin-top: 6px; font-size: 12.5px; }
+.ssl-regime-row .ssl-pill { flex: none; }
+.ssl-regime-house { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px dashed var(--ssl-line); font-size: 12.5px; }
+.ssl-regime-house b { flex: none; }
+.ssl-regime-tips { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--ssl-line); }
+.ssl-regime-tip { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+/* 帝王传记 */
+.ssl-bio-head { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: flex-start; }
+.ssl-bio-title { margin: 2px 0 0; font: 700 22px/1.3 var(--ssl-serif); letter-spacing: .04em; color: var(--ssl-fg); }
+.ssl-puppet { flex: 0 1 320px; min-width: 240px; }
+.ssl-puppet > .ssl-between b { font: 700 15px/1.3 var(--ssl-serif); }
+.ssl-meter { position: relative; height: 8px; margin: 8px 0 4px; border-radius: 4px; background: var(--ssl-sunken); overflow: hidden; box-shadow: inset 0 0 0 1px var(--ssl-line); }
+.ssl-meter i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--ssl-ok); }
+.ssl-puppet.is-shared .ssl-meter i { background: var(--ssl-warn); }
+.ssl-puppet.is-slipping .ssl-meter i, .ssl-puppet.is-figurehead .ssl-meter i { background: var(--ssl-err); }
+.ssl-bio-radars { margin-top: 12px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.ssl-radar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.ssl-radar svg { flex: 0 1 310px; width: 310px; max-width: 100%; height: auto; }
+.ssl-radar-grid { fill: none; stroke: var(--ssl-line); stroke-width: 1; }
+.ssl-radar-area { fill: color-mix(in srgb, var(--ssl-seal) 22%, transparent); stroke: var(--ssl-seal); stroke-width: 2; stroke-linejoin: round; }
+.ssl-radar-dot { fill: var(--ssl-seal); stroke: var(--ssl-panel); stroke-width: 2; }
+.ssl-radar-dot.is-empty { fill: var(--ssl-panel); stroke: var(--ssl-mut); stroke-width: 1.5; }
+.ssl-radar-label { font-size: 13px; fill: var(--ssl-fg2); }
+.ssl-radar-list { flex: 1 1 140px; margin: 0; padding: 0; list-style: none; font-size: 12.5px; }
+.ssl-radar-list li { display: flex; align-items: baseline; gap: 8px; padding: 3px 0; border-bottom: 1px dashed var(--ssl-line); }
+.ssl-radar-list span { flex: 1; color: var(--ssl-fg2); }
+.ssl-radar-list b { font-variant-numeric: tabular-nums; }
+.ssl-radar-list i { font-style: normal; font-size: 11px; color: var(--ssl-mut); }
+@container (max-width: 900px) {
+  .ssl-regime-body { grid-template-columns: minmax(0, 1fr); }
+  .ssl-bio-radars { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 560px) {
+  .ssl-ladder { grid-template-columns: minmax(0, 1fr); }
+  .ssl-ladder-when { display: none; }
 }
 
 /* 朝堂页只放下旨框：跟 DSH 的输入框一样，框下面不再挂别的卡片 */
@@ -1603,7 +1673,7 @@ select.ssl-input { cursor: pointer; }
         submit: ['送审', 'Submission', 'plain', '中书省把方案送门下省审议', 'The Consul submits the plan to the Tribune'],
         veto: ['封驳', 'Veto', 'err', '审查不通过：门下省把方案打回重拟', 'Review failed: the Tribune sends the plan back'],
         assent: ['准奏', 'Assent', 'ok', '审查通过，可以派单', 'Review passed; orders can go out'],
-        overrule: ['保留', 'Overruled', 'warn', '自治模式下封驳未决，按最后一版执行，意见转为注意事项', 'Autonomy: unresolved vetoes become cautions and the last draft goes ahead'],
+        overrule: ['保留', 'Overruled', 'warn', '丞相模式下封驳未决，按最后一版执行，意见转为注意事项', 'Autonomy: unresolved vetoes become cautions and the last draft goes ahead'],
         dispatch: ['派单', 'Dispatch', 'plain', '尚书省把方案拆成差事派给六部', 'The Proconsul splits the plan into orders for the magistrates'],
         order: ['差事', 'Order', 'plain', '派给某一部的一件具体工作', 'One concrete piece of work for one office'],
         retry: ['重办', 'Retry', 'warn', '失败后带着失败原因再办一次', 'A failed order tried again with the error in hand'],
@@ -2240,6 +2310,7 @@ select.ssl-input { cursor: pointer; }
       // ---------- 官职：谁担任哪个岗位、朝规、术语 ----------
       function RosterTab({ state, onRefresh, notify }) {
         return h('div', null,
+          h('div', { style: { marginTop: '4px' } }, h(RegimeCard, { state, onRefresh, notify })),
           h(CourtRoster, { state, onRefresh, notify }),
           h('div', { style: { marginTop: '12px' } }, h(Glossary)));
       }
@@ -2902,6 +2973,8 @@ select.ssl-input { cursor: pointer; }
         const [drafts, setDrafts] = useState({});
         const [probe, setProbe] = useState({});
         const [saving, setSaving] = useState(false);
+        const [open, setOpen] = useState({});
+        const toggle = id => setOpen(prev => ({ ...prev, [id]: !prev[id] }));
 
         const edit = (id, patch) => setDrafts(prev => ({ ...prev, [id]: { ...(prev[id] || {}), ...patch } }));
         const valueOf = (id, key, fallback) => (drafts[id] && drafts[id][key] !== undefined ? drafts[id][key] : fallback);
@@ -2954,23 +3027,31 @@ select.ssl-input { cursor: pointer; }
             h('div', { className: 'ssl-actions' },
               h('span', { className: 'ssl-caption ssl-mono ssl-ellipsis', title: state.root, style: { maxWidth: '360px' } }, state.root),
               h('button', { className: 'ssl-btn ssl-btn--sm', onClick: probeAll }, t('probeAll')))),
-          h('div', { className: 'ssl-grid', style: { gridTemplateColumns: 'repeat(auto-fill, minmax(min(420px, 100%), 1fr))' } }, state.agents.map(item => {
+          h('div', { className: 'ssl-grid ssl-agents' }, state.agents.map(item => {
             const check = probe[item.id];
             const enabled = valueOf(item.id, 'enabled', item.enabled !== false);
             const posts = postsOf(item.id);
-            return h('div', { key: item.id, className: cx('ssl-card ssl-agent', !enabled && 'is-off') },
+            // 默认收起，只露一行：开关、名字、现任、类型、探测结果；有没保存的改动时保持展开
+            const expanded = open[item.id] === true || (open[item.id] === undefined && !!drafts[item.id]);
+            const summary = item.adapter === 'cli'
+              ? [item.command, (item.models || []).slice(0, 3).join(', ')].filter(Boolean).join(' · ')
+              : (ADAPTER_LABEL[item.adapter] || [item.adapter, item.adapter])[isEn() ? 1 : 0];
+            return h('div', { key: item.id, className: cx('ssl-card ssl-agent', !enabled && 'is-off', expanded && 'is-open') },
               h('div', { className: 'ssl-role-head' },
                 h('label', { className: 'ssl-switch', title: enabled ? t('enabled') : t('disabled') },
                   h('input', { type: 'checkbox', checked: enabled, onChange: event => edit(item.id, { enabled: event.target.checked }) }),
                   h('span', null)),
-                h('div', { className: 'ssl-grow' },
-                  h('div', { className: 'ssl-role-title' }, item.name),
-                  h('div', { className: 'ssl-caption ssl-ellipsis' }, posts.length ? t('postsNow', { list: posts.join(isEn() ? ', ' : '、') }) : t('noPost'))),
-                h('span', { className: 'ssl-pill ssl-pill--plain' }, (ADAPTER_LABEL[item.adapter] || [item.adapter, item.adapter])[isEn() ? 1 : 0]),
-                item.adapter === 'cli' ? h('button', { className: 'ssl-btn ssl-btn--sm', disabled: check && check.pending, onClick: () => doProbe(item.id) }, check && check.pending ? t('probing') : t('probe')) : null),
-              (item.traits || []).length ? h('div', { style: { display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '10px' } },
+                h('button', { className: 'ssl-agent-toggle ssl-grow', 'aria-expanded': expanded, onClick: () => toggle(item.id) },
+                  h('div', { className: 'ssl-role-title ssl-ellipsis' },
+                    check && !check.pending ? h('span', { className: cx('ssl-dot', check.ok ? 'is-ok' : 'is-err'), title: check.detail }) : null,
+                    item.name),
+                  h('div', { className: 'ssl-caption ssl-ellipsis' }, posts.length ? t('postsNow', { list: posts.join(isEn() ? ', ' : '、') }) : t('noPost')),
+                  expanded ? null : h('div', { className: 'ssl-caption ssl-mono ssl-ellipsis' }, summary)),
+                item.adapter === 'cli' ? h('button', { className: 'ssl-btn ssl-btn--sm', disabled: check && check.pending, onClick: () => doProbe(item.id) }, check && check.pending ? t('probing') : t('probe')) : null,
+                h('button', { className: 'ssl-btn ssl-btn--ghost ssl-btn--sm ssl-chevron', title: expanded ? t('collapse') : t('expand'), 'aria-label': expanded ? t('collapse') : t('expand'), onClick: () => toggle(item.id) }, expanded ? '▴' : '▾')),
+              !expanded ? null : (item.traits || []).length ? h('div', { style: { display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '10px' } },
                 item.traits.map(trait => h('span', { key: trait, className: 'ssl-pill' }, trait))) : null,
-              item.adapter === 'cli' ? h('div', { className: 'ssl-agent-fields' },
+              !expanded ? null : item.adapter === 'cli' ? h('div', { className: 'ssl-agent-fields' },
                 field(item.id, 'command', t('fieldCommand'), item.command || ''),
                 field(item.id, 'argsText', t('fieldArgs'), (item.args || []).join(' ')),
                 field(item.id, 'modelArgsText', t('fieldModelArgs'), (item.modelArgs || []).join(' ')),
@@ -2984,7 +3065,7 @@ select.ssl-input { cursor: pointer; }
                 field(item.id, 'formatArgsText', t('fieldFormatArgs'), (item.formatArgs || []).join(' '), '--output-format stream-json --verbose'),
                 field(item.id, 'resumeArgsText', t('fieldResumeArgs'), (item.resumeArgs || []).join(' '), t('resumeArgsPh'), true))
                 : h('div', { className: 'ssl-alert ssl-alert--info' }, item.adapter === 'self' ? t('adapterSelfNote') : t('adapterManualNote')),
-              check && !check.pending ? h('div', { className: 'ssl-probe' },
+              expanded && check && !check.pending ? h('div', { className: 'ssl-probe' },
                 h('span', { className: cx('ssl-pill', check.ok ? 'ssl-pill--ok' : 'ssl-pill--err') }, check.ok ? t('found') : t('notFound')),
                 h('span', { className: 'ssl-mono ssl-ellipsis', title: check.detail }, check.detail)) : null);
           })),
@@ -3113,6 +3194,249 @@ select.ssl-input { cursor: pointer; }
           h('button', { className: cx(currentLocale === 'en' && 'is-active'), onClick: () => choose('en') }, 'EN'));
       }
 
+      // ================= 朝局与帝王传记 =================
+      const zhEn = (zh, en) => (isEn() ? en : zh);
+      const REGIME_KEYS = ['jiuxi', 'quanchen', 'liangdang', 'sanju', 'qiangang'];
+      // 五级朝局：[中, 英] 各自的 名字 / 条件 / 典故 / 得 / 失
+      const REGIME_INFO = {
+        jiuxi: [
+          ['加九锡', '只用一家工具，模型也出自同一家', '王莽、曹操、司马昭受九锡，下一步就是篡位', '最快最省，缓存命中最高', '一家拟旨、审议、办差，皇帝看不见过程也插不上手；自己审自己，封驳形同虚设'],
+          ['Dictator Perpetuo', 'One tool, models from one house', 'Caesar was made dictator for life in 44 BC; the Ides of March came a month later', 'Fastest and cheapest, best cache reuse', 'One house drafts, reviews and works; you can neither see nor step in, and self-review makes the veto a formality'],
+        ],
+        quanchen: [
+          ['权倾朝野', '只用一家工具，但调了不同家的模型', '霍光、严嵩：朝中大事都经一人之手', '不同家的模型盲区不同，比加九锡多一层把关', '都跑在同一套工具和沙箱里，工具层面的毛病会一起犯；审议只能作参考'],
+          ['Sejanus’ Rome', 'One tool calling models from different houses', 'Tiberius withdrew to Capri; every message reached him through his prefect Sejanus', 'Different models have different blind spots', 'Everything runs in one tool and sandbox, so tool-level mistakes are shared; review is advisory'],
+        ],
+        liangdang: [
+          ['两党争霸', '两家工具，如 DSH + Claude Code', '北宋新旧党争；罗马分东西两帝', '一家办、另一家审，是真正的交叉检查', '来回多、花钱多；僵持时皇帝得亲自断案'],
+          ['East and West', 'Two tools, e.g. DSH + Claude Code', 'In 395 the empire split between Arcadius in the East and Honorius in the West', 'One house works and the other reviews: a real cross-check', 'More rounds and more spend; deadlocks need your ruling'],
+        ],
+        sanju: [
+          ['三巨头', '三家工具，如 DSH + WorkBuddy + Claude Code', '三国鼎立；凯撒、庞培、克拉苏结前三头同盟', '各领擅长的岗位，拟旨、审议、办差分属几家，互相牵制', '交接多、花钱多；一家倒下，同盟即瓦解'],
+          ['Triumvirate', 'Three tools, e.g. DSH + WorkBuddy + Claude Code', 'Caesar, Pompey and Crassus; later Octavian, Antony and Lepidus split the provinces', 'Each house holds what it does best, and they keep each other in check', 'More hand-offs and spend; lose one house and the pact collapses'],
+        ],
+        qiangang: [
+          ['乾纲独断', '四家及以上工具', '推恩令之后的汉武帝：众建诸侯而少其力', '量才授官：每个岗位都交给最合适的那家，没有哪家能一手遮天', '要管的工具多；每份奏折只调用对口的那一两家，不会四家全上'],
+          ['Tetrarchy', 'Four tools or more', 'Diocletian shared the empire among four, yet kept the final word', 'Every office goes to the house that suits it, and no house can rule alone', 'More tools to keep in order; a decree still calls only the one or two that fit'],
+        ],
+      };
+      const regimeInfo = key => {
+        const row = (REGIME_INFO[key] || REGIME_INFO.jiuxi)[isEn() ? 1 : 0];
+        return { name: row[0], when: row[1], story: row[2], gain: row[3], cost: row[4] };
+      };
+      // 架空程度
+      const PUPPET_INFO = {
+        supreme: [['大权在握', '朝中多家分权，大事你亲自拍板。'], ['Firm grip', 'Power is spread across houses and you make the big calls yourself.']],
+        steady: [['垂拱而治', '分权得当，偶尔放手给丞相。'], ['Light hand', 'Power is well spread; now and then you let the regent decide.']],
+        shared: [['君臣共治', '朝中有一两家说了算，但批红还握在你手里。'], ['Shared rule', 'One or two houses run things, but the seal is still yours.']],
+        slipping: [['大权旁落', '一家独大，或者多半由丞相代你拍板。'], ['Power slipping', 'One house dominates, or the regent decides most decrees for you.']],
+        figurehead: [['形同傀儡', '权臣包办一切，你只在最后盖个印，像汉献帝。'], ['Figurehead', 'One house does everything and you only stamp the end, like Honorius at Ravenna.']],
+      };
+      const puppetInfo = key => {
+        const row = (PUPPET_INFO[key] || PUPPET_INFO.shared)[isEn() ? 1 : 0];
+        return { name: row[0], desc: row[1] };
+      };
+      // 皇帝六能：名字 / 怎么算 / 怎么补
+      const ABILITY_INFO = {
+        zhiren: [['知人', '朝局越分权越高；拟旨与封驳出自同一家扣分', '再任用一家工具，或让拟旨与封驳分属两家'], ['Appointments', 'Higher the more houses share power; same-house drafting and review costs points', 'Bring in another tool, or give drafting and review to different houses']],
+        mingcha: [['明察', '拍板的奏折里，亲自批红、驳回或叫停的比例', '少交给丞相拍板，奏折上来亲自批红或驳回'], ['Oversight', 'Share of decided decrees you sealed, rejected or halted yourself', 'Let the regent decide less; seal or reject decrees yourself']],
+        jiejian: [['节俭', '废料越少、缓存命中越高越好', '看国库里「户部的建议」：废料多半来自被封驳的草稿和重办'], ['Thrift', 'Less waste and more cache reuse score higher', 'See the Quaestor’s advice in the Aerarium: waste is mostly vetoed drafts and redos']],
+        shengming: [['圣明', '门下一次就准奏的比例；给了验收标准加分', '下旨时写清目标、范围和验收标准，门下就少驳几轮'], ['Clarity', 'Share of plans passed on the first review; acceptance criteria add points', 'State the goal, scope and acceptance criteria and the Tribune will veto less']],
+        qinzheng: [['勤政', '近 30 天下了几道旨', '多下几道旨，史馆和这张图才有数据'], ['Diligence', 'Decrees issued in the last 30 days', 'Issue more decrees so the Annals and this chart have data']],
+        zhiji: [['治绩', '办成的奏折占比', '去奏折页看失败原因，常见是 CLI 没装好或权限不够'], ['Results', 'Share of decrees that succeeded', 'Check failed decrees: usually a missing CLI or missing write permission']],
+      };
+      const ABILITY_KEYS = Object.keys(ABILITY_INFO);
+      const abilityInfo = key => {
+        const row = ABILITY_INFO[key][isEn() ? 1 : 0];
+        return { name: row[0], how: row[1], tip: row[2] };
+      };
+      const TITLES_BY_ABILITY = {
+        zhiren: ['知人善任之君', 'the Judge of Men'], mingcha: ['明察秋毫之君', 'the Watchful'], jiejian: ['节用爱民之君', 'the Frugal'],
+        shengming: ['圣明烛照之君', 'the Clear-Sighted'], qinzheng: ['宵衣旰食之君', 'the Tireless'], zhiji: ['功业彪炳之君', 'the Accomplished'],
+      };
+
+      /** 五级朝局的阶梯，当前这一级高亮 */
+      function RegimeLadder({ level }) {
+        const current = REGIME_KEYS.indexOf(level);
+        return h('ol', { className: 'ssl-ladder', 'aria-label': zhEn('五级朝局', 'Five regimes') }, REGIME_KEYS.map((key, index) => {
+          const info = regimeInfo(key);
+          return h('li', { key, className: cx(index === current && 'is-current', index < current && 'is-past'), title: `${info.when}\n${info.story}` },
+            h('b', null, index + 1),
+            h('span', { className: 'ssl-ladder-name' }, info.name),
+            h('span', { className: 'ssl-ladder-when' }, info.when));
+        }));
+      }
+
+      /** 头部的朝局小签：点一下进帝王传记 */
+      function RegimeChip({ regime, onClick }) {
+        if (!regime) return null;
+        const info = regimeInfo(regime.level);
+        const puppet = regime.puppet ? puppetInfo(regime.puppet.verdict) : null;
+        return h('button', { className: cx('ssl-regime-chip', `is-${regime.level}`), onClick, title: `${info.when}${puppet ? `\n${puppet.name} · ${regime.puppet.score}` : ''}` },
+          h('span', { className: 'ssl-caption' }, zhEn('朝局', 'Regime')),
+          h('b', null, info.name),
+          h('span', { className: 'ssl-regime-dots', 'aria-hidden': true }, REGIME_KEYS.map((key, index) => h('i', { key, className: cx(index <= regime.rank - 1 && 'on') }))));
+      }
+
+      /** 官职页顶部：当前朝局、各家分了哪些岗位、再任用谁能升一级 */
+      function RegimeCard({ state, onRefresh, notify }) {
+        const regime = state.regime;
+        if (!regime) return null;
+        const info = regimeInfo(regime.level);
+        const apply = item => {
+          const prev = state.roles[item.roleId] || {};
+          savePresetPatch(state, { roles: { ...state.roles, [item.roleId]: { ...prev, agentId: item.agentId, model: '' } } }, onRefresh, notify,
+            zhEn(`${roleName(item.roleId)}改由 ${item.agent} 担任`, `${roleName(item.roleId)} is now held by ${item.agent}`));
+        };
+        return h('div', { className: 'ssl-card ssl-regime' },
+          h('div', { className: 'ssl-card-h' },
+            h('div', { className: 'ssl-grow' },
+              h('h4', { className: 'ssl-card-t' }, zhEn('朝局', 'Regime'), ' · ', info.name),
+              h('div', { className: 'ssl-caption' }, zhEn('按官职任命算，不调模型、不花钱；工具越多，权越分散，皇权越稳', 'Read from who holds office, no model calls; the more tools, the more power is spread and the safer your throne'))),
+            regime.autonomous ? h('span', { className: 'ssl-pill ssl-pill--warn' }, zhEn('丞相模式', 'Regent mode')) : null),
+          h(RegimeLadder, { level: regime.level }),
+          h('div', { className: 'ssl-regime-body' },
+            h('div', null,
+              h('p', { className: 'ssl-regime-story' }, info.story),
+              h('div', { className: 'ssl-regime-row' }, h('span', { className: 'ssl-pill ssl-pill--ok' }, zhEn('得', 'Gain')), h('span', null, info.gain)),
+              h('div', { className: 'ssl-regime-row' }, h('span', { className: 'ssl-pill ssl-pill--err' }, zhEn('失', 'Cost')), h('span', null, info.cost))),
+            h('div', null,
+              h('div', { className: 'ssl-label' }, zhEn('各家领哪些岗位', 'Who holds what')),
+              regime.tools.length ? regime.tools.map(tool => h('div', { key: tool.agentId, className: 'ssl-regime-house' },
+                h('b', null, tool.name),
+                h('span', { className: 'ssl-caption' }, tool.offices.map(roleName).join(isEn() ? ', ' : '、')))) : h('div', { className: 'ssl-caption' }, zhEn('还没有人在任', 'No one holds office yet')))),
+          regime.suggestions.length ? h('div', { className: 'ssl-regime-tips' }, regime.suggestions.map((item, index) => h('div', { key: index, className: 'ssl-regime-tip' },
+            h('span', { className: 'ssl-grow' },
+              item.kind === 'appoint' ? zhEn(
+                `把${roleName(item.roleId)}交给 ${item.agent}${item.fit ? '（对口）' : ''}，朝局可升为「${regimeInfo(item.to).name}」`,
+                `Give the ${roleName(item.roleId)} to ${item.agent}${item.fit ? ' (a good fit)' : ''} to rise to “${regimeInfo(item.to).name}”`)
+                : item.kind === 'recuse' ? zhEn(
+                  `回避：拟旨与封驳出自同一家，自己审自己。把门下省交给 ${item.agent}，封驳才算数`,
+                  `Recusal: the same house drafts and reviews. Give the Tribune to ${item.agent} so the veto means something`)
+                : zhEn(`群臣里没有闲着的工具：在「群臣」启用或添加一个，朝局可升为「${regimeInfo(item.to).name}」`,
+                  `No idle tool in the Cohort: enable or add one to rise to “${regimeInfo(item.to).name}”`)),
+            item.agentId ? h('button', { className: 'ssl-btn ssl-btn--sm', onClick: () => apply(item) }, zhEn('照此任命', 'Appoint')) : null))) : null);
+      }
+
+      /** 六轴雷达：单一系列，数值列表就是它的表格视图；悬停每个顶点看数值 */
+      function Radar({ axes, label }) {
+        const size = 240;
+        const c = size / 2;
+        const r = 84;
+        const n = axes.length;
+        const point = (index, value) => {
+          const angle = -Math.PI / 2 + (index * 2 * Math.PI) / n;
+          return [c + Math.cos(angle) * r * value / 100, c + Math.sin(angle) * r * value / 100];
+        };
+        const poly = values => values.map((value, index) => point(index, value).map(v => v.toFixed(1)).join(',')).join(' ');
+        const values = axes.map(axis => (axis.value == null ? 0 : axis.value));
+        return h('div', { className: 'ssl-radar' },
+          // 两侧各留 58 的边给轴名（英文名比中文长），不让文字压到旁边的数值列表
+          h('svg', { viewBox: `-58 -6 ${size + 116} ${size + 12}`, role: 'img', 'aria-label': label },
+            [25, 50, 75, 100].map(level => h('polygon', { key: level, className: 'ssl-radar-grid', points: poly(axes.map(() => level)) })),
+            axes.map((axis, index) => {
+              const [x, y] = point(index, 100);
+              return h('line', { key: axis.key, className: 'ssl-radar-grid', x1: c, y1: c, x2: x, y2: y });
+            }),
+            h('polygon', { className: 'ssl-radar-area', points: poly(values) }),
+            axes.map((axis, index) => {
+              const [x, y] = point(index, values[index]);
+              return h('g', { key: axis.key },
+                h('circle', { className: cx('ssl-radar-dot', axis.value == null && 'is-empty'), cx: x, cy: y, r: 4 }),
+                // 比点大的透明热区，悬停出数值
+                h('circle', { cx: x, cy: y, r: 12, fill: 'transparent' }, h('title', null, `${axis.name}: ${axis.value == null ? zhEn('暂无', 'no data') : axis.value}${axis.note ? ` · ${axis.note}` : ''}`)));
+            }),
+            axes.map((axis, index) => {
+              const [x, y] = point(index, 122);
+              const anchor = Math.abs(x - c) < 4 ? 'middle' : x > c ? 'start' : 'end';
+              return h('text', { key: axis.key, className: 'ssl-radar-label', x, y: y + 4, textAnchor: anchor }, axis.name);
+            })),
+          h('ul', { className: 'ssl-radar-list' }, axes.map(axis => h('li', { key: axis.key, title: axis.how || '' },
+            h('span', null, axis.name),
+            h('b', null, axis.value == null ? '—' : axis.value),
+            axis.note ? h('i', null, axis.note) : null))));
+      }
+
+      // ---------- 帝王传记 ----------
+      function BiographyTab({ state, onGo }) {
+        const [bio, setBio] = useState(null);
+        const [error, setError] = useState('');
+        useEffect(() => {
+          apiJson('/biography').then(setBio).catch(err => setError(String(err.message || err)));
+        }, [state.edicts.length, state.regime && state.regime.level]);
+        if (error) return h('div', { className: 'ssl-card ssl-alert' }, error);
+        if (!bio) return h('div', { className: 'ssl-card ssl-empty' }, t('loading'));
+
+        const regime = bio.regime;
+        const info = regimeInfo(regime.level);
+        const puppet = puppetInfo(regime.puppet.verdict);
+        const reign = bio.reign;
+        const scored = ABILITY_KEYS.filter(key => bio.abilities[key] != null);
+        const best = scored.slice().sort((a, b) => bio.abilities[b] - bio.abilities[a])[0];
+        const worst = scored.slice().sort((a, b) => bio.abilities[a] - bio.abilities[b])[0];
+        const title = !reign.edicts ? zhEn('新君初立', 'a new Caesar')
+          : regime.puppet.verdict === 'figurehead' ? zhEn('傀儡天子', 'a figurehead Caesar')
+          : TITLES_BY_ABILITY[best || 'qinzheng'][isEn() ? 1 : 0];
+        const days = reign.since ? Math.max(1, Math.ceil((Date.now() - reign.since) / 86400000)) : 0;
+
+        const taskAxes = MINISTRY_IDS.map(id => {
+          const bucket = bio.tasks[id] || { total: 0, done: 0 };
+          return {
+            key: id, name: roleName(id),
+            value: bucket.total ? Math.round(100 * bucket.done / bucket.total) : null,
+            note: zhEn(`${bucket.done}/${bucket.total} 件`, `${bucket.done}/${bucket.total}`),
+          };
+        });
+        const abilityAxes = ABILITY_KEYS.map(key => ({ key, name: abilityInfo(key).name, how: abilityInfo(key).how, value: bio.abilities[key] }));
+        const regimeHistory = REGIME_KEYS.filter(key => reign.regimes[key]);
+
+        return h('div', null,
+          h('div', { className: 'ssl-card ssl-bio-head' },
+            h('div', { className: 'ssl-grow' },
+              h('div', { className: 'ssl-caption' }, zhEn('帝王传记', 'Res Gestae')),
+              h('h3', { className: 'ssl-bio-title' }, title),
+              h('p', { className: 'ssl-caption', style: { margin: '6px 0 0' } }, reign.edicts
+                ? zhEn(`在位 ${days} 日，下旨 ${reign.edicts} 道：办成 ${reign.done}、驳回 ${reign.rejected}、叫停 ${reign.cancelled}、失败 ${reign.failed}；亲裁 ${reign.ruled} 道，丞相代裁 ${reign.regent} 道。`,
+                  `${days} days on the throne, ${reign.edicts} decrees: ${reign.done} done, ${reign.rejected} rejected, ${reign.cancelled} halted, ${reign.failed} failed; ${reign.ruled} decided by you, ${reign.regent} by the regent.`)
+                : zhEn('还没下过旨。下第一道旨，传记就从这里写起。', 'No decrees yet. Your record begins with the first one.'))),
+            h('div', { className: cx('ssl-puppet', `is-${regime.puppet.verdict}`) },
+              h('div', { className: 'ssl-between' },
+                h('span', { className: 'ssl-caption' }, zhEn('是否被架空', 'Are you a puppet?')),
+                h('b', null, puppet.name)),
+              h('div', { className: 'ssl-meter', role: 'meter', 'aria-valuenow': regime.puppet.score, 'aria-valuemin': 0, 'aria-valuemax': 100, title: zhEn(`架空指数 ${regime.puppet.score}/100`, `Puppet index ${regime.puppet.score}/100`) },
+                h('i', { style: { width: `${regime.puppet.score}%` } })),
+              h('div', { className: 'ssl-between ssl-caption' }, h('span', null, zhEn('大权在握', 'In control')), h('span', null, `${regime.puppet.score}/100`), h('span', null, zhEn('形同傀儡', 'Figurehead'))),
+              h('p', { className: 'ssl-caption', style: { margin: '6px 0 0' } }, puppet.desc))),
+
+          h(Section, { title: zhEn('朝局', 'Regime'), note: `${info.name} · ${info.when}` }),
+          h('div', { className: 'ssl-card' },
+            h(RegimeLadder, { level: regime.level }),
+            h('div', { className: 'ssl-regime-row', style: { marginTop: '10px' } }, h('span', { className: 'ssl-pill ssl-pill--ok' }, zhEn('得', 'Gain')), h('span', null, info.gain)),
+            h('div', { className: 'ssl-regime-row' }, h('span', { className: 'ssl-pill ssl-pill--err' }, zhEn('失', 'Cost')), h('span', null, info.cost)),
+            regimeHistory.length ? h('div', { className: 'ssl-caption', style: { marginTop: '10px' } },
+              zhEn('历朝：', 'Past decrees: '), regimeHistory.map(key => `${regimeInfo(key).name} ×${reign.regimes[key]}`).join(isEn() ? ', ' : '、')) : null,
+            regime.suggestions.length ? h('div', { style: { marginTop: '10px' } },
+              h('button', { className: 'ssl-btn ssl-btn--sm', onClick: () => onGo('roster') }, zhEn('去官职页调整任命 →', 'Adjust appointments →'))) : null),
+
+          h('div', { className: 'ssl-cols ssl-bio-radars' },
+            h('div', { className: 'ssl-card' },
+              h('div', { className: 'ssl-card-h' },
+                h('h4', { className: 'ssl-card-t' }, zhEn('任务雷达', 'Tasks by magistrate')),
+                h('span', { className: 'ssl-caption' }, zhEn('各部办成率', 'success rate per office'))),
+              h(Radar, { axes: taskAxes, label: zhEn('六部办成率雷达图', 'Success rate radar of the six magistrates') })),
+            h('div', { className: 'ssl-card' },
+              h('div', { className: 'ssl-card-h' },
+                h('h4', { className: 'ssl-card-t' }, zhEn('皇帝六能', 'Your six virtues')),
+                h('span', { className: 'ssl-caption' }, zhEn('0–100，悬停看算法', '0–100, hover for how'))),
+              h(Radar, { axes: abilityAxes, label: zhEn('皇帝能力雷达图', 'Emperor ability radar') }))),
+
+          worst ? h('div', { className: 'ssl-card', style: { marginTop: '12px' } },
+            h('h4', { className: 'ssl-card-t', style: { marginBottom: '6px' } }, zhEn('史臣曰', 'The annalist says')),
+            h('p', { style: { margin: 0 } },
+              zhEn(`长于${abilityInfo(best).name}，短于${abilityInfo(worst).name}。`, `Strong in ${abilityInfo(best).name}, weak in ${abilityInfo(worst).name}. `),
+              abilityInfo(worst).tip, isEn() ? '.' : '。')) : null);
+      }
+
       function App({ embedded }) {
         useLocale();
         const { state, error, refresh } = useCourtState();
@@ -3150,6 +3474,7 @@ select.ssl-input { cursor: pointer; }
           ['roster', t('tabRoster'), null],
           ['annals', t('tabAnnals'), null],
           ['treasury', t('tabTreasury'), null],
+          ['biography', t('tabBio'), null],
           ['agents', t('tabAgents'), null],
           ['hall', t('tabHall'), null],
         ];
@@ -3161,6 +3486,7 @@ select.ssl-input { cursor: pointer; }
               h('h2', { className: 'ssl-h1' }, t('appName')),
               h('p', { className: 'ssl-sub' }, t('appSub'))),
             h(LanguageSwitch),
+            state ? h(RegimeChip, { regime: state.regime, onClick: () => setTab('biography') }) : null,
             state ? h('div', { className: 'ssl-stats' },
               h('div', { className: cx('ssl-stat', running && 'ssl-stat--warn') }, h('b', null, running), h('span', null, t('statRunning'))),
               h('div', { className: cx('ssl-stat', awaiting && 'ssl-stat--seal') }, h('b', null, awaiting), h('span', null, t('statAwaiting'))),
@@ -3175,6 +3501,7 @@ select.ssl-input { cursor: pointer; }
             : !state ? h('div', { className: 'ssl-card ssl-empty' }, t('loading'))
             : tab === 'court' ? h(CourtTab, { state, onRefresh: refresh, notify, onGo: setTab })
             : tab === 'roster' ? h(RosterTab, { state, onRefresh: refresh, notify })
+            : tab === 'biography' ? h(BiographyTab, { state, onGo: setTab })
             : tab === 'workroom' ? h(WorkroomTab, { state, onOpenEdict: openEdict })
             : tab === 'memorial' ? h(MemorialTab, { state, onRefresh: refresh, notify, focusId })
             : tab === 'annals' ? h(AnnalsTab, { state, onRefresh: refresh, notify })
@@ -4027,13 +4354,13 @@ select.ssl-input { cursor: pointer; }
         zh: {
           appName: '三省六部',
           appSub: '把本机的 AI 工具排成朝堂：中书拟旨、门下封驳、尚书派单、六部并行办差，全程在隔离分支里进行，批红才合并。',
-          tabCourt: '朝堂', tabWorkroom: '值房', tabMemorials: '奏折', tabAnnals: '史馆', tabHall: '殿宇', tabAgents: '群臣', tabRoster: '官职',
+          tabCourt: '朝堂', tabWorkroom: '值房', tabMemorials: '奏折', tabAnnals: '史馆', tabHall: '殿宇', tabAgents: '群臣', tabRoster: '官职', tabBio: '本纪',
           courtNoteFirst: '头一回上朝：先去「群臣」点一下一键探测，确认每个岗位的 CLI 都找得到。', courtNoteBroken: '{n} 个岗位没人或已停用，派到那里的差事会失败。', goSetup: '去检查 →',
           statRunning: '在办', statAwaiting: '待你处理', statArchived: '已归档',
           noHost: '无法连接宿主：{error}', noHostHint: '确认插件的宿主半已加载（设置 → 插件），或重启 DSH 后再试。',
           hostLost: '与宿主的连接中断：{error}（显示的是最后一次拿到的状态）',
           loading: '加载中…', today: '今天', working: '处理中', waitingOutput: '等待输出…', vacant: '空缺', none: '暂无',
-          close: '关闭', cancel: '取消', collapse: '收起', applied: '已应用', inUse: '使用中', emptyDoc: '（空）', noSummary: '（无摘要）',
+          close: '关闭', cancel: '取消', collapse: '收起', expand: '展开', applied: '已应用', inUse: '使用中', emptyDoc: '（空）', noSummary: '（无摘要）',
           issue: '下旨', issueTitle: '下旨', briefLabel: '圣意', sealTitle: '下旨（Ctrl + Enter）',
           orientTitle: '奏折竖排右起书写；写路径、英文或代码时可以切成横排',
           orientVertical: '改竖排', orientHorizontal: '改横排',
@@ -4044,21 +4371,21 @@ select.ssl-input { cursor: pointer; }
           fieldCriteria: '验收标准（可选）', criteriaPh: '如：测试全部通过、时长 22-28 秒',
           opened: '已开朝：{id}',
           fullCaption: '朝堂同时最多办 {n} 份奏折，请等一份办完',
-          autoCaption: '自治模式：拟旨 → 封驳 → 六部并行执行 → 复核 → 自我修复 → 自动归档，全程不问你',
+          autoCaption: '丞相模式：拟旨 → 封驳 → 六部并行执行 → 复核 → 自我修复 → 自动归档，全程不问你',
           normalCaption: '中书拟旨 → 门下封驳 → 尚书派单 → 六部执行 → 门下复核 → 上奏批红',
           inSessionN: '在办 {n}/{cap}',
           recentTitle: '最近奏折', allArrow: '全部 →', noEdicts: '还没有奏折。写下圣意，开第一次朝会。', openEdict: '查看奏折',
           groupDepartments: '三省', groupDepartmentsNote: '拟旨 · 封驳 · 派单',
           groupMinistries: '六部', groupMinistriesNote: '各司其职，按派单办差，互不依赖的差事并行',
           rulesTitle: '朝规', rulesNote: '开朝时生效，已在办的奏折不受影响', rulesSaved: '朝规已更新',
-          autoOn: '自治模式 · 无人值守', autoOff: '自治模式', autoOnTitle: '自治模式已开', autoOffTitle: '自治模式已关',
+          autoOn: '丞相模式 · 无人值守', autoOff: '丞相模式', autoOnTitle: '丞相模式已开', autoOffTitle: '丞相模式已关',
           autoOnDesc: '全程不问你：没有命令行的岗位由代办接手，失败自动重办，复核不过自动补救，通过即归档',
           autoOffDesc: '关闭时：人工岗位暂停等你回填，奏折上奏后等你批红（批红即合并分支）',
           fieldDeputy: '代办人选', noDeputy: '不代办', fieldFix: '自我修复', noFix: '不修复', fixRounds: '最多 {n} 轮',
           fieldTemplate: '官制模板', applyTemplate: '套用职掌…', templateApplied: '已套用「{name}」官制，可在下面的卡片上逐个微调职掌',
           ruleIsolation: '隔离分支', ruleIsolationTitle: '工作目录是 git 仓库时，每份奏折在独立的 worktree 分支里办，批红才合并进原分支',
           ruleWrites: '各部可写文件', ruleWritesTitle: '常规模式下给执行差事追加「写入参数」（群臣页可改），否则 CLI 只能出方案、改不了文件',
-          ruleAutoMerge: '自治归档即合并', ruleAutoMergeTitle: '自治模式复核通过后直接把分支合并进原分支（默认关：留给你点合并）',
+          ruleAutoMerge: '丞相归档即合并', ruleAutoMergeTitle: '丞相模式复核通过后直接把分支合并进原分支（默认关：留给你点合并）',
           ruleMemory: '史馆记忆', ruleMemoryTitle: '拟旨与审议时带上以往相似奏折留下的教训',
           ruleParallel: '六部并行', serial: '逐件办', parallelN: '最多 {n} 件同时',
           ruleConcurrent: '同时开朝', concurrentN: '{n} 份奏折',
@@ -4067,7 +4394,7 @@ select.ssl-input { cursor: pointer; }
           modelDefault: 'CLI 默认', modelNoCli: '不走命令行', modelPlugin: '插件内置，不调模型',
           dutyTitle: '职掌：{duty}（点击修改，中书按职掌派活）', dutyAria: '{role}职掌',
           roleShangshu: '尚书省由插件确定式完成派单与汇总，不额外调用模型',
-          roleDeputy: '{reason}，自治模式下由 {deputy} 代办',
+          roleDeputy: '{reason}，丞相模式下由 {deputy} 代办',
           roleVacantShort: '此职空缺', roleDisabledShort: '{name} 已停用', roleNoCliShort: '{name} 没有命令行',
           roleVacant: '此职空缺，派到这里的差事会直接失败', roleDisabled: '{name} 已停用，请换人或去「群臣」启用',
           roleSelf: '由 DSH 本体处理：出待办，主 agent（sansheng_fill）或你回填后继续',
@@ -4107,7 +4434,7 @@ select.ssl-input { cursor: pointer; }
           filledToast: '已回填，朝会继续', skippedToast: '已跳过，朝会继续',
           filterAll: '全部', filterActive: '在办', filterApproval: '待批红', filterDone: '已归档', filterClosed: '未成', filterEmpty: '这一类下没有奏折',
           noEdictsYet: '还没有奏折。去「朝堂」下旨，或在对话里让模型调用 sansheng_edict。', pickEdict: '左侧选择一份奏折',
-          autoPill: '自治', draftRounds: '拟旨 {n} 轮', fixRoundsMeta: '自我修复 {n} 轮', lessonsN: '参考前朝经验 {n} 条',
+          autoPill: '丞相', draftRounds: '拟旨 {n} 轮', fixRoundsMeta: '自我修复 {n} 轮', lessonsN: '参考前朝经验 {n} 条',
           approve: '批红', approveMerge: '批红并合并', reject: '驳回', halt: '叫停', rejectConfirm: '确认驳回',
           rejectPh: '驳回理由（会记进史馆，下次拟旨引以为戒）', rejectMemoryNote: '分支会保留一份快照，可在下方丢弃。',
           approvedToast: '已批红归档', approvedMergedToast: '已批红，成果已合并', rejectedToast: '已驳回', haltedToast: '已叫停',
@@ -4127,7 +4454,7 @@ select.ssl-input { cursor: pointer; }
           enabled: '已启用', disabled: '已停用', postsNow: '现任：{list}', noPost: '暂无官职', probe: '探测', found: '找到', notFound: '未找到',
           fieldCommand: '命令', fieldArgs: '基础参数（空格分隔，可用 {prompt}）', fieldModelArgs: '模型参数（{model}）', fieldModels: '模型候选（逗号分隔）',
           fieldExecArgs: '写入参数（常规模式执行差事时追加，允许改文件）', execArgsPh: '如 --permission-mode acceptEdits；留空则只能出方案',
-          fieldAutoArgs: '自治参数（自治模式下追加，放开这个 CLI 自己的权限确认）', autoArgsPh: '如 --full-auto；留空则无人值守时可能写不了文件',
+          fieldAutoArgs: '无人值守参数（丞相模式下追加，放开这个 CLI 自己的权限确认）', autoArgsPh: '如 --full-auto；留空则无人值守时可能写不了文件',
           adapterSelfNote: 'DSH 本体：相关差事出待办，主 agent 用 sansheng_fill 或你在奏折页回填后继续。',
           adapterManualNote: '人工适配器：这个工具只有图形界面，派到它的差事会出工单并暂停，等你回填。',
           unsavedN: '{n} 个 agent 有未保存的修改', allSaved: '所有修改已保存', undo: '撤销', saving: '保存中…', saveAgents: '保存群臣配置', agentsSaved: '群臣配置已保存',
@@ -4139,7 +4466,7 @@ select.ssl-input { cursor: pointer; }
           stepMinistryAria: '第 {n} 步部门', stepTitleAria: '第 {n} 步内容', moveUp: '上移', moveDown: '下移', remove: '删除',
           flowEmpty: '没有钦定流程时，中书省按圣意和各部职掌自己拆步骤，互不依赖的可以并行。选个模板或添加一步来自己定。',
           addStep: '+ 添加一步', issueByFlow: '按上面的流程开朝',
-          flowAutoCaption: '自治模式：全程不问你，下旨后在右侧「各部门沟通」看进展', flowCaption: '下旨后在右侧「各部门沟通」看进展',
+          flowAutoCaption: '丞相模式：全程不问你，下旨后在右侧「各部门沟通」看进展', flowCaption: '下旨后在右侧「各部门沟通」看进展',
           paneExec: '政令执行', paneExecDesc: '当前奏折的流程、各部差事、回填与实时输出',
           paneChat: '各部门沟通', paneChatDesc: '三省六部之间的公文往来，像群聊一样看',
           paneExecEmpty: '朝堂清静。到头部「确定工作流」下旨，这里会显示执行进度。', openChat: '看各部门沟通',
@@ -4151,13 +4478,13 @@ select.ssl-input { cursor: pointer; }
         en: {
           appName: 'Imperial Senate',
           appSub: 'Your AI tools as a Roman Senate: the Consul drafts, the Tribune vetoes, the Proconsul dispatches, the magistrates work in parallel, all on an isolated branch that is merged only under your seal.',
-          tabCourt: 'Senate', tabWorkroom: 'Officium', tabMemorials: 'Decrees', tabAnnals: 'Annals', tabHall: 'Palace', tabAgents: 'Cohort', tabRoster: 'Offices',
+          tabCourt: 'Senate', tabWorkroom: 'Officium', tabMemorials: 'Decrees', tabAnnals: 'Annals', tabHall: 'Palace', tabAgents: 'Cohort', tabRoster: 'Offices', tabBio: 'Res Gestae',
           courtNoteFirst: 'First session: open Cohort and press Probe all to check every office can find its CLI.', courtNoteBroken: '{n} offices are vacant or disabled; orders sent there will fail.', goSetup: 'Check →',
           statRunning: 'In session', statAwaiting: 'Need you', statArchived: 'Archived',
           noHost: 'Cannot reach the host: {error}', noHostHint: 'Check that the plugin\'s host half is loaded (Settings → Plugins), or restart DSH.',
           hostLost: 'Lost contact with the host: {error} (showing the last known state)',
           loading: 'Loading…', today: 'Today', working: 'Working', waitingOutput: 'Waiting for output…', vacant: 'Vacant', none: 'None',
-          close: 'Close', cancel: 'Cancel', collapse: 'Hide', applied: 'Applied', inUse: 'In use', emptyDoc: '(empty)', noSummary: '(no summary)',
+          close: 'Close', cancel: 'Cancel', collapse: 'Hide', expand: 'Show', applied: 'Applied', inUse: 'In use', emptyDoc: '(empty)', noSummary: '(no summary)',
           issue: 'Decree', issueTitle: 'Issue a decree', briefLabel: 'Caesar\'s will', sealTitle: 'Seal the decree (Ctrl + Enter)',
           orientTitle: 'Switch writing direction', orientVertical: 'Vertical', orientHorizontal: 'Horizontal',
           issueHint: 'Press the seal or Ctrl + Enter',

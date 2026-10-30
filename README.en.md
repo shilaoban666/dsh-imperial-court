@@ -81,6 +81,8 @@ It ships in two languages that share one engine: **English · Roman Senate** and
 | **Praetor** | 刑部 | Tests, review, compliance | Codex | A second pair of eyes |
 | **Aedile** | 工部 | UI, design, infrastructure | COSER (to configure) | |
 
+**The regime** is read from who holds office (no model calls): one tool with one model house is *Dictator Perpetuo*, one tool calling several model houses is *Sejanus’ Rome*, two tools are *East and West*, three a *Triumvirate*, four or more a *Tetrarchy*. The fewer houses, the cheaper and faster, but the less you can see or step in. The Offices tab shows the ladder, who holds what and which idle tool to appoint where to move up a rung; the **Res Gestae** tab adds a puppet index (are you a figurehead?), a radar of each magistrate's success rate and a radar of your six virtues (Appointments, Oversight, Thrift, Clarity, Diligence, Results).
+
 The Consul and the Tribune may not be the same agent (checked on save). **Models belong to offices**, not agents: the same Claude Code can run `opus` as Consul and `sonnet` as Legate.
 
 ## How a decree flows
@@ -151,6 +153,7 @@ Development: `npm test` runs 38 end-to-end tests against real git repositories a
 | `lib/prompts.mjs` | Prompt templates in Chinese and English |
 | `lib/git.mjs` | Worktrees, commits, patches, merges, discards |
 | `lib/annals.mjs` | Lessons, similarity recall, veto statistics |
+| `lib/regime.mjs` | The regime: tools and model houses in office, five rungs, upgrade tips, puppet index |
 | `lib/i18n.mjs` | Office names, remits and host-side strings |
 | `test/` | End-to-end tests and the fake CLI |
 

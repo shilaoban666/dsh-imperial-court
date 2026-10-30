@@ -17,6 +17,7 @@ import { WORKFLOW_TEMPLATES, resolveWorkflow, cleanWorkflow } from './lib/workfl
 import { createTreasury, costOf, savedOf, DEFAULT_PRICES } from './lib/treasury.mjs';
 import { createWiki } from './lib/wiki.mjs';
 import { historianPrompt } from './lib/prompts.mjs';
+import { regimeOf, actualRegimeOf, puppetIndex, puppetVerdict, REGIMES, REGIME_TEXT } from './lib/regime.mjs';
 
 // DSH 自带的 defineTool（dsh-openwrite 同款）。本插件以 link: 方式装进 profile 时可能解析不到，就按原样注册。
 let defineTool = definition => definition;
@@ -139,7 +140,7 @@ function sanitizePreset(input, current) {
       resumeArgs: list(raw.resumeArgs),
       // 常规模式执行差事时追加：放开写文件（各部在隔离分支里办差）
       execArgs: list(raw.execArgs),
-      // 自治模式下追加的参数：放开 CLI 自己的权限确认（如 claude --permission-mode acceptEdits、codex --full-auto）
+      // 丞相模式下追加的参数：放开 CLI 自己的权限确认（如 claude --permission-mode acceptEdits、codex --full-auto）
       autoArgs: list(raw.autoArgs),
       models: list(raw.models).filter(Boolean),
       promptMode: raw.promptMode === 'arg' ? 'arg' : 'stdin',
@@ -223,6 +224,8 @@ function summarizeEdict(edict) {
     modeReason: edict.modeReason || '',
     expressMinistry: edict.expressMinistry || '',
     chronicleUsed: edict.chronicleUsed || [],
+    regime: edict.regime || null,
+    ruledBy: edict.ruledBy || '',
     spend: spendOf(edict),
     git: g ? {
       branch: g.branch, base: g.base, baseCommit: g.baseCommit, merged: !!g.merged, discarded: !!g.discarded,
@@ -318,6 +321,8 @@ export function createCourt(config = {}, { log = console } = {}) {
   const recent = []; // 刚办完的差事，值房里留一会儿
   const pendingFills = new Map(); // `${edictId}:${seq}` → { resolve }
   const rejectNotes = new Map();
+  // 皇帝亲手驳回 / 叫停的奏折（还在跑的由流程收尾，收尾后在 afterRun 里记上「亲裁」）
+  const ruledByEmperor = new Set();
   let callSeq = 0;
   const uiLocale = () => normalizeLocale(store.state.ui && store.state.ui.locale);
   const findBackground = () => Object.keys(BACKGROUND_TYPES)
@@ -504,7 +509,7 @@ export function createCourt(config = {}, { log = console } = {}) {
     },
     /**
      * 让某个岗位办一件差事。prompt 可以是字符串，也可以是 ({ substitute }) => string：
-     * 自治模式下岗位上的人办不了（只有图形界面 / 停用 / 空缺）时，转给代办人选，prompt 需要知道这件事。
+     * 丞相模式下岗位上的人办不了（只有图形界面 / 停用 / 空缺）时，转给代办人选，prompt 需要知道这件事。
      * meta: { kind, from, title, summary, parse: 'plan'|'verdict', execute: 是否是动手的差事, quietReport: 回文由流程自己发 }
      */
     async call(edict, roleId, prompt, artifactName, meta = {}) {
@@ -728,6 +733,9 @@ export function createCourt(config = {}, { log = console } = {}) {
       }
     }
     if (ACTIVE_STATUSES.has(edict.status)) { store.saveEdict(edict); return; }
+    settleRegime(edict);
+    if (ruledByEmperor.delete(edict.id)) edict.ruledBy = 'emperor';
+    else if (edict.status === 'done' && edict.autonomous) edict.ruledBy = 'regent';
     settleCalls(edict);
     // 没走到上奏的（失败、叫停、停朝）也把封驳与办砸的教训录进实录
     if (!edict.chronicled) wiki.ingest(edict, { roleTitle: id => roleTitle(edict.locale, id) });
@@ -735,6 +743,27 @@ export function createCourt(config = {}, { log = console } = {}) {
     store.saveEdict(edict);
     annals.record(edict, { rejectNote: rejectNotes.get(edictId) || '' });
     rejectNotes.delete(edictId);
+  }
+
+  /** 当前朝局（按任命）+ 架空指数（再看近来亲裁了多少） */
+  function regimeWithPuppet() {
+    const regime = regimeOf(store.state);
+    const score = puppetIndex(regime, annals.list());
+    return { ...regime, puppet: { score, verdict: puppetVerdict(score) } };
+  }
+
+  /** 本朝实际：按这份奏折真正调用了哪几家算；比任命时低（有人倒下、由代办接手），告诉皇帝 */
+  function settleRegime(edict) {
+    const actual = actualRegimeOf(edict.calls || [], store.state.agents || []);
+    edict.regime = { ...(edict.regime || {}), actual };
+    const appointed = edict.regime.appointed;
+    if (actual && appointed && REGIMES.indexOf(actual) < REGIMES.indexOf(appointed)) {
+      const names = REGIME_TEXT[normalizeLocale(edict.locale)];
+      pushMessage(edict, {
+        from: 'shangshu', to: 'emperor', kind: 'notice', title: names[actual],
+        summary: tr(edict.locale, 'regimeFell', { from: names[appointed], to: names[actual] }),
+      });
+    }
   }
 
   /** 结算：没成的奏折，所有调用都算废料；然后同步到国库账本 */
@@ -782,6 +811,54 @@ export function createCourt(config = {}, { log = console } = {}) {
         workflowTemplates: WORKFLOW_TEMPLATES,
         recentWorkspaces: workspaces,
         annals: { count: annals.list().length, rubberStamp: annals.stats().rubberStamp },
+        regime: regimeWithPuppet(),
+      };
+    },
+    /** 帝王传记：朝局、架空指数、任务雷达、皇帝能力雷达、在位纪年。全部来自已有的账，不调模型 */
+    biography() {
+      const regime = regimeWithPuppet();
+      const entries = annals.list();
+      const stats = annals.stats();
+      const money = treasury.stats();
+      const settled = entries.filter(item => ['done', 'rejected', 'cancelled', 'failed'].includes(item.outcome));
+      const decided = settled.filter(item => item.outcome !== 'failed');
+      const done = settled.filter(item => item.outcome === 'done').length;
+      const monthAgo = Date.now() - 30 * 86400000;
+      const recentCount = entries.filter(item => item.at >= monthAgo).length;
+      const pct = value => Math.max(0, Math.min(100, Math.round(value)));
+      const recuse = regime.suggestions.some(item => item.kind === 'recuse');
+      const abilities = {
+        // 知人善任：朝局越分权越高；拟旨与封驳出自同一家扣分
+        zhiren: pct(regime.rank * 20 - (recuse ? 10 : 0)),
+        // 明察：拍板的奏折里，亲自批红 / 驳回 / 叫停的比例
+        mingcha: decided.length ? pct(100 * decided.filter(item => item.ruledBy === 'emperor').length / decided.length) : null,
+        // 节俭：废料越少、缓存命中越高越好
+        jiejian: money.totals.calls ? pct(70 * (1 - money.wasteRate) + 30 * money.cacheHitRate) : null,
+        // 圣明：圣意写得清，门下一次就准；给了验收标准加分
+        shengming: stats.total ? pct(80 * stats.firstPassRate + 20 * (entries.filter(item => item.criteria).length / entries.length)) : null,
+        // 勤政：近 30 天下了几道旨
+        qinzheng: pct(recentCount * 8),
+        // 治绩：办成的比例
+        zhiji: settled.length ? pct(100 * done / settled.length) : null,
+      };
+      const regimes = {};
+      for (const item of entries) if (item.regime) regimes[item.regime] = (regimes[item.regime] || 0) + 1;
+      return {
+        regime,
+        abilities,
+        tasks: stats.ministries,
+        reign: {
+          since: entries.length ? entries[entries.length - 1].at : 0,
+          edicts: entries.length,
+          done,
+          rejected: settled.filter(item => item.outcome === 'rejected').length,
+          cancelled: settled.filter(item => item.outcome === 'cancelled').length,
+          failed: settled.filter(item => item.outcome === 'failed').length,
+          ruled: decided.filter(item => item.ruledBy === 'emperor').length,
+          regent: decided.filter(item => item.ruledBy === 'regent').length,
+          costUsd: money.totals.costUsd,
+          regimes,
+        },
       };
     },
     setUi(input = {}) {
@@ -895,6 +972,8 @@ export function createCourt(config = {}, { log = console } = {}) {
       edict.locale = locale;
       // 开朝那一刻的朝规定死这份奏折走不走自治，中途改设置不影响已经在办的
       edict.autonomous = rules.autonomous === true;
+      // 开朝时的朝局（按任命算），办完再按实际调用算一次
+      edict.regime = { appointed: regimeOf(store.state).level };
       // 钦定流程：皇帝在「确定工作流」里排好的部门顺序，中书只能照此拟旨
       edict.workflow = resolveWorkflow(input.workflow, store.state.workflow, locale);
       prepareIsolation(edict, info);
@@ -973,6 +1052,7 @@ export function createCourt(config = {}, { log = console } = {}) {
       edict.status = 'done';
       edict.stage = 'done';
       edict.note = merge ? tr(edict.locale, 'noteApprovedMerged', { base: g.base }) : tr(edict.locale, 'noteApproved');
+      edict.ruledBy = 'emperor';
       store.appendEvent(edict, 'approve', {});
       store.saveEdict(edict);
       annals.record(edict);
@@ -1152,6 +1232,7 @@ export function createCourt(config = {}, { log = console } = {}) {
     if (!edict) fail('errNoEdict');
     const controller = controllers.get(edictId);
     if (controller && !controller.signal.aborted) {
+      ruledByEmperor.add(edictId);
       controller.abort(reason);
       return { ...summarizeEdict(edict), status: reason.status, stage: reason.status, note: reason.note };
     }
@@ -1163,6 +1244,7 @@ export function createCourt(config = {}, { log = console } = {}) {
     edict.status = reason.status;
     edict.stage = reason.status;
     edict.note = reason.note;
+    edict.ruledBy = 'emperor';
     store.appendEvent(edict, reason.event, { note: reason.note });
     store.saveEdict(edict);
     annals.record(edict, { rejectNote: reason.event === 'reject' ? reason.note : '' });
@@ -1243,6 +1325,7 @@ export async function handleRequest(api, req, res, uiLocale = () => 'zh') {
     if (route === '/probe-all' && method === 'POST') return sendJson(res, 200, api.probeAll());
     if (route === '/edicts' && method === 'POST') return sendJson(res, 200, api.createEdict({ locale, ...(await body()) }));
     if (route === '/annals' && method === 'GET') return sendJson(res, 200, api.annals());
+    if (route === '/biography' && method === 'GET') return sendJson(res, 200, api.biography());
     if (route === '/estimate' && method === 'POST') return sendJson(res, 200, api.estimate({ locale, ...(await body()) }));
     if (route === '/treasury' && method === 'GET') return sendJson(res, 200, api.treasury());
     if (route === '/treasury' && method === 'PUT') return sendJson(res, 200, api.saveTreasury(await body()));
