@@ -12,8 +12,9 @@ const args = process.argv.slice(2);
 const resumeAt = args.indexOf('--resume');
 const resumed = resumeAt >= 0 ? args[resumeAt + 1] : '';
 const has = (...markers) => markers.some(marker => prompt.includes(marker));
+// FAKE_PERM / FAKE_MODEL：插件按权限、岗位模型设的环境变量（模拟 dsh headless 的 DSH_PERMISSION_MODE / SANSHENG_DSH_MODEL）
 const record = entry => {
-  if (log) fs.appendFileSync(log, `${JSON.stringify({ ...entry, resumed, at: Date.now() })}\n`);
+  if (log) fs.appendFileSync(log, `${JSON.stringify({ ...entry, resumed, perm: process.env.FAKE_PERM || '', envModel: process.env.FAKE_MODEL || '', at: Date.now() })}\n`);
 };
 // 跨进程计数：同一种「只失败一次」的花样，第二次起照常
 const once = key => {
@@ -111,7 +112,7 @@ async function main() {
     if (resumed.startsWith('sess-task-')) return task(resumed.slice('sess-task-'.length), 'hello.txt');
   }
   if (has('职责是把圣意拟成可执行的方案', "turn Caesar's will into an executable plan")) {
-    record({ kind: 'draft', lessons: has('【前朝经验】', '[Annals]'), chronicle: has('【实录】', '[Chronicle]'), isolated: has('【隔离副本】', '[Isolated copy]') });
+    record({ kind: 'draft', attach: has('【附件】', '[Attachments]'), lessons: has('【前朝经验】', '[Annals]'), chronicle: has('【实录】', '[Chronicle]'), isolated: has('【隔离副本】', '[Isolated copy]') });
     if (flags.has('draft-garbage')) return emit('I will think about it.', 'sess-draft');
     return json(plan(), 'sess-draft');
   }

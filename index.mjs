@@ -7,6 +7,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createStore } from './lib/store.mjs';
+import { spawn } from 'node:child_process';
+import os from 'node:os';
 import { runAgent, probeAgent } from './lib/adapters.mjs';
 import { runEdict, normalizeVerdict, deliverablePath } from './lib/court.mjs';
 import { ministriesOf, splitHandoff, extractJson } from './lib/prompts.mjs';
@@ -38,6 +40,97 @@ const clampInt = (value, min, max, fallback) => {
   const number = Number(value);
   return Number.isFinite(number) ? Math.max(min, Math.min(max, Math.round(number))) : fallback;
 };
+
+// 下旨时选的权限，与 DSH 输入框一致：仅可查看 / 工作区内修改 / 完全权限
+const PERMISSIONS = new Set(['read', 'workspace', 'full']);
+function permissionOf(edict, rules) {
+  if (PERMISSIONS.has(edict.permission)) return edict.permission;
+  return rules.execWrites === false ? 'read' : 'workspace';
+}
+
+const ATTACH_MAX = 10 * 1024 * 1024;
+const ATTACH_TOTAL = 20 * 1024 * 1024;
+/** 随旨交下的文件：[{ name, data: base64 或 data URL }] → 存进奏折目录的 attachments/，返回 [{ name, path, size }] */
+function saveAttachments(store, edict, list) {
+  if (!Array.isArray(list) || !list.length) return [];
+  const dir = path.join(store.root, 'edicts', edict.id, 'attachments');
+  const saved = [];
+  let total = 0;
+  for (const item of list.slice(0, 12)) {
+    // 只留文件名，去掉路径与 Windows 不允许的字符，防止写出目录
+    const name = path.basename(String((item && item.name) || '')).replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').slice(0, 120);
+    const data = String((item && item.data) || '').replace(/^data:[^,]*,/, '');
+    if (!name || !data) continue;
+    const bytes = Buffer.from(data, 'base64');
+    total += bytes.length;
+    if (bytes.length > ATTACH_MAX || total > ATTACH_TOTAL) fail('errAttachSize');
+    fs.mkdirSync(dir, { recursive: true });
+    let target = path.join(dir, name);
+    for (let n = 2; fs.existsSync(target); n += 1) target = path.join(dir, `${n}-${name}`);
+    fs.writeFileSync(target, bytes);
+    saved.push({ name: path.basename(target), path: target, size: bytes.length });
+  }
+  return saved;
+}
+
+/** DSH 侧栏里的工作区（$DSH_HOME/storages/workspace.json），按 DSH 自己的顺序；只读，不存在的目录跳过 */
+function dshWorkspaces() {
+  try {
+    const home = process.env.DSH_HOME || path.join(os.homedir(), '.dsh');
+    const data = JSON.parse(fs.readFileSync(path.join(home, 'storages', 'workspace.json'), 'utf8'));
+    const table = (data.tables && data.tables.workspaces) || {};
+    const ids = (data.global && Array.isArray(data.global.workspaceIds)) ? data.global.workspaceIds : Object.keys(table);
+    return ids.map(id => table[id]).filter(item => item && item.path && fs.existsSync(item.path))
+      .map(item => ({ path: item.path, title: String(item.title || '') }));
+  } catch {
+    return [];
+  }
+}
+
+/** 系统的选文件夹对话框；取消或不支持时 path 为空 */
+function pickFolderDialog(start) {
+  return new Promise(resolve => {
+    let command;
+    let args;
+    const env = { ...process.env, SANSHENG_START: start && fs.existsSync(start) ? start : '' };
+    if (process.platform === 'win32') {
+      command = 'powershell.exe';
+      args = ['-NoProfile', '-STA', '-Command', [
+        '[Console]::OutputEncoding = [Text.Encoding]::UTF8',
+        'Add-Type -AssemblyName System.Windows.Forms',
+        // 用一个置顶的隐形窗口当父窗口，对话框才会出现在 DSH 前面
+        '$owner = New-Object System.Windows.Forms.Form -Property @{ TopMost = $true; ShowInTaskbar = $false }',
+        '$dialog = New-Object System.Windows.Forms.FolderBrowserDialog',
+        '$dialog.ShowNewFolderButton = $true',
+        'if ($env:SANSHENG_START) { $dialog.SelectedPath = $env:SANSHENG_START }',
+        "if ($dialog.ShowDialog($owner) -eq 'OK') { [Console]::Out.Write($dialog.SelectedPath) }",
+      ].join('; ')];
+    } else if (process.platform === 'darwin') {
+      command = 'osascript';
+      args = ['-e', 'POSIX path of (choose folder)'];
+    } else {
+      command = 'zenity';
+      args = ['--file-selection', '--directory'];
+    }
+    let out = '';
+    let child;
+    try {
+      child = spawn(command, args, { env, windowsHide: false, stdio: ['ignore', 'pipe', 'ignore'] });
+    } catch {
+      resolve({ path: '', unsupported: true });
+      return;
+    }
+    const timer = setTimeout(() => child.kill(), 10 * 60 * 1000);
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', text => { out += text; });
+    child.on('error', () => { clearTimeout(timer); resolve({ path: '', unsupported: true }); });
+    child.on('close', () => {
+      clearTimeout(timer);
+      const picked = out.trim().replace(/[\\/]$/, '') || out.trim();
+      resolve({ path: picked && fs.existsSync(picked) ? picked : '' });
+    });
+  });
+}
 
 function readBody(req, limit = 2 * 1024 * 1024) {
   return new Promise((resolve, reject) => {
@@ -134,7 +227,10 @@ function sanitizePreset(input, current) {
       args: list(raw.args),
       modelArgs: list(raw.modelArgs),
       // 结构化输出：国库要的用量、续接要的会话 id 都从这里来
-      outputFormat: ['claude-stream', 'codex-json'].includes(raw.outputFormat) ? raw.outputFormat : 'text',
+      outputFormat: ['claude-stream', 'codex-json', 'dsh-json'].includes(raw.outputFormat) ? raw.outputFormat : 'text',
+      // 不收模型参数的 CLI 用环境变量选模型（dsh headless：SANSHENG_DSH_MODEL）、定权限（DSH_PERMISSION_MODE）
+      modelEnv: /^[A-Z][A-Z0-9_]{1,63}$/.test(String(raw.modelEnv || '')) ? String(raw.modelEnv) : '',
+      permissionEnv: /^[A-Z][A-Z0-9_]{1,63}$/.test(String(raw.permissionEnv || '')) ? String(raw.permissionEnv) : '',
       formatArgs: list(raw.formatArgs),
       // 续接会话的参数模板（{session}）；留空 = 这个 CLI 不续接，每轮发完整提示词
       resumeArgs: list(raw.resumeArgs),
@@ -163,10 +259,6 @@ function sanitizePreset(input, current) {
     role.duty = String(role.duty || '').trim().slice(0, 200);
   }
   const rules = next.rules;
-  if (rules.separationOfPowers !== false && next.roles.zhongshu && next.roles.menxia
-    && next.roles.zhongshu.agentId && next.roles.zhongshu.agentId === next.roles.menxia.agentId) {
-    fail('errSeparation');
-  }
   rules.maxReviewRounds = clampInt(rules.maxReviewRounds, 1, 5, 3);
   rules.maxSteps = clampInt(rules.maxSteps, 1, 12, 8);
   rules.autonomous = rules.autonomous === true;
@@ -225,6 +317,8 @@ function summarizeEdict(edict) {
     expressMinistry: edict.expressMinistry || '',
     chronicleUsed: edict.chronicleUsed || [],
     regime: edict.regime || null,
+    permission: edict.permission || '',
+    attachments: (edict.attachments || []).map(item => ({ name: item.name, size: item.size })),
     ruledBy: edict.ruledBy || '',
     spend: spendOf(edict),
     git: g ? {
@@ -301,6 +395,17 @@ const overlaps = (a, b) => {
   return norm(x).startsWith(norm(y)) || norm(y).startsWith(norm(x));
 };
 
+/** 老配置的 DSH 本体（adapter: self，只出待办）换成预设里的 dsh headless 命令行；用户自己改过的不动 */
+function migrateDshAgent(store, preset) {
+  const fresh = (preset.agents || []).find(agent => agent.id === 'dsh' && agent.adapter === 'cli');
+  const index = (store.state.agents || []).findIndex(agent => agent.id === 'dsh');
+  if (!fresh || index < 0) return;
+  const saved = store.state.agents[index];
+  if (saved.adapter !== 'self') return;
+  store.state.agents[index] = { ...fresh, enabled: saved.enabled !== false };
+  store.save();
+}
+
 /**
  * 朝堂本体：状态、流程、隔离、史馆。与 DSH 无关，便于测试。
  * @returns {{ api, runtime, store, annals, dispose }}
@@ -310,6 +415,7 @@ export function createCourt(config = {}, { log = console } = {}) {
   const preset = JSON.parse(fs.readFileSync(presetPath, 'utf8'));
   const store = createStore(config.dataDir);
   store.load(preset);
+  migrateDshAgent(store, preset);
   if (!store.state.ui || typeof store.state.ui !== 'object') store.state.ui = { skin: 'default', theme: 'default' };
   const annals = createAnnals(store.root);
   const treasury = createTreasury(store.root);
@@ -493,6 +599,15 @@ export function createCourt(config = {}, { log = console } = {}) {
       tail: (item.tail || '').slice(-1600),
     })),
     /** 人工岗位出了工单后等回填；叫停 / 驳回会让它直接抛出 */
+    /** 代办：没命令行的岗位交给谁去办——朝规里的代办人选，没有就是 DSH 本体 */
+    deputy() {
+      const agents = store.state.agents || [];
+      const rules = store.state.rules || {};
+      const runnable = agent => agent && agent.enabled !== false && agent.adapter === 'cli';
+      const fallback = agents.find(agent => agent.id === rules.fallbackAgentId);
+      if (runnable(fallback)) return fallback;
+      return agents.find(agent => agent.id === 'dsh' && runnable(agent)) || null;
+    },
     waitForFill(edict, step) {
       return new Promise((resolve, reject) => {
         const key = `${edict.id}:${step.seq}`;
@@ -587,15 +702,18 @@ export function createCourt(config = {}, { log = console } = {}) {
         ].filter(Boolean).join(' '),
       });
 
-      const writes = meta.execute && rules.execWrites !== false && Array.isArray(agent.execArgs) ? agent.execArgs : [];
+      const permission = permissionOf(edict, rules);
+      const writes = meta.execute && permission !== 'read' && Array.isArray(agent.execArgs) ? agent.execArgs : [];
       let result;
       try {
         result = await runAgent(agent, promptText, {
           cwd: edict.execDir || edict.workspace,
           model,
           locale,
-          autonomous: edict.autonomous === true,
+          // 「完全权限」与丞相模式都放开 CLI 自己的确认；「仅可查看」什么都不放
+          autonomous: permission !== 'read' && (edict.autonomous === true || permission === 'full'),
           extraArgs: writes,
+          permission: meta.execute ? permission : 'read',
           session,
           stallMs: (Number(rules.stallSeconds) || 0) * 1000,
           signal: runtime.signal(edict.id),
@@ -812,7 +930,24 @@ export function createCourt(config = {}, { log = console } = {}) {
         recentWorkspaces: workspaces,
         annals: { count: annals.list().length, rubberStamp: annals.stats().rubberStamp },
         regime: regimeWithPuppet(),
+        // 没命令行的岗位可以交给谁代办（界面上的「交给 DSH 代办」按钮）
+        deputy: (() => { const agent = runtime.deputy(); return agent ? { id: agent.id, name: agent.name } : null; })(),
       };
+    },
+    /** 工作目录候选：DSH 侧栏里的工作区（按 DSH 的顺序）+ 朝堂最近用过的 */
+    workspaces() {
+      const list = [];
+      const push = (dir, title, source) => {
+        if (!dir || list.some(item => samePath(item.path, dir))) return;
+        list.push({ path: dir, title: title || path.basename(dir) || dir, source });
+      };
+      for (const item of dshWorkspaces()) push(item.path, item.title, 'dsh');
+      for (const item of store.listEdicts()) if (item.workspace) push(item.workspace, '', 'recent');
+      return { workspaces: list.slice(0, 40) };
+    },
+    /** 弹系统的选文件夹对话框（Windows：FolderBrowserDialog；macOS：choose folder），取消返回空 */
+    pickFolder(start) {
+      return pickFolderDialog(String(start || ''));
     },
     /** 帝王传记：朝局、架空指数、任务雷达、皇帝能力雷达、在位纪年。全部来自已有的账，不调模型 */
     biography() {
@@ -970,6 +1105,10 @@ export function createCourt(config = {}, { log = console } = {}) {
       }
       const edict = store.newEdict({ brief, workspace, criteria: input.criteria });
       edict.locale = locale;
+      // 权限：与 DSH 输入框一致的三档。不选就按朝规（各部可写文件 → 工作区内修改）
+      if (PERMISSIONS.has(input.permission)) edict.permission = input.permission;
+      // 附件：存在奏折自己的目录里（不进隔离分支，免得被合并进仓库），路径写进每一道公文
+      edict.attachments = saveAttachments(store, edict, input.attachments);
       // 开朝那一刻的朝规定死这份奏折走不走自治，中途改设置不影响已经在办的
       edict.autonomous = rules.autonomous === true;
       // 开朝时的朝局（按任命算），办完再按实际调用算一次
@@ -1077,13 +1216,19 @@ export function createCourt(config = {}, { log = console } = {}) {
       store.saveEdict(edict);
       return summarizeEdict(edict);
     },
-    /** 回填人工岗位的结果，或跳过它 */
-    fill(edictId, seq, text, skip = false) {
+    /** 回填人工岗位的结果，或跳过它；delegate = 交给代办（DSH 本体或丞相模式的代办人选）去办 */
+    fill(edictId, seq, text, skip = false, delegate = false) {
       const edict = store.getEdict(edictId);
       if (!edict) fail('errNoEdict');
       const key = `${edictId}:${Number(seq)}`;
       const pending = pendingFills.get(key);
       if (!pending) fail('errNotAwaiting');
+      if (delegate === true) {
+        if (!runtime.deputy()) fail('errNoDeputy');
+        pendingFills.delete(key);
+        pending.resolve({ delegate: true });
+        return { ok: true };
+      }
       if (!skip && !String(text || '').trim()) fail('errFillEmpty');
       pendingFills.delete(key);
       pending.resolve({ text: String(text || '').slice(0, 20000), skipped: skip === true });
@@ -1323,9 +1468,12 @@ export async function handleRequest(api, req, res, uiLocale = () => 'zh') {
     if (route === '/workflow' && method === 'PUT') return sendJson(res, 200, { workflow: api.saveWorkflow((await body()).workflow) });
     if (route === '/probe' && method === 'POST') return sendJson(res, 200, api.probe((await body()).agentId));
     if (route === '/probe-all' && method === 'POST') return sendJson(res, 200, api.probeAll());
-    if (route === '/edicts' && method === 'POST') return sendJson(res, 200, api.createEdict({ locale, ...(await body()) }));
+    // 下旨可带附件（base64），放宽到 25 MB
+    if (route === '/edicts' && method === 'POST') return sendJson(res, 200, api.createEdict({ locale, ...(await body(25 * 1024 * 1024)) }));
     if (route === '/annals' && method === 'GET') return sendJson(res, 200, api.annals());
     if (route === '/biography' && method === 'GET') return sendJson(res, 200, api.biography());
+    if (route === '/workspaces' && method === 'GET') return sendJson(res, 200, api.workspaces());
+    if (route === '/pick-folder' && method === 'POST') return sendJson(res, 200, await api.pickFolder((await body()).start));
     if (route === '/estimate' && method === 'POST') return sendJson(res, 200, api.estimate({ locale, ...(await body()) }));
     if (route === '/treasury' && method === 'GET') return sendJson(res, 200, api.treasury());
     if (route === '/treasury' && method === 'PUT') return sendJson(res, 200, api.saveTreasury(await body()));
@@ -1349,7 +1497,7 @@ export async function handleRequest(api, req, res, uiLocale = () => 'zh') {
       if (method === 'POST' && action === '/reject') return sendJson(res, 200, api.reject(edictId, (await body()).note));
       if (method === 'POST' && action === '/fill') {
         const input = await body();
-        return sendJson(res, 200, api.fill(edictId, input.seq, input.text, input.skip === true));
+        return sendJson(res, 200, api.fill(edictId, input.seq, input.text, input.skip === true, input.delegate === true));
       }
     }
     if (route === '/artifact' && method === 'GET') {
@@ -1473,9 +1621,10 @@ function registerTools(ctx, court) {
       seq: { type: 'number', required: true, description: 'Order number (#) shown by sansheng_status' },
       text: { type: 'string', description: 'The result: what was done and where the output is' },
       skip: { type: 'boolean', description: 'true to skip this order instead' },
+      delegate: { type: 'boolean', description: 'true to hand this order to the deputy (DSH itself by default) instead of filling it in' },
     },
     async execute(args) {
-      api.fill(String(args.id || ''), Number(args.seq), args.text, args.skip === true);
+      api.fill(String(args.id || ''), Number(args.seq), args.text, args.skip === true, args.delegate === true);
       return say('已回填，朝会继续。', 'Filled in; the session continues.');
     },
   });

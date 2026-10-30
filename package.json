@@ -1,6 +1,6 @@
 {
   "name": "dsh-sansheng-liubu",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "type": "module",
   "main": "index.mjs",
   "description": "三省六部 / Imperial Court：把本机的 Claude Code / Codex / WorkBuddy 等 AI CLI 组织成朝堂（或古罗马元老院），拟旨、封驳、并行办差、复核、批红合并，全程在隔离的 git 分支里进行。",
