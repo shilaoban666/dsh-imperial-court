@@ -1028,6 +1028,56 @@ select.ssl-input { cursor: pointer; }
 .ssl-power-table tr.is-current td:first-child { box-shadow: inset 3px 0 0 var(--ssl-seal); }
 /* 文书房：产出所在的文件夹 */
 .ssl-files-where { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 6px 8px; border-radius: 8px; background: var(--ssl-sunken); }
+/* 再接一家工具 */
+.ssl-upgrade {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin-bottom: 12px; padding: 12px 14px; border-radius: 12px; font-size: 12.5px; color: var(--ssl-fg2);
+  border: 1px solid color-mix(in srgb, var(--ssl-seal) 45%, var(--ssl-line)); background: color-mix(in srgb, var(--ssl-seal) 9%, transparent);
+}
+.ssl-upgrade .ssl-grow { min-width: 260px; }
+.ssl-upgrade b { color: var(--ssl-fg); margin-right: 4px; }
+/* 新旨的起手式 */
+.ssl-starters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
+.ssl-starters > span { font-size: 12px; color: var(--ssl-mut); margin-right: 2px; }
+/* 功勋 */
+.ssl-badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr)); gap: 10px; }
+.ssl-badge { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--ssl-line); background: var(--ssl-sunken); opacity: .72; }
+.ssl-badge.is-won { opacity: 1; border-color: color-mix(in srgb, var(--ssl-seal) 45%, var(--ssl-line)); background: color-mix(in srgb, var(--ssl-seal) 8%, var(--ssl-panel)); }
+.ssl-badge-seal { flex: none; width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; font: 700 15px/1 var(--ssl-serif); color: var(--ssl-mut); border: 1.5px dashed var(--ssl-line2); }
+.ssl-badge.is-won .ssl-badge-seal { color: #fff; background: var(--ssl-seal); border: 0; box-shadow: inset 0 0 0 2px color-mix(in srgb, #fff 22%, transparent); }
+.ssl-badge-seal.is-latin { font: 700 9px/1 var(--sc-serif); }
+.ssl-badge .ssl-meter { margin: 6px 0 0; height: 5px; }
+/* 成效 */
+.ssl-impact-hero { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.ssl-impact-big { display: flex; flex-direction: column; gap: 4px; }
+.ssl-impact-hero > .ssl-card, .ssl-cols > .ssl-card { margin-top: 0; }
+.ssl-impact-big > b { font: 700 30px/1.15 var(--ssl-serif); color: var(--ssl-fg); font-variant-numeric: tabular-nums; }
+.ssl-impact-big > b small { font: 500 13px/1 inherit; color: var(--ssl-mut); }
+.ssl-cmp { padding: 10px 0; border-bottom: 1px dashed var(--ssl-line); }
+.ssl-cmp:last-child { border-bottom: 0; }
+.ssl-cmp-label { font-size: 12.5px; color: var(--ssl-fg2); margin-bottom: 6px; }
+.ssl-cmp-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) 120px; gap: 10px; align-items: center; margin: 3px 0; font-size: 12px; }
+.ssl-cmp-who { color: var(--ssl-mut); }
+.ssl-cmp-track { height: 10px; border-radius: 5px; background: var(--ssl-sunken); overflow: hidden; }
+.ssl-cmp-track i { display: block; height: 100%; border-radius: 0 4px 4px 0; }
+.ssl-cmp-track i.is-solo { background: color-mix(in srgb, var(--ssl-mut) 55%, transparent); }
+.ssl-cmp-track i.is-court { background: var(--ssl-seal); }
+.ssl-cmp-row b { font-variant-numeric: tabular-nums; color: var(--ssl-fg); }
+.ssl-cmp-row b em { font-style: normal; font-weight: 500; color: var(--ssl-ok); }
+.ssl-ledger > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px dashed var(--ssl-line); font-size: 12.5px; }
+.ssl-ledger > div.is-total { border-bottom: 0; border-top: 1px solid var(--ssl-line2); margin-top: 2px; font-weight: 700; }
+.ssl-ledger b { font-variant-numeric: tabular-nums; }
+.ssl-ledger .is-plus { color: var(--ssl-ok); }
+.ssl-ledger .is-minus { color: var(--ssl-err); }
+.ssl-catch { display: flex; align-items: center; gap: 14px; }
+.ssl-catch > b { font: 700 26px/1 var(--ssl-serif); min-width: 34px; text-align: center; color: var(--ssl-mut); }
+.ssl-catch.is-hit > b { color: var(--ssl-seal); }
+@container (max-width: 900px) {
+  .ssl-impact-hero { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (max-width: 560px) {
+  .ssl-impact-hero { grid-template-columns: minmax(0, 1fr); }
+  .ssl-cmp-row { grid-template-columns: 52px minmax(0, 1fr) 90px; }
+}
 /* 朝会页 */
 .ssl-forum-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .ssl-forum-bar .ssl-input { flex: 1 1 auto; min-width: 0; max-width: 520px; height: 32px; padding: 0 8px; }
@@ -2710,11 +2760,13 @@ select.ssl-input { cursor: pointer; }
               note ? h('div', { className: 'ssl-court-note' },
                 h('span', { className: 'ssl-grow' }, note),
                 h('button', { className: 'ssl-btn ssl-btn--sm', onClick: () => onGo('agents') }, t('goSetup'))) : null,
+              h(UpgradeCard, { state, notify, onRefresh, onGo }),
               h(Composer, {
                 ...composerProps,
                 placeholder: t('briefPh'),
                 caption: full ? t('fullCaption', { n: state.capacity || 2 }) : autonomous ? t('autoCaption') : t('normalCaption'),
-              }))
+              }),
+              h(DecreeStarters, { onPick: text => setBrief(text) }))
           : view ? h(Thread, { detail: view, state, notify, onChanged: () => { onRefresh(); pull(); }, onOpenDoc: openDoc, onGo })
           : h('div', { className: 'ssl-empty' }, t('loading'));
 
@@ -2746,6 +2798,21 @@ select.ssl-input { cursor: pointer; }
             : h(IdleSide, { state, onGo }));
 
         return h('div', { className: 'ssl-bench' }, left, center, right);
+      }
+
+      // 新旨的起手式：常见的几类活，点一下填进圣旨框，改改就能下。写清目标、范围、验收标准，门下就少驳几轮
+      const STARTERS = [
+        ['修 bug', 'Fix a bug', '修复：<哪里出错、怎么复现>。修好后跑相关测试，确认不再出现，并说明改了哪些文件。', 'Fix: <what breaks and how to reproduce it>. Run the related tests afterwards to confirm, and list the files you changed.'],
+        ['审查改动', 'Review changes', '审查最近的改动：找出 bug、安全隐患和没覆盖的测试，按严重程度列出，每条写明文件和行号。', 'Review the latest changes: list bugs, security risks and missing tests by severity, each with file and line.'],
+        ['写周报', 'Weekly report', '根据本周的 git 提交写一份周报：完成了什么、遇到的风险、下周计划，一页以内。', 'Write a one-page weekly report from this week’s commits: what was done, risks, next week’s plan.'],
+        ['整理数据', 'Tidy data', '把 <文件或目录> 里的数据整理成一张表格（CSV），去重、补齐缺失项，并写三条关键结论。', 'Turn the data in <file or folder> into one clean CSV table (dedupe, fill gaps) and write three key findings.'],
+        ['写文档', 'Write docs', '给 <模块> 写一份使用说明：安装、最小示例、常见问题，放在 docs/ 下。', 'Write a guide for <module>: install, a minimal example and FAQ, under docs/.'],
+        ['写首诗', 'Write a poem', '写一首关于 <主题> 的七言绝句，附一句白话解释。', 'Write a short poem about <theme>, with one line explaining it.'],
+      ];
+      function DecreeStarters({ onPick }) {
+        return h('div', { className: 'ssl-starters' },
+          h('span', null, zhEn('起手式', 'Start from')),
+          STARTERS.map(row => h('button', { key: row[0], className: 'ssl-chip', title: zhEn(row[2], row[3]), onClick: () => onPick(zhEn(row[2], row[3])) }, zhEn(row[0], row[1]))));
       }
 
       /** 回奏里常见的 Markdown：标题、列表、代码块、粗体、行内代码；其余照原样显示（不用 innerHTML） */
@@ -3937,6 +4004,52 @@ select.ssl-input { cursor: pointer; }
         return gains;
       }
 
+      // ---------- 只用一家工具时：告诉你再接一家能多得什么，并一键接入 ----------
+      const UPGRADE_KEY = 'sansheng-liubu.upgrade-dismissed';
+      const INSTALL_HINTS = { claude: 'npm i -g @anthropic-ai/claude-code', codex: 'npm i -g @openai/codex', gemini: 'npm i -g @google/gemini-cli', qwen: 'npm i -g @qwen-code/qwen-code' };
+      function UpgradeCard({ state, notify, onRefresh, onGo }) {
+        const regime = state.regime;
+        const [hidden, setHidden] = useState(() => {
+          try { return !!regime && localStorage.getItem(UPGRADE_KEY) === regime.level; } catch { return false; }
+        });
+        const [busy, setBusy] = useState('');
+        if (!regime || !regime.power || !regime.power.bound || regime.rank > 2 || hidden || !regime.powers) return null;
+        const holding = new Set(Object.values(state.roles || {}).map(role => role.agentId));
+        // 候选：有命令行、还没任职的工具（停用的也算，接入时顺手启用）
+        const candidates = state.agents.filter(agent => agent.adapter === 'cli' && !holding.has(agent.id)).slice(0, 3);
+        const gains = gainsOf(regime.power, regime.powers.liangdang);
+        const dismiss = () => {
+          try { localStorage.setItem(UPGRADE_KEY, regime.level); } catch { /* 存不了就只在这次隐藏 */ }
+          setHidden(true);
+        };
+        // 接入：先探测 CLI 在不在，在就启用并让它当门下省（别家来审，封驳才算数）
+        const join = agent => {
+          setBusy(agent.id);
+          apiJson('/probe', { method: 'POST', body: JSON.stringify({ agentId: agent.id }) })
+            .then(result => {
+              if (!result || !result.ok) {
+                const hint = INSTALL_HINTS[String(agent.command || '').replace(/\.cmd$/i, '').toLowerCase()];
+                notify(zhEn(`本机没找到 ${agent.command}。${hint ? `先在终端运行 ${hint} 并登录一次，` : '先装好它，'}再点一次。`, `${agent.command} was not found. ${hint ? `Run ${hint} and sign in once, ` : 'Install it, '}then try again.`), 'err');
+                return;
+              }
+              const agents = state.agents.map(item => (item.id === agent.id ? { ...item, enabled: true } : item));
+              const roles = { ...state.roles, menxia: { ...(state.roles.menxia || {}), agentId: agent.id, model: '' } };
+              savePresetPatch({ ...state, agents }, { agents, roles }, onRefresh, notify, zhEn(`${agent.name} 已接入，担任门下省`, `${agent.name} joined as the Tribune`));
+            })
+            .catch(error => notify(String(error.message || error), 'err'))
+            .finally(() => setBusy(''));
+        };
+        return h('div', { className: 'ssl-upgrade' },
+          h('div', { className: 'ssl-grow' },
+            h('b', null, zhEn(`现在是「${regimeInfo(regime.level).name}」：一家工具包办。`, `Now “${regimeInfo(regime.level).name}”: one tool does everything. `)),
+            h('span', null, zhEn(`再接一家升为「${regimeInfo('liangdang').name}」：${gains.join('，')}，而且别家来审，把关分会明显上去。`, `Add one more to reach “${regimeInfo('liangdang').name}”: ${gains.join(', ')}, and a second tool reviews the work.`))),
+          h('div', { className: 'ssl-actions' },
+            candidates.map(agent => h('button', { key: agent.id, className: 'ssl-btn ssl-btn--seal ssl-btn--sm', disabled: !!busy, onClick: () => join(agent) },
+              busy === agent.id ? zhEn('探测中…', 'Checking…') : zhEn(`接入 ${agent.name}`, `Add ${agent.name}`))),
+            candidates.length ? null : h('button', { className: 'ssl-btn ssl-btn--sm', onClick: () => onGo('agents') }, zhEn('去群臣添加工具', 'Add a tool in Cohort')),
+            h('button', { className: 'ssl-btn ssl-btn--ghost ssl-btn--sm', onClick: dismiss }, zhEn('知道了', 'Dismiss'))));
+      }
+
       /** 五级朝局各自的皇权，当前这一级高亮（官职页） */
       function PowerTable({ state }) {
         const regime = state.regime;
@@ -4144,6 +4257,143 @@ select.ssl-input { cursor: pointer; }
       }
 
       // ---------- 帝王传记 ----------
+      // ---------- 成效：同样的活，与一个工具单干相比快了多少、交到你手上前好了多少 ----------
+      const rate = value => (value == null ? '—' : `${Math.round(value * 100)}%`);
+      const CATCH_INFO = {
+        veto: [['门下封驳', '方案没想清楚就被打回重拟'], ['Tribune veto', 'Plans sent back before any work began']],
+        impeach: [['御史弹劾', '回奏不实、产出缺失，带着问题重办'], ['Impeachment', 'Reports that did not hold up, redone with the findings']],
+        admonish: [['锦衣卫督办', '推脱、说「请您手动」的被打回'], ['Admonition', 'Shirking (“you can do it manually”) sent back']],
+        guard: [['锦衣卫看守', '卡死不动、超支的被拿下'], ['Guard', 'Stalled or overspending work stopped']],
+        remedy: [['复核补救', '复核不过，自动补办'], ['Remedy', 'Failed the audit and was fixed automatically']],
+      };
+      const catchInfo = key => { const row = CATCH_INFO[key][isEn() ? 1 : 0]; return { name: row[0], desc: row[1] }; };
+
+      /** 两根条对比：单干（灰）与三省六部（主色），数值写在条后面 */
+      function CompareRow({ label, solo, court, soloText, courtText, max, better }) {
+        const width = value => `${max ? Math.max(2, Math.min(100, (value / max) * 100)) : 0}%`;
+        return h('div', { className: 'ssl-cmp' },
+          h('div', { className: 'ssl-cmp-label' }, label),
+          h('div', { className: 'ssl-cmp-bars' },
+            h('div', { className: 'ssl-cmp-row', title: `${zhEn('单干', 'Alone')}: ${soloText}` },
+              h('span', { className: 'ssl-cmp-who' }, zhEn('单干', 'Alone')),
+              h('div', { className: 'ssl-cmp-track' }, h('i', { className: 'is-solo', style: { width: width(solo) } })),
+              h('b', null, soloText)),
+            h('div', { className: 'ssl-cmp-row', title: `${zhEn('三省六部', 'Senate')}: ${courtText}` },
+              h('span', { className: 'ssl-cmp-who' }, zhEn('三省六部', 'Senate')),
+              h('div', { className: 'ssl-cmp-track' }, h('i', { className: 'is-court', style: { width: width(court) } })),
+              h('b', null, courtText, better ? h('em', null, better) : null))));
+      }
+
+      function ImpactTab({ state, onGo }) {
+        const [data, setData] = useState(null);
+        const [error, setError] = useState('');
+        useEffect(() => {
+          apiJson('/impact').then(setData).catch(err => setError(String(err.message || err)));
+        }, [state.edicts.length, state.edicts.filter(item => item.status === 'done').length]);
+        if (error) return h('div', { className: 'ssl-card ssl-alert' }, error);
+        if (!data) return h('div', { className: 'ssl-card ssl-empty' }, t('loading'));
+        if (!data.count) {
+          return h('div', { className: 'ssl-card ssl-empty' },
+            h('p', { style: { margin: '0 0 12px' } }, zhEn('还没有办完的奏折。办完第一份，这里就会算出：同样的活比一个工具单干快了多少、交到你手上之前多拦下了几个问题。',
+              'No finished decrees yet. After the first one, this page shows how much faster it was than one tool working alone and how many problems were caught before reaching you.')),
+            h('button', { className: 'ssl-btn ssl-btn--seal', onClick: () => onGo('court') }, zhEn('去下旨', 'Issue a decree')));
+        }
+        const { time, quality, catches, caught, money, recent } = data;
+        const speedup = time.speedup ? `${time.speedup.toFixed(time.speedup >= 10 ? 0 : 1)}×` : '—';
+        const faster = time.speedup && time.speedup > 1 ? Math.round((1 - 1 / time.speedup) * 100) : 0;
+        const maxTime = Math.max(time.soloMs, time.execWallMs + time.reviewMs, 1);
+        const net = time.netSavedMs;
+
+        return h('div', null,
+          h('div', { className: 'ssl-impact-hero' },
+            h('div', { className: 'ssl-card ssl-impact-big' },
+              h('span', { className: 'ssl-caption' }, zhEn('办差比单干快', 'Faster than one tool alone')),
+              h('b', null, speedup),
+              h('span', { className: 'ssl-caption' }, faster ? zhEn(`少等 ${faster}%：${fmtElapsed(time.soloMs)} → ${fmtElapsed(time.execWallMs)}`, `${faster}% less waiting: ${fmtElapsed(time.soloMs)} → ${fmtElapsed(time.execWallMs)}`) : zhEn('还没有并行办过的差事', 'No parallel work yet'))),
+            h('div', { className: 'ssl-card ssl-impact-big' },
+              h('span', { className: 'ssl-caption' }, zhEn('交到你手上前的合格率', 'Pass rate before it reaches you')),
+              h('b', null, quality.upliftPts != null ? `+${quality.upliftPts}` : '—', h('small', null, zhEn(' 个百分点', ' pts'))),
+              h('span', { className: 'ssl-caption' }, zhEn(`单干 ${rate(quality.firstPassRate)} → 三省六部 ${rate(quality.passRate)}`, `Alone ${rate(quality.firstPassRate)} → Senate ${rate(quality.passRate)}`))),
+            h('div', { className: 'ssl-card ssl-impact-big' },
+              h('span', { className: 'ssl-caption' }, zhEn('在你看到之前拦下的问题', 'Problems caught before you saw them')),
+              h('b', null, caught),
+              h('span', { className: 'ssl-caption' }, zhEn(`${data.count} 份奏折，单干时这些都会原样交到你手上`, `${data.count} decrees; alone, all of these would have reached you`))),
+            h('div', { className: 'ssl-card ssl-impact-big' },
+              h('span', { className: 'ssl-caption' }, zhEn('把关分', 'Quality score')),
+              h('b', null, quality.score != null ? quality.score : '—', h('small', null, ' / 100')),
+              h('span', { className: 'ssl-caption' }, zhEn('交叉审议、逐件复核、最终合格、救回率', 'Cross-review, audits, final pass, rescues')))),
+
+          h('div', { className: 'ssl-cols', style: { marginTop: '12px' } },
+            h('div', { className: 'ssl-card' },
+              h('div', { className: 'ssl-card-h' },
+                h('h4', { className: 'ssl-card-t' }, zhEn('同样的活：单干 vs 三省六部', 'Same work: alone vs the Senate')),
+                h('span', { className: 'ssl-caption' }, zhEn('悬停看数值', 'Hover for values'))),
+              h(CompareRow, {
+                label: zhEn('办差耗时（越短越好）', 'Time at work (shorter is better)'), max: maxTime,
+                solo: time.soloMs, court: time.execWallMs, soloText: fmtElapsed(time.soloMs), courtText: fmtElapsed(time.execWallMs),
+                better: faster ? zhEn(` 快 ${faster}%`, ` ${faster}% faster`) : '',
+              }),
+              h(CompareRow, {
+                label: zhEn('交到你手上前合格（越高越好）', 'Passed before reaching you (higher is better)'), max: 1,
+                solo: quality.firstPassRate || 0, court: quality.passRate || 0, soloText: rate(quality.firstPassRate), courtText: rate(quality.passRate),
+                better: quality.upliftPts ? zhEn(` +${quality.upliftPts} 点`, ` +${quality.upliftPts} pts`) : '',
+              }),
+              h(CompareRow, {
+                label: zhEn('有人替你把关', 'Someone checks the work'), max: 1,
+                solo: 0, court: quality.auditRate || 0, soloText: zhEn('没有', 'Nobody'), courtText: rate(quality.auditRate),
+              })),
+            h('div', { className: 'ssl-card' },
+              h('div', { className: 'ssl-card-h' }, h('h4', { className: 'ssl-card-t' }, zhEn('时间账', 'Time ledger'))),
+              h('div', { className: 'ssl-ledger' },
+                h('div', null, h('span', null, zhEn('并行省下', 'Saved by parallel work')), h('b', { className: 'is-plus' }, `+${fmtElapsed(time.parallelSavedMs)}`)),
+                h('div', null, h('span', { title: zhEn('每拦下一个问题，按一次办差的平均时长算你少返工一次', 'Each caught problem counts as one redo you did not have to do, at the average order length') }, zhEn('少返工（估算）', 'Rework avoided (estimate)')), h('b', { className: 'is-plus' }, `+${fmtElapsed(time.reworkSavedMs)}`)),
+                h('div', null, h('span', null, zhEn('拟旨、封驳、复核多花', 'Spent on drafting, review and audit')), h('b', { className: 'is-minus' }, `−${fmtElapsed(time.reviewMs)}`)),
+                h('div', { className: 'is-total' }, h('span', null, zhEn('净省', 'Net')), h('b', { className: net >= 0 ? 'is-plus' : 'is-minus' }, `${net >= 0 ? '+' : '−'}${fmtElapsed(Math.abs(net))}`))),
+              h('div', { className: 'ssl-ledger', style: { marginTop: '12px' } },
+                h('div', null, h('span', null, zhEn('为把关多付', 'Paid for checking')), h(Money, { usd: money.reviewCostUsd, compact: true })),
+                h('div', null, h('span', null, zhEn('缓存省下', 'Saved by the cache')), h(Money, { usd: money.savedUsd, compact: true }))),
+              net < 0 ? h('div', { className: 'ssl-caption', style: { marginTop: '8px' } }, zhEn('净省为负：审议花的时间比省下的多。短小的活交给急递，或在朝规里把朝制设为自动。', 'Net is negative: review took longer than it saved. Send small jobs express, or set the procedure to auto in the rules.')) : null)),
+
+          h(Section, { title: zhEn('拦下了什么', 'What was caught'), note: zhEn('单干时，这些问题都要你自己发现、自己返工', 'Alone, you would have found and fixed each of these yourself') }),
+          h('div', { className: 'ssl-grid ssl-catches' }, Object.keys(CATCH_INFO).map(key => h('div', { key, className: cx('ssl-card ssl-catch', catches[key] && 'is-hit') },
+            h('b', null, catches[key] || 0),
+            h('div', null, h('div', { className: 'ssl-role-title' }, catchInfo(key).name), h('div', { className: 'ssl-caption' }, catchInfo(key).desc))))),
+
+          h(Section, { title: zhEn('把关明细', 'Quality detail') }),
+          h('div', { className: 'ssl-card' },
+            h('div', { className: 'ssl-ledger' },
+              h('div', null, h('span', { title: zhEn('拟旨与封驳出自两家工具的比例：别家来审，才看得出自家的盲区', 'Share of plans reviewed by a different tool than the one that drafted them') }, zhEn('交叉审议', 'Cross-tool review')), h('b', null, rate(quality.crossRate))),
+              h('div', null, h('span', null, zhEn('有御史巡查或门下复核', 'Inspected or audited')), h('b', null, rate(quality.auditRate))),
+              h('div', null, h('span', { title: zhEn('被拦下过问题的奏折里，最后仍然办成的比例', 'Of decrees with caught problems, the share that still ended well') }, zhEn('救回率', 'Rescue rate')), h('b', null, rate(quality.rescueRate))),
+              h('div', null, h('span', null, zhEn('一次就办对', 'Right first time')), h('b', null, rate(quality.firstPassRate)))),
+            quality.crossRate === 0 || quality.crossRate == null ? h('div', { className: 'ssl-caption', style: { marginTop: '8px' } },
+              zhEn('拟旨与封驳出自同一家工具时，审议只能算自查。再接一家工具当门下省，把关分会明显上去。', 'When the same tool drafts and reviews, review is only a self-check. Give the Tribune to another tool and the score rises.'),
+              ' ', h('button', { className: 'ssl-link', onClick: () => onGo('roster') }, zhEn('去任命 →', 'Appoint →'))) : null),
+
+          h(Section, { title: zhEn('最近的奏折', 'Recent decrees'), note: zhEn('这张表就是上面各图的数据', 'This table is the data behind the charts above') }),
+          h('div', { className: 'ssl-card', style: { overflowX: 'auto' } },
+            h('table', { className: 'ssl-table' },
+              h('thead', null, h('tr', null,
+                h('th', null, zhEn('奏折', 'Decree')), h('th', null, zhEn('单干', 'Alone')), h('th', null, zhEn('三省六部', 'Senate')),
+                h('th', null, zhEn('快了', 'Faster')), h('th', null, zhEn('拦下', 'Caught')), h('th', null, zhEn('合格', 'Passed')))),
+              h('tbody', null, recent.map(row => h('tr', { key: row.id },
+                h('td', { className: 'ssl-ellipsis', style: { maxWidth: '320px' }, title: row.brief }, row.brief),
+                h('td', null, fmtElapsed(row.soloMs)),
+                h('td', null, fmtElapsed(row.execWallMs)),
+                h('td', null, row.execWallMs && row.soloMs > row.execWallMs ? `${Math.round((1 - row.execWallMs / row.soloMs) * 100)}%` : '—'),
+                h('td', null, row.caught || '—'),
+                h('td', null, row.passed ? '✓' : '✗')))))),
+
+          h('div', { className: 'ssl-card', style: { marginTop: '12px' } },
+            h('details', { className: 'ssl-details' },
+              h('summary', null, zhEn('怎么算的', 'How this is measured')),
+              h('ul', { className: 'ssl-lessons' },
+                h('li', null, zhEn('单干：同一批办差调用由一个工具一件件做，耗时是它们的时长之和；没有封驳、巡查、复核。', 'Alone: the same work orders done one after another by one tool, so the time is their sum; no veto, inspection or audit.')),
+                h('li', null, zhEn('三省六部：办差并行，耗时按墙钟算（同时进行的只算一次）；拟旨、封驳、复核的时间单独记在时间账里，不藏。', 'Senate: orders run in parallel and are timed by the clock (overlaps count once); drafting, review and audit time is listed separately in the ledger.')),
+                h('li', null, zhEn('合格率：单干只有「一次就办对、没被拦下任何问题」的算合格；三省六部按最后通过复核或你批红算。', 'Pass rate: alone, only work with no caught problems counts; with the Senate, work that finally passed the audit or your seal counts.')),
+                h('li', null, zhEn('少返工是估算：每拦下一个问题，按一次办差的平均时长算。只用已记下的数据，不调模型、不花钱。', 'Rework avoided is an estimate: one average order per caught problem. Only recorded data is used; no model calls.'))))));
+      }
+
       function BiographyTab({ state, onGo }) {
         const [bio, setBio] = useState(null);
         const [error, setError] = useState('');
@@ -4220,7 +4470,47 @@ select.ssl-input { cursor: pointer; }
             h('h4', { className: 'ssl-card-t', style: { marginBottom: '6px' } }, zhEn('史臣曰', 'The annalist says')),
             h('p', { style: { margin: 0 } },
               zhEn(`长于${abilityInfo(best).name}，短于${abilityInfo(worst).name}。`, `Strong in ${abilityInfo(best).name}, weak in ${abilityInfo(worst).name}. `),
-              abilityInfo(worst).tip, isEn() ? '.' : '。')) : null);
+              abilityInfo(worst).tip, isEn() ? '.' : '。')) : null,
+          h(Achievements, { bio, state }));
+      }
+
+      /** 功勋：做到了就盖上朱印，没做到的给出进度。全按已记下的数据算 */
+      function Achievements({ bio, state }) {
+        const [impact, setImpact] = useState(null);
+        useEffect(() => { apiJson('/impact').then(setImpact).catch(() => setImpact(null)); }, [state.edicts.length]);
+        const reign = bio.reign;
+        const rank = (state.regime && state.regime.rank) || 1;
+        const reached = key => !!(reign.regimes && reign.regimes[key]) || REGIME_KEYS.indexOf(key) < rank;
+        const ministries = MINISTRY_IDS.filter(id => bio.tasks[id] && bio.tasks[id].total > 0).length;
+        const catches = (impact && impact.catches) || {};
+        const time = (impact && impact.time) || {};
+        const money = (impact && impact.money) || {};
+        const list = [
+          ['登', 'I', ['登基', 'Accession'], ['下第一道旨', 'Issue your first decree'], reign.edicts, 1],
+          ['勤', 'II', ['勤政', 'Diligence'], ['下满 20 道旨', 'Issue 20 decrees'], reign.edicts, 20],
+          ['亲', 'III', ['亲政', 'Personal rule'], ['亲自批红或驳回 10 道', 'Seal or reject 10 decrees yourself'], reign.ruled, 10],
+          ['功', 'IV', ['功业', 'Triumph'], ['办成 30 道', 'Finish 30 decrees'], reign.done, 30],
+          ['齐', 'V', ['六部齐备', 'Six magistrates'], ['六部都办过差', 'Every magistrate has served'], ministries, 6],
+          ['分', 'VI', ['分权', 'Divided power'], ['升到两党争霸', 'Reach East and West'], reached('liangdang') ? 1 : 0, 1],
+          ['鼎', 'VII', ['三足鼎立', 'Triumvirate'], ['升到三巨头', 'Reach the Triumvirate'], reached('sanju') ? 1 : 0, 1],
+          ['乾', 'VIII', ['乾纲独断', 'Tetrarchy'], ['升到乾纲独断', 'Reach the Tetrarchy'], reached('qiangang') ? 1 : 0, 1],
+          ['谏', 'IX', ['广开言路', 'Open court'], ['门下封驳 5 次', 'The Tribune vetoes 5 times'], catches.veto || 0, 5],
+          ['察', 'X', ['明察秋毫', 'Sharp eyes'], ['御史弹劾 3 次', '3 impeachments'], catches.impeach || 0, 3],
+          ['速', 'XI', ['并行如飞', 'Swift as Mercury'], ['并行累计省下 1 小时', 'Save an hour by parallel work'], Math.floor((time.parallelSavedMs || 0) / 60000), 60],
+          ['俭', 'XII', ['节用', 'Thrift'], ['缓存累计省下 1 美元', 'Save $1 through the cache'], Math.floor((money.savedUsd || 0) * 100), 100],
+        ];
+        const won = list.filter(row => row[4] >= row[5]).length;
+        return h(React.Fragment, null,
+          h(Section, { title: zhEn('功勋', 'Honours'), note: zhEn(`已得 ${won} / ${list.length}`, `${won} of ${list.length} won`) }),
+          h('div', { className: 'ssl-badges' }, list.map(([seal, latin, name, how, value, target]) => {
+            const done = value >= target;
+            return h('div', { key: seal, className: cx('ssl-badge', done && 'is-won'), title: `${zhEn(how[0], how[1])} · ${Math.min(value, target)}/${target}` },
+              h('span', { className: cx('ssl-badge-seal', isEn() && 'is-latin') }, isEn() ? latin : seal),
+              h('div', { className: 'ssl-grow' },
+                h('div', { className: 'ssl-role-title' }, zhEn(name[0], name[1])),
+                h('div', { className: 'ssl-caption' }, zhEn(how[0], how[1])),
+                done ? null : h('div', { className: 'ssl-meter' }, h('i', { style: { width: `${Math.min(100, (value / target) * 100)}%` } }))));
+          })));
       }
 
       function App({ embedded }) {
@@ -4266,6 +4556,7 @@ select.ssl-input { cursor: pointer; }
           ['roster', t('tabRoster'), null],
           ['annals', t('tabAnnals'), null],
           ['treasury', t('tabTreasury'), null],
+          ['impact', zhEn('成效', 'Gains'), null],
           ['biography', t('tabBio'), null],
           ['agents', t('tabAgents'), null],
           ['hall', t('tabHall'), null],
@@ -4300,6 +4591,7 @@ select.ssl-input { cursor: pointer; }
             : tab === 'memorial' ? h(ForumTab, { state, notify, selected: selected || '', onSelect: setSelected, onGo: setTab })
             : tab === 'annals' ? h(AnnalsTab, { state, onRefresh: refresh, notify })
             : tab === 'treasury' ? h(TreasuryTab, { state, onRefresh: refresh, notify })
+            : tab === 'impact' ? h(ImpactTab, { state, onGo: setTab })
             : tab === 'hall' ? h(HallTab, { state, onRefresh: refresh, notify })
             : h(AgentsTab, { state, onRefresh: refresh, notify }),
           error && state ? h('div', { className: 'ssl-alert' }, t('hostLost', { error })) : null,

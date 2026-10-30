@@ -16,6 +16,7 @@ import { tokens } from '../lib/annals.mjs';
 import { ROLE_IDS, MINISTRY_IDS } from '../lib/i18n.mjs';
 import { resolveWorkflow } from '../lib/workflows.mjs';
 import { regimeOf, familyOf, puppetIndex, actualRegimeOf, OFFICES } from '../lib/regime.mjs';
+import { impactOf, unionMs } from '../lib/impact.mjs';
 
 const FAKE = fileURLToPath(new URL('./fake-agent.mjs', import.meta.url));
 const tmp = prefix => fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -656,6 +657,39 @@ test('workspace candidates come from DSH’s own sidebar list; an old DSH-itself
   assert.equal(dsh.permissionEnv, 'DSH_PERMISSION_MODE');
 });
 
+test('impact: parallel work is faster than one tool doing it alone, and caught problems raise the pass rate', async () => {
+  assert.equal(unionMs([[0, 10], [5, 15], [20, 30]]), 25);
+  const call = (roleId, kind, startedAt, endedAt, agentId = 'a') => ({ roleId, kind, startedAt, endedAt, agentId, costUsd: 0.01 });
+  // 第一份：拟旨（a）→ 封驳（b，跨家）→ 两部并行各 10 秒 → 复核；中途门下封驳一次，最后通过
+  const fixed = {
+    id: 'e1', brief: 'one', status: 'done', createdAt: 2, recheck: { verdict: 'approve' },
+    calls: [call('zhongshu', 'draft', 0, 2000), call('menxia', 'submit', 2000, 3000, 'b'), call('war', 'order', 3000, 13000), call('justice', 'order', 3000, 13000), call('menxia', 'audit', 13000, 14000, 'b')],
+    messages: [{ kind: 'veto' }],
+  };
+  // 第二份：急递，一次就办对
+  const clean = { id: 'e2', brief: 'two', status: 'awaiting-approval', createdAt: 1, calls: [call('rites', 'order', 0, 4000)], messages: [] };
+  const result = impactOf([fixed, clean, { id: 'e3', status: 'running', calls: [call('war', 'order', 0, 1)] }]);
+  assert.equal(result.count, 2, 'running decrees are left out');
+  assert.equal(result.time.soloMs, 24000);
+  assert.equal(result.time.execWallMs, 14000);
+  assert.equal(result.time.parallelSavedMs, 10000);
+  assert.ok(result.time.speedup > 1.7 && result.time.speedup < 1.72);
+  assert.equal(result.caught, 1);
+  assert.equal(result.quality.passRate, 1);
+  assert.equal(result.quality.firstPassRate, 0.5);
+  assert.equal(result.quality.upliftPts, 50);
+  assert.equal(result.quality.crossRate, 1);
+  assert.equal(result.recent[0].id, 'e1');
+
+  // 端到端：真的跑一份，成效接口有数
+  const { api } = makeCourt({ flags: 'parallel' });
+  const { id } = api.createEdict({ brief: 'parallel work', workspace: tmp('court-plain-') });
+  await waitFor(api, id, ['awaiting-approval', 'failed']);
+  const live = api.impact();
+  assert.equal(live.count, 1);
+  assert.ok(live.time.soloMs >= live.time.execWallMs);
+});
+
 test('regime sets power: a figurehead cannot reject, pick the procedure or open two decrees; the rule can turn it off', async () => {
   const { api, court } = makeCourt();
   // 两家工具 = 两党争霸：各部之间的往来全看得见，也能驳回
@@ -667,7 +701,8 @@ test('regime sets power: a figurehead cannot reject, pick the procedure or open 
   const state = api.getState();
   assert.equal(state.regime.level, 'jiuxi');
   assert.equal(state.regime.power.reject, false);
-  assert.equal(state.regime.power.see, 1);
+  // 只用一家工具也看得见流程与差事（不再只见结果）
+  assert.equal(state.regime.power.see, 2);
   assert.equal(state.capacity, 1);
   // 朝规里设的是常朝、下旨时要大朝会，傀儡都做不了主：一律按「自动」，短旨走急递
   const { id, mode } = api.createEdict({ brief: 'write a hello file', workspace: tmp('court-plain-'), mode: 'grand' });
