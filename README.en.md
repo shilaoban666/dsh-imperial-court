@@ -83,7 +83,7 @@ It ships in two languages that share one engine: **English · Roman Senate** and
 
 **The regime** is read from who holds office (no model calls): one tool with one model house is *Dictator Perpetuo*, one tool calling several model houses is *Sejanus’ Rome*, two tools are *East and West*, three a *Triumvirate*, four or more a *Tetrarchy*. The fewer houses, the cheaper and faster, but the less you can see or step in. The Offices tab shows the ladder, who holds what and which idle tool to appoint where to move up a rung; the **Res Gestae** tab adds a puppet index (are you a figurehead?), a radar of each magistrate's success rate and a radar of your six virtues (Appointments, Oversight, Thrift, Clarity, Diligence, Results).
 
-The Consul and the Tribune may not be the same agent (checked on save). **Models belong to offices**, not agents: the same Claude Code can run `opus` as Consul and `sonnet` as Legate.
+**Any office can go to any agent**, DSH itself included (it runs through `dsh headless`). The Consul and the Tribune may be the same agent, but that is *Dictator Perpetuo*: a house reviewing itself, and the Offices tab suggests recusal. **Models belong to offices**, not agents: the same Claude Code can run `opus` as Consul and `sonnet` as Legate.
 
 ## How a decree flows
 
@@ -130,6 +130,20 @@ flowchart LR
 ## Model tools
 
 `sansheng_edict` (issue; optional `workflow`: `default`, `none`, `video`, `dev`, `report`, or `war,justice`), `sansheng_status`, `sansheng_approve` (seal and merge), `sansheng_reject`, `sansheng_fill`, `sansheng_assign`.
+
+## DSH itself can hold any office
+
+DSH ships a one-shot task mode, `dsh headless`; the plugin uses it so DSH does real work like Claude Code or Codex (older versions only issued a to-do for someone to fill in).
+
+- **Found without PATH**: the plugin locates `resources/runtime/cli/bin/dsh.cmd` from the DSH install folder, including the location recorded in Windows' uninstall entries.
+- **Your login**: headless only reads `DEEPSEEK_API_KEY` by default; the bundled [`dsh-headless.patch.yml`](dsh-headless.patch.yml) re-enables the desktop sign-in. With `DEEPSEEK_API_KEY` set, it uses the API key.
+- **Model per office**: `deepseek-flash` / `deepseek-v4-pro`, passed to the patch through `SANSHENG_DSH_MODEL`.
+- **Permission per decree**: read only / edit in workspace / full access map to DSH's own `DSH_PERMISSION_MODE`; drafting and review are always read-only.
+- **Real accounts, resumable**: usage from the `--json` events (cache hits included) goes into the Aerarium; redos continue the same session with `--session-id`.
+
+**Tools without a command line** (GUI-only): the order pauses for you to fill in, skip, or **hand it to DSH** in one click (the deputy is set in the rules; DSH by default).
+
+The decree box mirrors DSH's input: **＋ attach files**, **permission**, **working folder** (DSH's own workspaces plus recent ones, or a native folder dialog) and criteria on the left, the procedure on the right. Attachments are kept in the decree's own folder, never on the isolated branch, and their paths go into every order.
 
 ## Install
 

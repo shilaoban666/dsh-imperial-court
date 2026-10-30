@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "agents": [
     {
       "id": "cc",
@@ -129,14 +129,41 @@
     {
       "id": "dsh",
       "name": "DSH",
-      "adapter": "self",
-      "models": [],
-      "traits": [
-        "调度",
-        "本机工具",
-        "宿主"
+      "adapter": "cli",
+      "command": "dsh",
+      "args": [
+        "headless",
+        "--patch",
+        "{pluginDir}/dsh-headless.patch.yml",
+        "-"
       ],
-      "enabled": true
+      "promptMode": "stdin",
+      "modelEnv": "SANSHENG_DSH_MODEL",
+      "permissionEnv": "DSH_PERMISSION_MODE",
+      "modelArgs": [],
+      "execArgs": [],
+      "autoArgs": [],
+      "models": [
+        "deepseek-flash",
+        "deepseek-v4-pro"
+      ],
+      "timeoutMs": 900000,
+      "traits": [
+        "中文",
+        "长文本",
+        "便宜",
+        "文书",
+        "数据"
+      ],
+      "enabled": true,
+      "outputFormat": "dsh-json",
+      "formatArgs": [
+        "--json"
+      ],
+      "resumeArgs": [
+        "--session-id",
+        "{session}"
+      ]
     },
     {
       "id": "qwen",
