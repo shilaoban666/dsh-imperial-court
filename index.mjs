@@ -19,7 +19,7 @@ import { WORKFLOW_TEMPLATES, resolveWorkflow, cleanWorkflow } from './lib/workfl
 import { createTreasury, costOf, savedOf, DEFAULT_PRICES } from './lib/treasury.mjs';
 import { createWiki } from './lib/wiki.mjs';
 import { historianPrompt } from './lib/prompts.mjs';
-import { regimeOf, actualRegimeOf, puppetIndex, puppetVerdict, REGIMES, REGIME_TEXT } from './lib/regime.mjs';
+import { regimeOf, actualRegimeOf, puppetIndex, puppetVerdict, powerOf, POWERS, REGIMES, REGIME_TEXT } from './lib/regime.mjs';
 
 // DSH 自带的 defineTool（dsh-openwrite 同款）。本插件以 link: 方式装进 profile 时可能解析不到，就按原样注册。
 let defineTool = definition => definition;
@@ -85,6 +85,75 @@ function dshWorkspaces() {
   } catch {
     return [];
   }
+}
+
+/** 没选工作目录时给这道旨新建的产出文件夹：文档/SanshengLiubu/<年月日-时分秒>（SANSHENG_OUTPUT_DIR 可改根目录） */
+function newOutputFolder(now = new Date()) {
+  const docs = path.join(os.homedir(), 'Documents');
+  const base = process.env.SANSHENG_OUTPUT_DIR || path.join(fs.existsSync(docs) ? docs : os.homedir(), 'SanshengLiubu');
+  const p = n => String(n).padStart(2, '0');
+  const stamp = `${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}-${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}`;
+  let dir = path.join(base, stamp);
+  for (let n = 2; fs.existsSync(dir); n += 1) dir = path.join(base, `${stamp}-${n}`);
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+/** 不是 git 仓库时，「改了哪些文件」只能看修改时间：列出开朝以后动过的文件（有上限，跳过依赖与缓存目录） */
+const SKIP_DIRS = new Set(['node_modules', '.git', '.venv', 'venv', '__pycache__', 'dist', 'build', '.next', '.cache']);
+export function recentFiles(root, since, { maxVisit = 3000, maxOut = 60 } = {}) {
+  const out = [];
+  const queue = [''];
+  let visited = 0;
+  while (queue.length && visited < maxVisit) {
+    const rel = queue.shift();
+    let entries = [];
+    try {
+      entries = fs.readdirSync(path.join(root, rel), { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (++visited > maxVisit) break;
+      const child = rel ? `${rel}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        if (!SKIP_DIRS.has(entry.name) && !entry.name.startsWith('.')) queue.push(child);
+      } else if (entry.isFile()) {
+        try {
+          const stat = fs.statSync(path.join(root, child));
+          if (stat.mtimeMs >= since - 1000) out.push({ file: child, add: 0, del: 0, mtime: stat.mtimeMs, size: stat.size });
+        } catch {
+          /* 读不到就跳过 */
+        }
+      }
+    }
+  }
+  return out.sort((a, b) => b.mtime - a.mtime).slice(0, maxOut);
+}
+
+// 「打开」只对文档、图片、音视频这类直接用默认程序打开；脚本、程序一律只在文件夹里定位，不替用户执行
+const OPENABLE = new Set(['html', 'htm', 'md', 'txt', 'log', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'mp3', 'wav', 'ogg', 'flac', 'm4a', 'mid', 'midi', 'mp4', 'webm', 'mov', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv', 'json']);
+export const canOpenFile = file => OPENABLE.has(path.extname(String(file)).slice(1).toLowerCase());
+
+/** 用系统的文件管理器打开文件夹 / 在文件夹里选中文件 / 用默认程序打开文件 */
+function openInOs(target, how) {
+  let command;
+  let args;
+  let verbatim = false;
+  if (process.platform === 'win32') {
+    command = 'explorer.exe';
+    verbatim = true;
+    args = [how === 'reveal' ? `/select,"${target}"` : `"${target}"`];
+  } else if (process.platform === 'darwin') {
+    command = 'open';
+    args = how === 'reveal' ? ['-R', target] : [target];
+  } else {
+    command = 'xdg-open';
+    args = [how === 'reveal' ? path.dirname(target) : target];
+  }
+  const child = spawn(command, args, { detached: true, stdio: 'ignore', windowsVerbatimArguments: verbatim });
+  child.on('error', () => {});
+  child.unref();
 }
 
 /** 系统的选文件夹对话框；取消或不支持时 path 为空 */
@@ -268,6 +337,8 @@ function sanitizePreset(input, current) {
   rules.execWrites = rules.execWrites !== false;
   rules.parallel = clampInt(rules.parallel, 1, 4, 2);
   rules.maxConcurrent = clampInt(rules.maxConcurrent, 1, 4, 2);
+  // 朝局定皇权（看得见多少、能不能驳回、几份几部同时办）；关掉就按上面两条朝规走
+  rules.regimePowers = rules.regimePowers !== false;
   rules.useMemory = rules.useMemory !== false;
   rules.maxRetries = clampInt(rules.maxRetries, 0, 3, 1);
   rules.pressure = ['off', 'gentle', 'standard'].includes(rules.pressure) ? rules.pressure : 'standard';
@@ -355,10 +426,11 @@ function spendOf(edict) {
 
 // 急递派给哪个部：按圣意里的关键词投票，平局归兵部
 const ROUTE_KEYWORDS = {
-  war: ['代码', 'bug', '修复', '实现', '重构', '构建', '部署', '编译', '函数', '接口', '脚本', 'code', 'fix', 'implement', 'refactor', 'build', 'deploy', 'function', 'api', 'script', 'crash'],
+  war: ['代码', 'bug', '修复', '实现', '重构', '构建', '部署', '编译', '函数', '接口', '脚本', '安装', '升级', '插件', 'code', 'fix', 'implement', 'refactor', 'build', 'deploy', 'function', 'api', 'script', 'crash', 'install', 'upgrade', 'plugin'],
   justice: ['测试', '审查', '合规', '检查', '安全', '漏洞', 'test', 'review', 'lint', 'audit', 'security', 'verify'],
   revenue: ['数据', '表格', '报表', 'csv', 'excel', '统计', '财务', '图表', 'data', 'spreadsheet', 'report', 'sql', 'chart', 'metrics'],
-  rites: ['文档', '文案', '周报', '汇报', 'ppt', '邮件', '翻译', 'readme', '说明', '公告', 'doc', 'docs', 'write', 'email', 'slides', 'translate', 'changelog'],
+  // 写歌、写诗、写故事这类文字创作归礼部，不该落到写代码的兵部手里
+  rites: ['文档', '文案', '周报', '汇报', 'ppt', '邮件', '翻译', 'readme', '说明', '公告', '歌', '诗', '词', '故事', '小说', '文章', '作文', '散文', '剧本', '演讲', '祝福', 'doc', 'docs', 'write', 'email', 'slides', 'translate', 'changelog', 'song', 'poem', 'lyrics', 'story', 'essay', 'article', 'speech'],
   works: ['界面', '设计', '样式', '前端', '页面', '布局', '图标', 'ui', 'css', 'design', 'layout', 'style', 'frontend', 'docker', 'infra'],
   personnel: ['权限', '账号', '配置', '环境变量', '密钥', 'config', 'permission', 'account', 'env', 'settings', 'credentials'],
 };
@@ -864,10 +936,33 @@ export function createCourt(config = {}, { log = console } = {}) {
   }
 
   /** 当前朝局（按任命）+ 架空指数（再看近来亲裁了多少） */
+  /** 这道旨的产出此刻在磁盘上的哪个目录：办理中在隔离 worktree，合并后或没隔离在工作目录；办完还在分支里没合并的返回 '' */
+  function diskRoot(edict) {
+    const g = edict.git;
+    if (g && g.worktree && fs.existsSync(g.worktree)) return edict.execDir || g.worktree;
+    if (g && g.finalized && !g.merged && !g.empty && !g.discarded) return '';
+    return edict.workspace && fs.existsSync(edict.workspace) ? edict.workspace : '';
+  }
+
+  /** 此刻的皇权（按现任官员算的朝局）：同时几份、几个部并行、能不能驳回、能不能亲选朝制 */
+  function powerNow() {
+    return powerOf(regimeOf(store.state).level, store.state.rules || {});
+  }
+  /** 同时能办几份奏折：受朝局约束时由朝局定，否则按朝规 */
+  function capacityOf(rules) {
+    const power = powerNow();
+    return power.bound ? power.concurrent : clampInt(rules.maxConcurrent, 1, 4, 2);
+  }
+  function needReject(locale) {
+    if (powerNow().reject) return;
+    const level = regimeOf(store.state).level;
+    fail('errNoReject', { regime: (REGIME_TEXT[locale] || REGIME_TEXT.zh)[level] });
+  }
+
   function regimeWithPuppet() {
     const regime = regimeOf(store.state);
     const score = puppetIndex(regime, annals.list());
-    return { ...regime, puppet: { score, verdict: puppetVerdict(score) } };
+    return { ...regime, puppet: { score, verdict: puppetVerdict(score) }, power: powerOf(regime.level, store.state.rules || {}), powers: POWERS };
   }
 
   /** 本朝实际：按这份奏折真正调用了哪几家算；比任命时低（有人倒下、由代办接手），告诉皇帝 */
@@ -901,7 +996,7 @@ export function createCourt(config = {}, { log = console } = {}) {
       const locale = uiLocale();
       const edicts = store.listEdicts();
       const rules = store.state.rules || {};
-      const capacity = clampInt(rules.maxConcurrent, 1, 4, 2);
+      const capacity = capacityOf(rules);
       const workspaces = [];
       for (const item of edicts) {
         if (item.workspace && !workspaces.some(existing => samePath(existing, item.workspace))) workspaces.push(item.workspace);
@@ -1069,7 +1164,7 @@ export function createCourt(config = {}, { log = console } = {}) {
       if (!brief) fail('errEmptyBrief');
       if (brief.length > 8000) fail('errBriefTooLong');
       const rules = store.state.rules || {};
-      const capacity = clampInt(rules.maxConcurrent, 1, 4, 2);
+      const capacity = capacityOf(rules);
       // 界面会在满额时禁用下旨，但工具 sansheng_edict 和直接调 HTTP 的不会，这里才是真正的闸门
       if (active.size >= capacity) fail('errFull', { n: capacity });
       // 锦衣卫管国库：本月预算用尽就不再开朝
@@ -1087,7 +1182,9 @@ export function createCourt(config = {}, { log = console } = {}) {
         }
         if (!isDir) fail('errWorkspace', { path: raw });
       }
-      const workspace = path.resolve(raw || process.cwd());
+      // 没选工作目录：在「文档/SanshengLiubu」下给这道旨新建一个文件夹。
+      // 以前用的是 DSH 进程自己的目录（~/.dsh/profiles/...），产出混在 DSH 配置里，用户找不到
+      const workspace = path.resolve(raw || newOutputFolder());
       let info = null;
       if (rules.isolation !== 'off') {
         try {
@@ -1118,7 +1215,8 @@ export function createCourt(config = {}, { log = console } = {}) {
       prepareIsolation(edict, info);
       edict.recalled = rules.useMemory !== false ? annals.recall(brief, workspace) : [];
       // 朝制：急递 / 常朝 / 大朝会（自动时按圣意长短与流程步数挑）
-      const chosen = chooseMode(input.mode || rules.mode, brief, edict.workflow);
+      // 傀儡皇帝选不了朝制，一律由权臣按「自动」定
+      const chosen = chooseMode(powerNow().mode ? (input.mode || rules.mode) : 'auto', brief, edict.workflow);
       edict.mode = chosen.mode;
       edict.modeReason = chosen.reason;
       if (edict.mode === 'express') edict.expressMinistry = MINISTRY_SET.has(input.ministry) ? input.ministry : routeMinistry(brief);
@@ -1213,6 +1311,7 @@ export function createCourt(config = {}, { log = console } = {}) {
     discard(edictId) {
       const edict = store.getEdict(edictId);
       if (!edict) fail('errNoEdict');
+      needReject(edict.locale);
       if (ACTIVE_STATUSES.has(edict.status)) fail('errStillRunning');
       discardEdict(edict);
       store.saveEdict(edict);
@@ -1238,6 +1337,7 @@ export function createCourt(config = {}, { log = console } = {}) {
     },
     reject(edictId, note) {
       const edict = store.getEdict(edictId);
+      needReject(edict ? edict.locale : uiLocale());
       const text = String(note || '').trim() || tr(edict ? edict.locale : uiLocale(), 'noteRejected');
       rejectNotes.set(edictId, text);
       return stopEdict(edictId, { status: 'rejected', note: text, event: 'reject' }, ['awaiting-approval']);
@@ -1320,6 +1420,9 @@ export function createCourt(config = {}, { log = console } = {}) {
       } catch {
         changed = [];
       }
+      // 不是 git 仓库：按修改时间找开朝以后动过的文件
+      if (!g && !changed.length) changed = recentFiles(edict.workspace, edict.createdAt || 0);
+      changed = changed.map(item => ({ ...item, openable: canOpenFile(item.file) }));
       const exists = rel => {
         try {
           if (live) return fs.existsSync(path.join(edict.execDir || g.worktree, rel));
@@ -1331,7 +1434,25 @@ export function createCourt(config = {}, { log = console } = {}) {
       };
       const deliverables = [...new Set((edict.steps || []).map(step => deliverablePath(step.deliverable)).filter(Boolean))].slice(0, 30)
         .map(rel => ({ path: rel, exists: exists(rel) }));
-      return { source: live ? 'worktree' : onBranch ? 'branch' : 'workspace', changed, deliverables };
+      const folder = diskRoot(edict);
+      return { source: live ? 'worktree' : onBranch ? 'branch' : 'workspace', changed, deliverables, folder, workspace: edict.workspace };
+    },
+    /**
+     * 在系统里打开这道旨的产出：how = folder（打开文件夹）/ reveal（在文件夹里选中）/ open（用默认程序打开）。
+     * 只认这道旨的工作目录（或隔离 worktree）里的相对路径；还在隔离分支里没合并的文件不在磁盘上，打不开。
+     */
+    open(edictId, rel, how = 'folder') {
+      const edict = store.getEdict(edictId);
+      if (!edict) fail('errNoEdict');
+      const root = diskRoot(edict);
+      if (!root) fail('errOnBranch');
+      const clean = String(rel || '').replace(/\\/g, '/').replace(/^\/+/, '');
+      if (clean.split('/').includes('..') || path.isAbsolute(clean)) fail('errNoEdict');
+      const target = clean ? path.join(root, clean) : root;
+      if (!fs.existsSync(target)) fail('errNoFile', { path: clean || root });
+      const mode = how === 'open' && clean && canOpenFile(clean) ? 'open' : clean && how !== 'folder' ? 'reveal' : 'folder';
+      openInOs(mode === 'folder' && clean && fs.statSync(target).isFile() ? path.dirname(target) : target, mode);
+      return { ok: true, path: target, how: mode };
     },
     file(edictId, rel, diff = false) {
       const edict = store.getEdict(edictId);
@@ -1492,6 +1613,10 @@ export async function handleRequest(api, req, res, uiLocale = () => 'zh') {
       if (method === 'GET' && !action) return sendJson(res, 200, api.getEdict(edictId));
       if (method === 'POST' && action === '/approve') return sendJson(res, 200, api.approve(edictId));
       if (method === 'GET' && action === '/files') return sendJson(res, 200, api.files(edictId));
+      if (method === 'POST' && action === '/open') {
+        const input = await body();
+        return sendJson(res, 200, api.open(edictId, input.path, input.how));
+      }
       if (method === 'GET' && action === '/file') return sendJson(res, 200, api.file(edictId, url.searchParams.get('path'), url.searchParams.get('diff') === '1'));
       if (method === 'POST' && action === '/cancel') return sendJson(res, 200, api.cancel(edictId));
       if (method === 'POST' && action === '/merge') return sendJson(res, 200, api.merge(edictId));
