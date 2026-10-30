@@ -83,6 +83,8 @@ It ships in two languages that share one engine: **English · Roman Senate** and
 
 **The regime** is read from who holds office (no model calls): one tool with one model house is *Dictator Perpetuo*, one tool calling several model houses is *Sejanus’ Rome*, two tools are *East and West*, three a *Triumvirate*, four or more a *Tetrarchy*. The fewer houses, the cheaper and faster, but the less you can see or step in. The Offices tab shows the ladder, who holds what and which idle tool to appoint where to move up a rung; the **Res Gestae** tab adds a puppet index (are you a figurehead?), a radar of each magistrate's success rate and a radar of your six virtues (Appointments, Oversight, Thrift, Clarity, Diligence, Results).
 
+**The Senate tab is a three-column workbench**, laid out like the Claude Code desktop app: decrees on the left; in the middle the decree, the Consul's plan, **each magistrate's full report** (Markdown), live output, awaiting input, seal / reject / halt and the isolated branch, with the composer at the bottom so the result is in view without scrolling; on the right the flow, the orders, a mini panorama, recent dispatches and documents. Narrow windows fold the right column into a *Flow* drawer, then the list into a dropdown. The **Forum** tab holds the full panorama and every dispatch between offices as a group chat.
+
 **Any office can go to any agent**, DSH itself included (it runs through `dsh headless`). The Consul and the Tribune may be the same agent, but that is *Dictator Perpetuo*: a house reviewing itself, and the Offices tab suggests recusal. **Models belong to offices**, not agents: the same Claude Code can run `opus` as Consul and `sonnet` as Legate.
 
 ## How a decree flows

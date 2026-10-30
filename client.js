@@ -908,6 +908,116 @@ select.ssl-input { cursor: pointer; }
   border: 1px solid color-mix(in srgb, var(--ssl-warn) 40%, var(--ssl-line)); background: color-mix(in srgb, var(--ssl-warn) 8%, transparent);
 }
 .ssl-court-note .ssl-grow { min-width: 200px; }
+
+/* 朝堂三栏工作台（照 Claude Code 桌面版）：左奏折目录 | 中圣旨与回奏 | 右流程；整页定高，三栏各自滚动 */
+.ssl-root.is-bench { overflow-y: auto; }
+.ssl.is-bench { display: flex; flex-direction: column; height: 100%; max-width: none; padding: 18px 20px 14px; }
+.ssl.is-bench > .ssl-nav { margin-bottom: 12px; }
+.ssl-bench { position: relative; flex: 1 1 auto; min-height: 480px; display: grid; grid-template-columns: 236px minmax(0, 1fr) 316px; gap: 12px; }
+.ssl-root.is-embedded .ssl-bench { flex: none; height: 78vh; }
+.ssl-bench > * { min-height: 0; min-width: 0; }
+.ssl-bench-list { overflow-y: auto; padding: 8px; background: var(--ssl-sunken); border: 1px solid var(--ssl-line); border-radius: 12px; }
+.ssl-bench-new {
+  display: flex; align-items: center; gap: 8px; width: 100%; height: 36px; margin-bottom: 8px; padding: 0 12px; border-radius: 9px; cursor: pointer;
+  border: 1px solid var(--ssl-line2); background: var(--ssl-panel); color: var(--ssl-fg); font: inherit; font-size: 13px; font-weight: 600;
+}
+.ssl-bench-new:hover { border-color: var(--ssl-seal); }
+.ssl-bench-new.is-active { border-color: var(--ssl-seal); box-shadow: inset 3px 0 0 var(--ssl-seal); }
+.ssl-bench-new span { color: var(--ssl-seal); font-size: 15px; }
+.ssl-bench-main { position: relative; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--ssl-line); border-radius: 12px; background: var(--ssl-panel); }
+.ssl-bench-head { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 14px; border-bottom: 1px solid var(--ssl-line); }
+.ssl-bench-title { font-weight: 600; font-size: 13.5px; }
+.ssl-bench-pick { display: none; flex: 1 1 auto; min-width: 0; height: 30px; padding: 0 8px; }
+.ssl-bench-flowbtn { display: none; }
+.ssl-bench-flowbtn.is-on { color: var(--ssl-fg); background: var(--ssl-sunken); }
+.ssl-bench-thread { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 18px 18px 10px; }
+.ssl-bench-blank { max-width: 980px; margin: 0 auto; }
+.ssl-bench-compose { padding: 10px 14px 12px; border-top: 1px solid var(--ssl-line); }
+/* 底部的圣旨框压矮一点，把高度让给回奏 */
+.ssl-bench-compose .zz--compact .zz-paper { height: 92px; }
+.ssl-bench-compose .zz--compact .zz-head { padding: 8px 0; }
+.ssl-bench-compose .zz--compact .zz-seal { width: 40px; height: 40px; font-size: 13px; }
+.ssl-bench-compose .sc--compact .sc-text { min-height: 52px; }
+.ssl-bench-compose .zz-slips .ssl-decree-bar { margin-top: 8px; }
+.ssl-bench-side { overflow-y: auto; padding-right: 2px; }
+.ssl-bench-side .ssl-card { padding: 14px; }
+.ssl-bench-side .ssl-card-h { margin-bottom: 10px; }
+.ssl-bench-side .ssl-pano.is-compact { margin-top: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.ssl-bench .ssl-chat-doc { inset: 6px; }
+/* 中栏的来回：回奏占满宽度，好读长文 */
+.ssl-thread .ssl-msg--result .ssl-msg-main { flex: 1; max-width: none; }
+.ssl-thread .ssl-msg.is-mine .ssl-msg-main { max-width: 80%; }
+.ssl-thread-pills { justify-content: flex-end; margin-top: 6px; }
+.ssl-thread-plan { margin: 6px 0 0; padding-left: 20px; }
+.ssl-thread-plan li { margin: 2px 0; }
+.ssl-thread-block { margin: 4px 0 14px 36px; }
+.ssl-thread > .ssl-narrator { margin: 0 0 14px 36px; }
+.ssl-thread > .ssl-alert { margin: 0 0 14px 36px; }
+.ssl-thread > .ssl-card { margin: 0 0 12px 36px; }
+.ssl-verdict.is-awaiting { border-color: color-mix(in srgb, var(--ssl-seal) 55%, var(--ssl-line)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ssl-seal) 10%, transparent); }
+/* 回奏正文的 Markdown */
+.ssl-bubble .ssl-md { white-space: normal; }
+.ssl-md { font-size: 13px; line-height: 1.7; }
+.ssl-md > :first-child { margin-top: 0; }
+.ssl-md > :last-child { margin-bottom: 0; }
+.ssl-md p { margin: 0 0 8px; white-space: pre-wrap; }
+.ssl-md ul, .ssl-md ol { margin: 0 0 8px; padding-left: 22px; }
+.ssl-md li { margin: 2px 0; }
+.ssl-md-h { margin: 12px 0 6px; font-weight: 700; font-size: 13.5px; color: var(--ssl-fg); }
+.ssl-md code { padding: 1px 5px; border-radius: 4px; background: var(--ssl-panel); border: 1px solid var(--ssl-line); font: 12px/1.5 var(--ssl-mono, ui-monospace, monospace); }
+.ssl-md-code { margin: 0 0 8px; padding: 10px 12px; border-radius: 8px; overflow-x: auto; white-space: pre; background: var(--ssl-panel); border: 1px solid var(--ssl-line); font: 12px/1.55 var(--ssl-mono, ui-monospace, monospace); }
+/* 竖排流程 */
+.ssl-vflow { margin: 0; padding: 0; list-style: none; }
+.ssl-vflow li { position: relative; display: flex; gap: 10px; padding: 0 0 12px; color: var(--ssl-mut); }
+.ssl-vflow li:last-child { padding-bottom: 0; }
+.ssl-vflow li::before { content: ""; position: absolute; left: 10px; top: 22px; bottom: 0; width: 2px; background: var(--ssl-line2); }
+.ssl-vflow li:last-child::before { display: none; }
+.ssl-vflow li.is-done::before { background: var(--ssl-ok); }
+.ssl-vflow-node {
+  position: relative; z-index: 1; width: 22px; height: 22px; flex: 0 0 22px; border-radius: 50%; display: grid; place-items: center;
+  border: 1.5px solid var(--ssl-line2); background: var(--ssl-panel); font-size: 11px; font-weight: 600;
+}
+.ssl-vflow-label { padding-top: 2px; font-size: 12.5px; }
+.ssl-vflow li.is-done .ssl-vflow-node { background: var(--ssl-ok); border-color: var(--ssl-ok); color: #fff; }
+.ssl-vflow li.is-done .ssl-vflow-label { color: var(--ssl-fg2); }
+.ssl-vflow li.is-active .ssl-vflow-node { border-color: var(--ssl-warn); color: var(--ssl-warn); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ssl-warn) 18%, transparent); }
+.ssl-vflow li.is-active .ssl-vflow-label { color: var(--ssl-fg); font-weight: 600; }
+.ssl-vflow li.is-halted .ssl-vflow-node { background: var(--ssl-err); border-color: var(--ssl-err); color: #fff; }
+.ssl-vflow li.is-halted .ssl-vflow-label { color: var(--ssl-err); font-weight: 600; }
+/* 右栏的往来摘要 */
+.ssl-mini-list { display: flex; flex-direction: column; gap: 2px; }
+.ssl-mini {
+  display: block; width: 100%; padding: 6px 8px; border: 0; border-radius: 8px; background: transparent; color: inherit;
+  font: inherit; text-align: left; cursor: pointer;
+}
+.ssl-mini:hover { background: var(--ssl-hover); }
+.ssl-mini.is-err .ssl-mini-route { color: var(--ssl-err); }
+.ssl-mini-h { display: flex; align-items: center; gap: 6px; }
+.ssl-mini-h .ssl-pill { height: 18px; padding: 0 6px; font-size: 10.5px; flex: none; }
+.ssl-mini-h .ssl-caption { flex: none; margin-left: auto; }
+.ssl-mini-route { min-width: 0; font-size: 12px; font-weight: 600; color: var(--ssl-fg); }
+/* 朝会页 */
+.ssl-forum-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.ssl-forum-bar .ssl-input { flex: 1 1 auto; min-width: 0; max-width: 520px; height: 32px; padding: 0 8px; }
+.ssl-forum-chat { max-height: 70vh; overflow-y: auto; padding-right: 4px; }
+@container (max-width: 1120px) {
+  .ssl-bench { grid-template-columns: 216px minmax(0, 1fr); }
+  .ssl-bench-flowbtn { display: inline-flex; }
+  .ssl-bench-side {
+    display: none; position: absolute; top: 0; right: 0; bottom: 0; z-index: 6; width: min(340px, 92%); padding: 10px;
+    border-radius: 12px; background: var(--ssl-raised); border: 1px solid var(--ssl-line2); box-shadow: -10px 0 32px rgba(0,0,0,.22);
+  }
+  .ssl-bench-side.is-open { display: block; }
+}
+@container (max-width: 760px) {
+  .ssl.is-bench { padding: 12px 12px 10px; }
+  .ssl-bench { grid-template-columns: minmax(0, 1fr); min-height: 420px; }
+  .ssl-bench-list { display: none; }
+  .ssl-bench-pick { display: block; }
+  .ssl-bench-title { display: none; }
+  .ssl-bench-thread { padding: 14px 12px 8px; }
+  .ssl-thread-block, .ssl-thread > .ssl-narrator, .ssl-thread > .ssl-alert, .ssl-thread > .ssl-card { margin-left: 0; }
+}
 @media (prefers-reduced-motion: reduce) {
   .ssl *, .ssl-overlay * { animation: none !important; transition: none !important; }
 }
@@ -1917,8 +2027,8 @@ select.ssl-input { cursor: pointer; }
         return h('pre', { ref, className: cx('ssl-term', !body && 'ssl-term--empty'), style: { maxHeight: `${height}px` } }, body || t('waitingOutput'));
       }
 
-      /** 朝会流程条：已过 / 进行中 / 停在此处 / 未到 */
-      function Flow({ edict }) {
+      /** 朝会流程每一步的状态：is-done 已过 / is-active 进行中 / is-halted 停在此处 / '' 未到 */
+      function flowStates(edict) {
         let current = -1;
         let halted = -1;
         if (edict) {
@@ -1933,15 +2043,29 @@ select.ssl-input { cursor: pointer; }
             current = at;
           }
         }
-        return h('div', { className: 'ssl-flow' }, FLOW.map((step, index) => {
-          const state = index === halted ? 'is-halted'
-            : index < current ? 'is-done'
-            : index === current ? (edict && (edict.status === 'awaiting-approval' || isLive(edict.status)) ? 'is-active' : 'is-done')
-            : '';
-          return h('div', { key: step.id, className: cx('ssl-flow-step', state) },
-            h('div', { className: 'ssl-flow-node' }, state === 'is-done' ? '✓' : state === 'is-halted' ? '×' : index + 1),
-            h('div', { className: 'ssl-flow-label' }, flowLabel(step)));
-        }));
+        return FLOW.map((step, index) => (index === halted ? 'is-halted'
+          : index < current ? 'is-done'
+          : index === current ? (edict && (edict.status === 'awaiting-approval' || isLive(edict.status)) ? 'is-active' : 'is-done')
+          : ''));
+      }
+      const flowNode = (state, index) => (state === 'is-done' ? '✓' : state === 'is-halted' ? '×' : index + 1);
+
+      /** 朝会流程条（横排） */
+      function Flow({ edict }) {
+        const states = flowStates(edict);
+        return h('div', { className: 'ssl-flow' }, FLOW.map((step, index) => h('div', { key: step.id, className: cx('ssl-flow-step', states[index]) },
+          h('div', { className: 'ssl-flow-node' }, flowNode(states[index], index)),
+          h('div', { className: 'ssl-flow-label' }, flowLabel(step)))));
+      }
+
+      /** 朝会流程（竖排，放朝堂右栏）：进行中的那一步底下带上当前进展 */
+      function FlowList({ edict }) {
+        const states = flowStates(edict);
+        return h('ol', { className: 'ssl-vflow' }, FLOW.map((step, index) => h('li', { key: step.id, className: states[index] },
+          h('span', { className: 'ssl-vflow-node' }, flowNode(states[index], index)),
+          h('div', { className: 'ssl-grow' },
+            h('div', { className: 'ssl-vflow-label' }, flowLabel(step)),
+            states[index] === 'is-active' && edict && edict.note ? h('div', { className: 'ssl-caption' }, edict.note) : null))));
       }
 
       function Section({ title, note, right }) {
@@ -2427,18 +2551,51 @@ select.ssl-input { cursor: pointer; }
         attachments: value.attachments.length ? value.attachments.map(file => ({ name: file.name, data: file.data })) : undefined,
       });
 
-      // ---------- 朝堂：下旨 + 编队 ----------
-      function CourtTab({ state, onRefresh, notify, onGo }) {
+      // ---------- 朝堂：照 Claude Code 桌面版的三栏——左边奏折目录，中间圣旨与回奏，右边流程 ----------
+      const FILTERS = [
+        ['all', 'filterAll', () => true],
+        ['active', 'filterActive', item => isLive(item.status) || item.status === 'queued'],
+        ['approval', 'filterApproval', item => item.status === 'awaiting-approval'],
+        ['done', 'filterDone', item => item.status === 'done'],
+        ['closed', 'filterClosed', item => item.status === 'failed' || item.status === 'rejected' || item.status === 'cancelled'],
+      ];
+
+      function CourtTab({ state, onRefresh, notify, onGo, selected, onSelect }) {
         const [brief, setBrief] = useState('');
         const [decree, setDecree] = useState(emptyDecree);
+        const [filter, setFilter] = useState('all');
+        const [sideOpen, setSideOpen] = useState(false);
+        const [doc, setDoc] = useState(null);
+        const [detail, pull] = useEdictDetail(selected);
+        const threadRef = useRef(null);
+        const stick = useRef(true);
+        // 三栏里已经摆着谁在办，右下角的值房胶囊就收起来
+        usePaneMounted();
         const full = state.full === true;
         const autonomous = state.rules && state.rules.autonomous === true;
-        const { sending, stamp, submit } = useEdictSubmit({ notify, onDone: () => { onRefresh(); openPane(PANE_CHAT); } });
+        const { sending, stamp, submit } = useEdictSubmit({
+          notify,
+          onDone: result => { onRefresh(); stick.current = true; if (result && result.id) onSelect(result.id); },
+        });
         const send = () => {
           if (!brief.trim() || full) return;
           // 附件、验收标准只跟这一道旨；工作目录、权限、朝制留着给下一道
           submit({ brief, ...decreePayload(decree) }, () => { clearAfterStamp(setBrief, brief); setDecree(prev => ({ ...prev, attachments: [], criteria: '' })); });
         };
+        useEffect(() => { setDoc(null); setSideOpen(false); stick.current = true; }, [selected]);
+
+        const view = detail && detail.id === selected ? detail : null;
+        const summary = selected ? state.edicts.find(item => item.id === selected) || null : null;
+        const progressKey = view ? `${view.status}|${(view.messages || []).length}|${(view.live || []).map(item => item.tail.length).join(',')}` : '';
+        // 回奏一到就滚到底；用户往上翻看时不打扰
+        useEffect(() => {
+          const el = threadRef.current;
+          if (el && stick.current && selected) el.scrollTop = el.scrollHeight;
+        }, [progressKey, selected]);
+
+        const openDoc = name => apiJson(`/artifact?id=${encodeURIComponent(selected)}&name=${encodeURIComponent(name)}`)
+          .then(data => setDoc({ name, text: data.text || '' }))
+          .catch(error => notify(String(error.message || error), 'err'));
 
         const runningCount = state.busy ? state.busy.length : 0;
         // 只做不花钱的检查（有没有人、是否停用）；真正探测 CLI 在「群臣」页
@@ -2447,28 +2604,337 @@ select.ssl-input { cursor: pointer; }
           return !agent || agent.enabled === false;
         }).length;
         const note = broken ? t('courtNoteBroken', { n: broken }) : state.edicts.length ? '' : t('courtNoteFirst');
+        const composerProps = {
+          value: brief,
+          onChange: setBrief,
+          onSubmit: send,
+          canSubmit: !full && !sending && !!brief.trim(),
+          sending,
+          stamp,
+          extra: h(DecreeBar, { state, value: decree, onChange: setDecree, brief, notify }),
+        };
 
-        return h('div', { className: 'ssl-court' },
-          note ? h('div', { className: 'ssl-court-note' },
-            h('span', { className: 'ssl-grow' }, note),
-            h('button', { className: 'ssl-btn ssl-btn--sm', onClick: () => onGo('agents') }, t('goSetup'))) : null,
+        // 左栏：新旨 + 筛选 + 奏折目录
+        const filterFn = (FILTERS.find(item => item[0] === filter) || FILTERS[0])[2];
+        const list = state.edicts.filter(filterFn);
+        const left = h('aside', { className: 'ssl-bench-list' },
+          h('button', { className: cx('ssl-bench-new', !selected && 'is-active'), onClick: () => onSelect('') },
+            h('span', { 'aria-hidden': true }, '＋'), zhEn('新旨', 'New decree')),
+          state.edicts.length ? h('div', { className: 'ssl-filter' }, FILTERS.map(([id, key, fn]) => {
+            const n = state.edicts.filter(fn).length;
+            return h('button', { key: id, className: cx('ssl-chip', filter === id && 'is-active'), onClick: () => setFilter(id) }, id === 'all' ? t(key) : `${t(key)} ${n}`);
+          })) : null,
+          list.length ? h('div', { className: 'ssl-list' }, list.map(item => h('button', {
+            key: item.id, className: cx('ssl-item', selected === item.id && 'is-active'), onClick: () => onSelect(item.id), title: item.brief,
+          },
+          h('div', { className: 'ssl-item-t ssl-ellipsis' }, item.brief),
+          h('div', { className: 'ssl-item-m' }, h(StatusPill, { status: item.status }), dateTimeText(item.createdAt)))))
+            : h('div', { className: 'ssl-empty' }, state.edicts.length ? t('filterEmpty') : t('noEdictsShort')));
+
+        // 中栏：没选奏折时是一张大圣旨；选了就是这道旨的来回，圣旨框挪到底下
+        const head = h('div', { className: 'ssl-bench-head' },
+          state.edicts.length ? h('select', {
+            className: 'ssl-input ssl-bench-pick', value: selected || '', 'aria-label': t('pickEdictAria'),
+            onChange: event => onSelect(event.target.value),
+          },
+          h('option', { value: '' }, zhEn('＋ 新旨', '+ New decree')),
+          state.edicts.slice(0, 40).map(item => h('option', { key: item.id, value: item.id }, `${statusLabel(item.status)} | ${item.brief.slice(0, 30)}`))) : null,
+          h('div', { className: 'ssl-grow ssl-bench-title ssl-ellipsis' }, summary ? summary.brief : t('issueTitle')),
+          summary ? h(StatusPill, { status: summary.status })
+            : runningCount ? h(StatusPill, { status: 'running', text: t('inSessionN', { n: runningCount, cap: state.capacity || 2 }) })
+            : h('span', { className: 'ssl-caption' }, t('issueHint')),
+          h('button', {
+            className: cx('ssl-btn ssl-btn--ghost ssl-btn--sm ssl-bench-flowbtn', sideOpen && 'is-on'), 'aria-expanded': sideOpen,
+            onClick: () => setSideOpen(value => !value),
+          }, zhEn('流程', 'Flow')));
+
+        const thread = !selected
+          ? h('div', { className: 'ssl-bench-blank' },
+              note ? h('div', { className: 'ssl-court-note' },
+                h('span', { className: 'ssl-grow' }, note),
+                h('button', { className: 'ssl-btn ssl-btn--sm', onClick: () => onGo('agents') }, t('goSetup'))) : null,
+              h(Composer, {
+                ...composerProps,
+                placeholder: t('briefPh'),
+                caption: full ? t('fullCaption', { n: state.capacity || 2 }) : autonomous ? t('autoCaption') : t('normalCaption'),
+              }))
+          : view ? h(Thread, { detail: view, notify, onChanged: () => { onRefresh(); pull(); }, onOpenDoc: openDoc })
+          : h('div', { className: 'ssl-empty' }, t('loading'));
+
+        const center = h('section', { className: 'ssl-bench-main' },
+          head,
+          h('div', {
+            className: 'ssl-bench-thread', ref: threadRef,
+            onScroll: event => {
+              const el = event.currentTarget;
+              stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+            },
+          }, thread),
+          selected ? h('div', { className: 'ssl-bench-compose' }, h(Composer, {
+            ...composerProps,
+            compact: true,
+            disabled: full,
+            placeholder: full ? t('fullShort') : zhEn('再下一道旨……（Ctrl + Enter 下旨）', 'Another decree… (Ctrl + Enter)'),
+          })) : null,
+          doc ? h('div', { className: 'ssl-chat-doc' },
+            h('div', { className: 'ssl-card-h', style: { padding: '10px 12px', margin: 0, borderBottom: '1px solid var(--ssl-line)' } },
+              h('h4', { className: 'ssl-card-t ssl-mono ssl-ellipsis' }, doc.name),
+              h('button', { className: 'ssl-btn ssl-btn--ghost ssl-btn--sm', onClick: () => setDoc(null) }, t('close'))),
+            h('div', { style: { flex: 1, minHeight: 0, overflow: 'auto', padding: '12px 16px' } },
+              /\.md$/i.test(doc.name) ? h(Md, { text: doc.text || t('emptyDoc') }) : h('pre', { className: 'ssl-doc', style: { maxHeight: 'none', margin: 0 } }, doc.text || t('emptyDoc')))) : null);
+
+        // 右栏：流程、差事、全景、往来、文书；窄了就收成抽屉，由「流程」按钮拉出来
+        const right = h('aside', { className: cx('ssl-bench-side', sideOpen && 'is-open') },
+          view ? h(BenchSide, { detail: view, notify, onChanged: () => { onRefresh(); pull(); }, onOpenDoc: openDoc, onGo })
+            : h(IdleSide, { state }));
+
+        return h('div', { className: 'ssl-bench' }, left, center, right);
+      }
+
+      /** 回奏里常见的 Markdown：标题、列表、代码块、粗体、行内代码；其余照原样显示（不用 innerHTML） */
+      const mdInline = text => String(text).split(/(\*\*[^*\n]+\*\*|`[^`\n]+`)/).map((part, index) => (
+        part.length > 4 && part.startsWith('**') && part.endsWith('**') ? h('b', { key: index }, part.slice(2, -2))
+          : part.length > 2 && part.startsWith('`') && part.endsWith('`') ? h('code', { key: index }, part.slice(1, -1))
+          : part));
+      function Md({ text }) {
+        const blocks = [];
+        const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
+        let para = [];
+        let list = null;
+        const flushPara = () => {
+          if (para.length) blocks.push(h('p', { key: blocks.length }, mdInline(para.join('\n'))));
+          para = [];
+        };
+        const flushList = () => {
+          if (list) blocks.push(h(list.ordered ? 'ol' : 'ul', { key: blocks.length }, list.items.map((item, index) => h('li', { key: index }, mdInline(item)))));
+          list = null;
+        };
+        for (let i = 0; i < lines.length; i += 1) {
+          const line = lines[i];
+          if (/^\s*```/.test(line)) {
+            flushPara();
+            flushList();
+            const body = [];
+            for (i += 1; i < lines.length && !/^\s*```/.test(lines[i]); i += 1) body.push(lines[i]);
+            blocks.push(h('pre', { key: blocks.length, className: 'ssl-md-code' }, body.join('\n')));
+            continue;
+          }
+          const heading = line.match(/^(#{1,4})\s+(.*)$/);
+          if (heading) {
+            flushPara();
+            flushList();
+            blocks.push(h('div', { key: blocks.length, className: 'ssl-md-h' }, mdInline(heading[2])));
+            continue;
+          }
+          const item = line.match(/^\s*(?:[-*+]|(\d+)[.)])\s+(.*)$/);
+          if (item) {
+            flushPara();
+            const ordered = item[1] !== undefined;
+            if (list && list.ordered !== ordered) flushList();
+            if (!list) list = { ordered, items: [] };
+            list.items.push(item[2]);
+            continue;
+          }
+          if (!line.trim()) {
+            flushPara();
+            flushList();
+            continue;
+          }
+          flushList();
+          para.push(line);
+        }
+        flushPara();
+        flushList();
+        return h('div', { className: 'ssl-md' }, blocks);
+      }
+
+      /** 一条公文往来的气泡（朝堂中栏、朝会页、右侧面板共用） */
+      function DispatchBubble({ item, onOpen }) {
+        const mine = partyId(item.from) === 'emperor';
+        const summary = prettySummary(item.summary) || item.title || t('noSummary');
+        return h('div', { className: cx('ssl-msg', mine && 'is-mine') },
+          h(Avatar, { party: item.from }),
+          h('div', { className: 'ssl-msg-main' },
+            h('div', { className: 'ssl-msg-meta' },
+              h('b', null, roleName(item.from)),
+              h('span', null, `→ ${roleName(item.to)}`),
+              h(KindPill, { item }),
+              h('span', null, timeText(item.at))),
+            h('div', { className: cx('ssl-bubble', item.ok === false && 'is-err') },
+              summary,
+              item.model || item.durationMs || item.artifact ? h('div', { className: 'ssl-bubble-foot' },
+                item.model ? h('span', { className: 'ssl-mono' }, item.model) : null,
+                item.durationMs ? h('span', null, t('tookN', { t: fmtElapsed(item.durationMs) })) : null,
+                item.artifact && onOpen ? h('button', { className: 'ssl-link', onClick: () => onOpen(item.artifact) }, t('viewDoc')) : null) : null)));
+      }
+
+      /** 正在办的岗位：打字中的气泡，带输出尾巴 */
+      function LiveBubble({ item }) {
+        return h('div', { className: 'ssl-msg' },
+          h(Avatar, { party: item.roleId }),
+          h('div', { className: 'ssl-msg-main' },
+            h('div', { className: 'ssl-msg-meta' },
+              h('b', null, roleName(item.roleId)),
+              h('span', null, `${kindLabel(item.kind)}${item.title ? ` · ${item.title}` : ''} · ${t('workingFor', { t: fmtElapsed(item.elapsedMs) })}`),
+              item.agent ? h('span', { className: 'ssl-mono' }, `${item.agent}${item.model ? ` · ${item.model}` : ''}`) : null),
+            h('div', { className: 'ssl-bubble is-live' },
+              item.tail ? h('div', { className: 'ssl-mono', style: { whiteSpace: 'pre-wrap' } }, item.tail.slice(-400)) : null,
+              h('span', { className: 'ssl-typing', 'aria-label': t('typing') }, h('i'), h('i'), h('i')))));
+      }
+
+      /** 朝堂中栏：圣旨 → 中书方案 → 各部回奏（全文）→ 此刻在办 → 待回填 → 回奏与批红 */
+      function Thread({ detail, notify, onChanged, onOpenDoc }) {
+        const [rejecting, setRejecting] = useState(false);
+        const [rejectNote, setRejectNote] = useState('');
+        useEffect(() => { setRejecting(false); setRejectNote(''); }, [detail.id]);
+        const act = (action, body, okText) => apiJson(`/edicts/${detail.id}/${action}`, { method: 'POST', body: JSON.stringify(body || {}) })
+          .then(() => { notify(okText); onChanged(); })
+          .catch(error => notify(String(error.message || error), 'err'));
+
+        const results = detail.results || [];
+        const resultOf = seq => (results.find(item => item.seq === seq) || {}).summary || '';
+        const plan = detail.plan || null;
+        const live = detail.live || [];
+        const waiting = detail.steps.filter(step => step.status === 'awaiting-input');
+        const answered = detail.steps.filter(step => step.status !== 'pending' && step.status !== 'awaiting-input' && resultOf(step.seq));
+        const canApprove = detail.status === 'awaiting-approval';
+        const canReject = canApprove || isLive(detail.status);
+        const canCancel = isLive(detail.status) || detail.status === 'queued';
+        const merges = detail.git && detail.git.finalized && !detail.git.empty && !detail.git.merged && !detail.git.discarded;
+        const hasMemorial = detail.artifacts.includes('06-memorial.md');
+        const recheck = detail.recheck || null;
+        const doReject = () => { act('reject', { note: rejectNote }, t('rejectedToast')); setRejecting(false); setRejectNote(''); };
+
+        return h('div', { className: 'ssl-thread' },
+          // 圣旨
+          h('div', { className: 'ssl-msg is-mine' },
+            h(Avatar, { party: 'emperor' }),
+            h('div', { className: 'ssl-msg-main' },
+              h('div', { className: 'ssl-msg-meta' }, h('b', null, roleName('emperor')), h('span', null, dateTimeText(detail.createdAt))),
+              h('div', { className: 'ssl-bubble' }, detail.brief),
+              h('div', { className: 'ssl-meta ssl-thread-pills' },
+                h(ModePill, { detail }),
+                detail.autonomous ? h('span', { className: 'ssl-pill ssl-pill--ok' }, t('autoPill')) : null,
+                detail.permission ? h('span', { className: 'ssl-pill ssl-pill--plain', title: permissionInfo(detail.permission).desc }, permissionInfo(detail.permission).name) : null,
+                (detail.attachments || []).length ? h('span', { className: 'ssl-pill ssl-pill--plain', title: detail.attachments.map(file => file.name).join(', ') }, zhEn(`附件 ${detail.attachments.length}`, `${detail.attachments.length} attached`)) : null,
+                detail.workspace ? h('span', { className: 'ssl-mono ssl-ellipsis', title: detail.workspace, style: { maxWidth: '260px' } }, detail.workspace) : null))),
+          // 中书方案（急递没有）
+          plan && detail.mode !== 'express' && (plan.summary || (plan.steps || []).length) ? h('div', { className: 'ssl-msg' },
+            h(Avatar, { party: 'zhongshu' }),
+            h('div', { className: 'ssl-msg-main' },
+              h('div', { className: 'ssl-msg-meta' }, h('b', null, roleName('zhongshu')), h('span', null, zhEn('拟定方案', 'drafted the plan')),
+                detail.rounds > 1 ? h('span', null, t('draftRounds', { n: detail.rounds })) : null),
+              h('div', { className: 'ssl-bubble' },
+                plan.summary ? h('div', null, plan.summary) : null,
+                detail.steps.length ? h('ol', { className: 'ssl-thread-plan' }, detail.steps.map(step => h('li', { key: step.seq },
+                  h('b', null, roleName(step.ministry)), ` · ${step.title}`))) : null))) : null,
+          // 各部回奏：全文，不再截断
+          answered.map(step => h('div', { key: step.seq, className: 'ssl-msg ssl-msg--result' },
+            h(Avatar, { party: step.ministry }),
+            h('div', { className: 'ssl-msg-main' },
+              h('div', { className: 'ssl-msg-meta' },
+                h('b', null, roleName(step.ministry)),
+                h('span', null, `#${step.seq} ${step.title}`),
+                h(StatusPill, { status: step.status, text: step.status === 'done' ? t('stepDone') : undefined }),
+                step.agent ? h('span', { className: 'ssl-mono' }, step.agent) : null),
+              h('div', { className: cx('ssl-bubble', step.status === 'failed' && 'is-err') },
+                h(Md, { text: resultOf(step.seq) }),
+                step.deliverable || step.workOrder || (step.impeachments || []).length ? h('div', { className: 'ssl-bubble-foot' },
+                  step.deliverable ? h('span', { className: 'ssl-mono' }, `→ ${step.deliverable}`) : null,
+                  (step.impeachments || []).length ? h('span', { style: { color: 'var(--ssl-err)' } }, `${roleName('yushi')}: ${step.impeachments.join('; ')}`) : null,
+                  step.workOrder ? h('button', { className: 'ssl-link', onClick: () => onOpenDoc(step.workOrder) }, t('viewWorkOrder')) : null) : null)))),
+          live.map(item => h(LiveBubble, { key: `live-${item.callId || item.roleId}`, item })),
+          waiting.map(step => h('div', { key: `fill-${step.seq}`, className: 'ssl-thread-block' }, h(FillCard, { edictId: detail.id, step, notify, onDone: onChanged, onOpen: onOpenDoc }))),
+          isLive(detail.status) || detail.status === 'queued' ? h(Narrator, { detail }) : null,
+          detail.error ? h('div', { className: 'ssl-alert' }, detail.error) : null,
+          // 回奏与批红
+          hasMemorial || canApprove || canCancel || detail.status === 'done' ? h('div', { className: cx('ssl-card ssl-verdict', canApprove && 'is-awaiting') },
+            h('div', { className: 'ssl-card-h' },
+              h('div', { className: 'ssl-grow' },
+                h('h4', { className: 'ssl-card-t' }, canApprove ? zhEn('尚书省上奏，候陛下批红', 'The Proconsul reports; awaiting your seal')
+                  : canCancel ? zhEn('正在办理', 'In progress') : zhEn('回奏', 'Report')),
+                detail.note ? h('div', { className: 'ssl-caption' }, detail.note) : null),
+              detail.spend && detail.spend.calls ? h(Money, { usd: detail.spend.costUsd, estimated: detail.spend.estimated, compact: true }) : null,
+              h(StatusPill, { status: detail.status })),
+            recheck && recheck.verdict ? h('div', { className: 'ssl-caption' },
+              h('b', null, roleName('menxia'), zhEn('复核：', ' audit: ')),
+              recheck.verdict === 'approve' ? zhEn('通过', 'passed') : zhEn('未通过', 'failed'),
+              (recheck.issues || []).length ? ` · ${recheck.issues.join('; ')}` : '') : null,
+            h('div', { className: 'ssl-actions', style: { marginTop: '12px' } },
+              canApprove ? h('button', { className: 'ssl-btn ssl-btn--seal', onClick: () => act('approve', null, merges ? t('approvedMergedToast') : t('approvedToast')) }, merges ? t('approveMerge') : t('approve')) : null,
+              canReject && !rejecting ? h('button', { className: 'ssl-btn ssl-btn--danger', onClick: () => setRejecting(true) }, t('reject')) : null,
+              canCancel ? h('button', { className: 'ssl-btn', onClick: () => act('cancel', null, t('haltedToast')) }, t('halt')) : null,
+              hasMemorial ? h('button', { className: 'ssl-btn ssl-btn--ghost', onClick: () => onOpenDoc('06-memorial.md') }, zhEn('看奏折全文', 'Read the full report')) : null),
+            rejecting ? h('div', { className: 'ssl-actions', style: { marginTop: '10px' } },
+              h('input', {
+                className: 'ssl-input ssl-grow', autoFocus: true, value: rejectNote, placeholder: t('rejectPh'), style: { minWidth: '200px' },
+                onChange: event => setRejectNote(event.target.value),
+                onKeyDown: event => {
+                  if (event.key === 'Enter') doReject();
+                  if (event.key === 'Escape') setRejecting(false);
+                },
+              }),
+              h('button', { className: 'ssl-btn ssl-btn--danger', onClick: doReject }, t('rejectConfirm')),
+              h('button', { className: 'ssl-btn ssl-btn--ghost', onClick: () => setRejecting(false) }, t('cancel'))) : null,
+            rejecting ? h('div', { className: 'ssl-caption', style: { marginTop: '6px' } }, t('rejectMemoryNote')) : null) : null);
+      }
+
+      /** 朝堂右栏（选了奏折）：流程、差事、隔离分支与改动、全景缩略、往来摘要、文书 */
+      function BenchSide({ detail, notify, onChanged, onOpenDoc, onGo }) {
+        const act = (action, body, okText) => apiJson(`/edicts/${detail.id}/${action}`, { method: 'POST', body: JSON.stringify(body || {}) })
+          .then(() => { notify(okText); onChanged(); })
+          .catch(error => notify(String(error.message || error), 'err'));
+        const messages = detail.messages || [];
+        const recent = messages.slice(-8).reverse();
+        const more = h('button', { className: 'ssl-link', onClick: () => onGo('memorial') }, zhEn('朝会页看全部 →', 'Open in Forum →'));
+        return h('div', { className: 'ssl-stack' },
+          h('div', { className: 'ssl-card' },
+            h('div', { className: 'ssl-card-h' }, h('h4', { className: 'ssl-card-t' }, zhEn('流程', 'Flow')), h(ModePill, { detail })),
+            h(FlowList, { edict: detail })),
           h('div', { className: 'ssl-card' },
             h('div', { className: 'ssl-card-h' },
-              h('h4', { className: 'ssl-card-t' }, t('issueTitle')),
-              runningCount ? h(StatusPill, { status: 'running', text: t('inSessionN', { n: runningCount, cap: state.capacity || 2 }) }) : h('span', { className: 'ssl-caption' }, t('issueHint'))),
-            h(Composer, {
-              value: brief,
-              onChange: setBrief,
-              onSubmit: send,
-              canSubmit: !full && !sending && !!brief.trim(),
-              sending,
-              stamp,
-              placeholder: t('briefPh'),
-              extra: h(DecreeBar, { state, value: decree, onChange: setDecree, brief, notify }),
-              caption: full ? t('fullCaption', { n: state.capacity || 2 })
-                : autonomous ? t('autoCaption')
-                : t('normalCaption'),
-            })));
+              h('h4', { className: 'ssl-card-t' }, t('stepsTitle')),
+              h('span', { className: 'ssl-caption' }, detail.steps.length ? t('stepsDone', { done: detail.steps.filter(step => step.status === 'done').length, n: detail.steps.length }) : '')),
+            detail.steps.length ? h(StepList, { steps: detail.steps, edictStatus: detail.status }) : h('div', { className: 'ssl-empty' }, t('notDispatched'))),
+          h(GitCard, { detail, act, onOpen: onOpenDoc }),
+          h(FilesCard, { detail, notify }),
+          (detail.calls || []).length ? h('div', { className: 'ssl-card' },
+            h('div', { className: 'ssl-card-h' }, h('h4', { className: 'ssl-card-t' }, t('panoTitle')), more),
+            h(Panorama, { detail, compact: true, onOpen: onOpenDoc })) : null,
+          h('div', { className: 'ssl-card' },
+            h('div', { className: 'ssl-card-h' },
+              h('h4', { className: 'ssl-card-t' }, t('messagesTitle')),
+              h('span', { className: 'ssl-caption' }, t('itemsN', { n: messages.length }))),
+            recent.length ? h('div', { className: 'ssl-mini-list' }, recent.map(item => h('button', {
+              key: item.seq, className: cx('ssl-mini', item.ok === false && 'is-err'), title: prettySummary(item.summary).slice(0, 400),
+              onClick: () => (item.artifact ? onOpenDoc(item.artifact) : onGo('memorial')),
+            },
+            h('div', { className: 'ssl-mini-h' },
+              h('span', { className: 'ssl-mini-route ssl-ellipsis' }, `${roleName(item.from)} → ${roleName(item.to)}`),
+              h(KindPill, { item }),
+              h('span', { className: 'ssl-caption' }, timeText(item.at))),
+            h('div', { className: 'ssl-caption ssl-ellipsis' }, item.title || prettySummary(item.summary).slice(0, 80) || '—')))) : h('div', { className: 'ssl-empty' }, t('waitingReports')),
+            messages.length > recent.length ? h('div', { style: { marginTop: '8px' } }, more) : null),
+          detail.artifacts.length ? h('div', { className: 'ssl-card' },
+            h('div', { className: 'ssl-card-h' }, h('h4', { className: 'ssl-card-t' }, t('artifactsTitle')), h('span', { className: 'ssl-caption' }, t('docsN', { n: detail.artifacts.length }))),
+            h('div', { className: 'ssl-files' }, detail.artifacts.map(name => h('button', { key: name, className: 'ssl-file', onClick: () => onOpenDoc(name) }, name)))) : null);
+      }
+
+      /** 朝堂右栏（还没选奏折）：流程说明 + 值房里谁在忙 */
+      function IdleSide({ state }) {
+        const live = state.live || [];
+        return h('div', { className: 'ssl-stack' },
+          h('div', { className: 'ssl-card' },
+            h('div', { className: 'ssl-card-h' }, h('h4', { className: 'ssl-card-t' }, zhEn('流程', 'Flow'))),
+            h(FlowList, { edict: null }),
+            h('div', { className: 'ssl-caption', style: { marginTop: '10px' } }, zhEn('短而单一的旨意走急递：直接派给一个部，跳过拟旨、封驳和复核。', 'Short, single-task decrees go express: straight to one magistrate, skipping draft, veto and audit.'))),
+          h('div', { className: 'ssl-card' },
+            h('div', { className: 'ssl-card-h' },
+              h('h4', { className: 'ssl-card-t' }, t('workroomTitle')),
+              live.length ? h(StatusPill, { status: 'running', text: t('rolesN', { n: live.length }) }) : h(StatusPill, { status: 'idle', text: t('noWork') })),
+            live.length ? live.map(item => h('div', { key: item.callId || `${item.edictId}:${item.roleId}`, className: 'ssl-between', style: { padding: '4px 0' } },
+              h('span', { className: 'ssl-ellipsis' }, `${roleName(item.roleId)} · ${kindLabel(item.kind)}`),
+              h('span', { className: 'ssl-caption' }, fmtElapsed(item.elapsedMs)))) : h('div', { className: 'ssl-caption' }, t('quietCourtNote'))));
       }
 
       // ---------- 官职：谁担任哪个岗位、朝规、术语 ----------
@@ -2928,155 +3394,78 @@ select.ssl-input { cursor: pointer; }
             step.workOrder && onOpen ? h('button', { className: 'ssl-link', onClick: () => onOpen(step.workOrder) }, t('viewWorkOrder')) : null));
       }
 
-      // ---------- 奏折：列表 + 详情 ----------
-      const FILTERS = [
-        ['all', 'filterAll', () => true],
-        ['active', 'filterActive', item => isLive(item.status) || item.status === 'queued'],
-        ['approval', 'filterApproval', item => item.status === 'awaiting-approval'],
-        ['done', 'filterDone', item => item.status === 'done'],
-        ['closed', 'filterClosed', item => item.status === 'failed' || item.status === 'rejected' || item.status === 'cancelled'],
-      ];
-
-      function MemorialTab({ state, onRefresh, notify, focusId }) {
-        const [selected, setSelected] = useState(focusId || null);
-        const [filter, setFilter] = useState('all');
+      // ---------- 朝会：一道旨的全景——泳道图、各部门之间的往来、差事、文书、事件 ----------
+      function ForumTab({ state, notify, selected, onSelect, onGo }) {
+        const auto = pickEdict(state);
+        const edictId = selected || (auto && auto.id) || '';
+        const [detail] = useEdictDetail(edictId);
         const [artifact, setArtifact] = useState({ name: '', text: '' });
-        const [rejecting, setRejecting] = useState(false);
-        const [rejectNote, setRejectNote] = useState('');
         const viewerRef = useRef(null);
-        const [detail, pull] = useEdictDetail(selected);
+        useEffect(() => { setArtifact({ name: '', text: '' }); }, [edictId]);
 
-        useEffect(() => { if (focusId) setSelected(focusId); }, [focusId]);
-        useEffect(() => { setArtifact({ name: '', text: '' }); setRejecting(false); }, [selected]);
-        useEffect(() => {
-          if (!selected && state.edicts.length) setSelected(state.edicts[0].id);
-        }, [state.edicts, selected]);
-
-        const act = (action, body, okText) => {
-          apiJson(`/edicts/${selected}/${action}`, { method: 'POST', body: JSON.stringify(body || {}) })
-            .then(() => { notify(okText); onRefresh(); pull(); })
-            .catch(error => notify(String(error.message || error), 'err'));
-        };
-
-        const openArtifact = name => apiJson(`/artifact?id=${encodeURIComponent(selected)}&name=${encodeURIComponent(name)}`)
+        const openArtifact = name => apiJson(`/artifact?id=${encodeURIComponent(edictId)}&name=${encodeURIComponent(name)}`)
           .then(data => {
             setArtifact({ name, text: data.text || '' });
             setTimeout(() => { if (viewerRef.current) viewerRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 30);
           })
           .catch(error => notify(String(error.message || error), 'err'));
 
-        const filterFn = (FILTERS.find(item => item[0] === filter) || FILTERS[0])[2];
-        const list = state.edicts.filter(filterFn);
-
         if (!state.edicts.length) return h('div', { className: 'ssl-card ssl-empty' }, t('noEdictsYet'));
 
-        const side = h('div', { className: 'ssl-side' },
-          h('div', { className: 'ssl-filter' }, FILTERS.map(([id, key, fn]) => {
-            const n = state.edicts.filter(fn).length;
-            return h('button', { key: id, className: cx('ssl-chip', filter === id && 'is-active'), onClick: () => setFilter(id) }, id === 'all' ? t(key) : `${t(key)} ${n}`);
-          })),
-          list.length ? h('div', { className: 'ssl-list' }, list.map(item => h('button', {
-            key: item.id,
-            className: cx('ssl-item', selected === item.id && 'is-active'),
-            onClick: () => setSelected(item.id),
-          },
-          h('div', { className: 'ssl-item-t ssl-ellipsis' }, item.brief),
-          h('div', { className: 'ssl-item-m' }, h(StatusPill, { status: item.status }), dateTimeText(item.createdAt)))))
-            : h('div', { className: 'ssl-empty' }, t('filterEmpty')));
+        const bar = h('div', { className: 'ssl-forum-bar' },
+          h('select', {
+            className: 'ssl-input', value: edictId, 'aria-label': t('pickEdictAria'),
+            onChange: event => onSelect(event.target.value),
+          }, state.edicts.slice(0, 60).map(item => h('option', { key: item.id, value: item.id }, `${statusLabel(item.status)} | ${item.brief.slice(0, 40)}`))),
+          detail && detail.id === edictId ? h(StatusPill, { status: detail.status }) : null,
+          h('button', { className: 'ssl-btn ssl-btn--sm', onClick: () => { onSelect(edictId); onGo('court'); } }, zhEn('回朝堂看结果', 'Back to the result')));
 
-        let main;
-        if (!detail || detail.id !== selected) {
-          main = h('div', { className: 'ssl-card ssl-empty' }, selected ? t('loading') : t('pickEdict'));
-        } else {
-          const canApprove = detail.status === 'awaiting-approval';
-          const canReject = canApprove || isLive(detail.status);
-          const canCancel = isLive(detail.status) || detail.status === 'queued';
-          const merges = detail.git && detail.git.finalized && !detail.git.empty && !detail.git.merged && !detail.git.discarded;
-          const waiting = detail.steps.filter(step => step.status === 'awaiting-input');
-          const doReject = () => { act('reject', { note: rejectNote }, t('rejectedToast')); setRejecting(false); setRejectNote(''); };
-          main = h('div', { className: 'ssl-stack' },
+        if (!detail || detail.id !== edictId) return h('div', null, bar, h(LoadingCard, {}));
+        const messages = detail.messages || [];
+        const live = detail.live || [];
+
+        return h('div', null,
+          bar,
+          (detail.calls || []).length ? h(Panorama, { detail, onOpen: openArtifact })
+            : h('div', { className: 'ssl-card' }, h('h4', { className: 'ssl-card-t' }, t('panoTitle')), h('div', { className: 'ssl-empty' }, t('waitingReports'))),
+          h('div', { className: 'ssl-detail-cols' },
             h('div', { className: 'ssl-card' },
-              h('div', { className: 'ssl-row' },
-                h('div', { className: 'ssl-grow' },
-                  h('p', { className: 'ssl-brief' }, detail.brief),
-                  h('div', { className: 'ssl-meta' },
-                    h(StatusPill, { status: detail.status }),
-                    h('span', { className: 'ssl-mono' }, detail.id),
-                    h('span', null, dateTimeText(detail.createdAt)),
-                    detail.autonomous ? h('span', { className: 'ssl-pill ssl-pill--ok' }, t('autoPill')) : null,
-                    detail.permission ? h('span', { className: 'ssl-pill ssl-pill--plain', title: permissionInfo(detail.permission).desc }, permissionInfo(detail.permission).name) : null,
-                    (detail.attachments || []).length ? h('span', { className: 'ssl-pill ssl-pill--plain', title: detail.attachments.map(file => file.name).join(', ') }, zhEn(`附件 ${detail.attachments.length}`, `${detail.attachments.length} attached`)) : null,
-                    h(ModePill, { detail }),
-                    detail.spend && detail.spend.calls ? h(Money, { usd: detail.spend.costUsd, estimated: detail.spend.estimated, compact: true }) : null,
-                    detail.rounds ? h('span', null, t('draftRounds', { n: detail.rounds })) : null,
-                    detail.fixRounds ? h('span', null, t('fixRoundsMeta', { n: detail.fixRounds })) : null,
-                    detail.recalled ? h('span', { title: (detail.recalledLessons || []).map(item => item.text).join('\n') }, t('lessonsN', { n: detail.recalled })) : null,
-                    detail.note ? h('span', null, detail.note) : null))),
-              h('div', { style: { margin: '18px 0 4px' } }, h(Flow, { edict: detail })),
-              h(Narrator, { detail }),
-              detail.error ? h('div', { className: 'ssl-alert' }, detail.error) : null,
-              canApprove || canReject || canCancel ? h('div', { className: 'ssl-actions', style: { marginTop: '16px' } },
-                canApprove ? h('button', { className: 'ssl-btn ssl-btn--seal', onClick: () => act('approve', null, merges ? t('approvedMergedToast') : t('approvedToast')) }, merges ? t('approveMerge') : t('approve')) : null,
-                canReject && !rejecting ? h('button', { className: 'ssl-btn ssl-btn--danger', onClick: () => setRejecting(true) }, t('reject')) : null,
-                canCancel ? h('button', { className: 'ssl-btn', onClick: () => act('cancel', null, t('haltedToast')) }, t('halt')) : null,
-                rejecting ? h('div', { className: 'ssl-actions ssl-grow', style: { minWidth: '260px' } },
-                  h('input', {
-                    className: 'ssl-input ssl-grow', autoFocus: true, value: rejectNote, placeholder: t('rejectPh'),
-                    onChange: event => setRejectNote(event.target.value),
-                    onKeyDown: event => {
-                      if (event.key === 'Enter') doReject();
-                      if (event.key === 'Escape') setRejecting(false);
-                    },
-                  }),
-                  h('button', { className: 'ssl-btn ssl-btn--danger', onClick: doReject }, t('rejectConfirm')),
-                  h('button', { className: 'ssl-btn ssl-btn--ghost', onClick: () => setRejecting(false) }, t('cancel'))) : null) : null,
-              canReject && rejecting ? h('div', { className: 'ssl-caption', style: { marginTop: '6px' } }, t('rejectMemoryNote')) : null),
-            waiting.map(step => h(FillCard, { key: step.seq, edictId: detail.id, step, notify, onDone: pull, onOpen: openArtifact })),
-            h(Panorama, { detail, onOpen: openArtifact }),
-            h(GitCard, { detail, act, onOpen: openArtifact }),
-            h(FilesCard, { detail, notify }),
-            detail.live && detail.live.length ? h('div', { className: 'ssl-card' },
-              h('div', { className: 'ssl-card-h' }, h('h4', { className: 'ssl-card-t' }, t('liveNow')), h(StatusPill, { status: 'running', text: t('rolesN', { n: detail.live.length }) })),
-              detail.live.map(item => h('div', { key: item.callId || item.roleId, style: { marginTop: '8px' } },
-                h('div', { className: 'ssl-between' },
-                  h('b', { style: { fontSize: '12.5px' } }, `${roleName(item.roleId)} · ${kindLabel(item.kind)}${item.title ? ` · ${item.title}` : ''}`),
-                  h('span', { className: 'ssl-caption' }, `${item.agent}${item.model ? ` · ${item.model}` : ''} · ${fmtElapsed(item.elapsedMs)}`)),
-                h(Terminal, { text: item.tail, max: 1200, height: 180 })))) : null,
-            h('div', { className: 'ssl-detail-cols' },
-              h('div', { className: 'ssl-card' },
-                h('div', { className: 'ssl-card-h' }, h('h4', { className: 'ssl-card-t' }, t('messagesTitle')), h('span', { className: 'ssl-caption' }, t('itemsN', { n: (detail.messages || []).length }))),
-                h(MessageList, { messages: detail.messages || [], onOpen: openArtifact })),
-              h('div', { className: 'ssl-stack' },
-                h('div', { className: 'ssl-card' },
-                  h('div', { className: 'ssl-card-h' }, h('h4', { className: 'ssl-card-t' }, t('stepsTitle')), h('span', { className: 'ssl-caption' }, detail.steps.length ? t('stepsDone', { done: detail.steps.filter(step => step.status === 'done').length, n: detail.steps.length }) : '')),
-                  detail.steps.length ? h(StepList, { steps: detail.steps, edictStatus: detail.status }) : h('div', { className: 'ssl-empty' }, t('notDispatched'))),
-                h('div', { className: 'ssl-card' },
-                  h('div', { className: 'ssl-card-h' }, h('h4', { className: 'ssl-card-t' }, t('artifactsTitle')), h('span', { className: 'ssl-caption' }, t('docsN', { n: detail.artifacts.length }))),
-                  detail.artifacts.length
-                    ? h('div', { className: 'ssl-files' }, detail.artifacts.map(name => h('button', {
-                        key: name, className: cx('ssl-file', artifact.name === name && 'is-active'), onClick: () => openArtifact(name),
-                      }, name)))
-                    : h('div', { className: 'ssl-empty' }, t('none'))))),
-            artifact.name ? h('div', { className: 'ssl-card', ref: viewerRef },
               h('div', { className: 'ssl-card-h' },
-                h('h4', { className: 'ssl-card-t ssl-mono' }, artifact.name),
-                h('button', { className: 'ssl-btn ssl-btn--ghost ssl-btn--sm', onClick: () => setArtifact({ name: '', text: '' }) }, t('close'))),
-              h('pre', { className: 'ssl-doc' }, artifact.text || t('emptyDoc'))) : null,
-            h('div', { className: 'ssl-card' },
-              h('details', { className: 'ssl-details' },
-                h('summary', null, t('eventsTitle'), h('span', { className: 'ssl-caption', style: { fontWeight: 400 } }, t('itemsN', { n: detail.events.length }))),
-                h('div', { className: 'ssl-events' }, detail.events.slice(-60).flatMap((event, index) => {
-                  const data = event.data || {};
-                  const text = data.note || data.error || data.stage || (data.from ? `${roleName(data.from)} → ${roleName(data.to)} ${kindLabel(data.kind)}` : '') || data.title || '';
-                  return [
-                    h('span', { key: `t${index}`, className: 't' }, timeText(event.at)),
-                    h('span', { key: `k${index}`, className: 'k' }, eventLabel(event.type)),
-                    h('span', { key: `d${index}`, className: 'd', title: text }, text),
-                  ];
-                })))));
-        }
-
-        return h('div', { className: 'ssl-split' }, side, main);
+                h('h4', { className: 'ssl-card-t' }, zhEn('各部往来', 'Dispatches between offices')),
+                h('span', { className: 'ssl-caption' }, t('itemsN', { n: messages.length }))),
+              messages.length || live.length ? h('div', { className: 'ssl-forum-chat' },
+                messages.map(item => h(DispatchBubble, { key: item.seq, item, onOpen: openArtifact })),
+                live.map(item => h(LiveBubble, { key: `live-${item.callId || item.roleId}`, item })))
+                : h('div', { className: 'ssl-empty' }, t('waitingReports'))),
+            h('div', { className: 'ssl-stack' },
+              h('div', { className: 'ssl-card' },
+                h('div', { className: 'ssl-card-h' }, h('h4', { className: 'ssl-card-t' }, t('stepsTitle')), h('span', { className: 'ssl-caption' }, detail.steps.length ? t('stepsDone', { done: detail.steps.filter(step => step.status === 'done').length, n: detail.steps.length }) : '')),
+                detail.steps.length ? h(StepList, { steps: detail.steps, edictStatus: detail.status }) : h('div', { className: 'ssl-empty' }, t('notDispatched'))),
+              h('div', { className: 'ssl-card' },
+                h('div', { className: 'ssl-card-h' }, h('h4', { className: 'ssl-card-t' }, t('artifactsTitle')), h('span', { className: 'ssl-caption' }, t('docsN', { n: detail.artifacts.length }))),
+                detail.artifacts.length
+                  ? h('div', { className: 'ssl-files' }, detail.artifacts.map(name => h('button', {
+                      key: name, className: cx('ssl-file', artifact.name === name && 'is-active'), onClick: () => openArtifact(name),
+                    }, name)))
+                  : h('div', { className: 'ssl-empty' }, t('none'))),
+              h(FilesCard, { detail, notify }))),
+          artifact.name ? h('div', { className: 'ssl-card', ref: viewerRef, style: { marginTop: '12px' } },
+            h('div', { className: 'ssl-card-h' },
+              h('h4', { className: 'ssl-card-t ssl-mono' }, artifact.name),
+              h('button', { className: 'ssl-btn ssl-btn--ghost ssl-btn--sm', onClick: () => setArtifact({ name: '', text: '' }) }, t('close'))),
+            h('pre', { className: 'ssl-doc' }, artifact.text || t('emptyDoc'))) : null,
+          h('div', { className: 'ssl-card', style: { marginTop: '12px' } },
+            h('details', { className: 'ssl-details' },
+              h('summary', null, t('eventsTitle'), h('span', { className: 'ssl-caption', style: { fontWeight: 400 } }, t('itemsN', { n: detail.events.length }))),
+              h('div', { className: 'ssl-events' }, detail.events.slice(-60).flatMap((event, index) => {
+                const data = event.data || {};
+                const text = data.note || data.error || data.stage || (data.from ? `${roleName(data.from)} → ${roleName(data.to)} ${kindLabel(data.kind)}` : '') || data.title || '';
+                return [
+                  h('span', { key: `t${index}`, className: 't' }, timeText(event.at)),
+                  h('span', { key: `k${index}`, className: 'k' }, eventLabel(event.type)),
+                  h('span', { key: `d${index}`, className: 'd', title: text }, text),
+                ];
+              })))));
       }
 
       /** 差事清单：序号、部门、依赖（after）、状态 */
@@ -3616,7 +4005,13 @@ select.ssl-input { cursor: pointer; }
         const { state, error, refresh } = useCourtState();
         const [tab, setTab] = useState('court');
         const [toastNode, notify] = useToast();
-        const [focusId, setFocusId] = useState(null);
+        // 朝堂与朝会共用的「当前奏折」：null = 还没定，'' = 新旨
+        const [selected, setSelected] = useState(null);
+        useEffect(() => {
+          if (selected !== null || !state) return;
+          const busy = state.edicts.find(item => isLive(item.status) || item.status === 'awaiting-approval');
+          setSelected(busy ? busy.id : '');
+        }, [state, selected]);
 
         // 皮肤/主题跟着宿主里存的选择走：每次拿到 state 都对齐一次（多实例、重启后自动恢复）
         const ui = (state && state.ui) || {};
@@ -3631,8 +4026,8 @@ select.ssl-input { cursor: pointer; }
         }, [skin, themeKey]);
 
         const openEdict = id => {
-          setFocusId(id);
-          setTab('memorial');
+          setSelected(id);
+          setTab('court');
         };
 
         const edicts = (state && state.edicts) || [];
@@ -3642,9 +4037,9 @@ select.ssl-input { cursor: pointer; }
         const archived = edicts.filter(item => item.status === 'done').length;
 
         const tabs = [
-          ['court', t('tabCourt'), null],
+          ['court', t('tabCourt'), awaiting ? h('span', { className: 'ssl-count ssl-count--seal' }, awaiting) : null],
+          ['memorial', zhEn('朝会', 'Forum'), null],
           ['workroom', t('tabWorkroom'), liveCount ? h('span', { className: 'ssl-count' }, liveCount) : null],
-          ['memorial', t('tabMemorials'), awaiting ? h('span', { className: 'ssl-count ssl-count--seal' }, awaiting) : null],
           ['roster', t('tabRoster'), null],
           ['annals', t('tabAnnals'), null],
           ['treasury', t('tabTreasury'), null],
@@ -3653,7 +4048,9 @@ select.ssl-input { cursor: pointer; }
           ['hall', t('tabHall'), null],
         ];
 
-        return h('div', { className: cx('ssl-root', embedded && 'is-embedded') }, h('div', { className: 'ssl', 'data-locale': currentLocale },
+        // 朝堂是三栏工作台：整页定高，三栏各自滚动
+        const bench = tab === 'court' && !!state;
+        return h('div', { className: cx('ssl-root', embedded && 'is-embedded', bench && 'is-bench') }, h('div', { className: cx('ssl', bench && 'is-bench'), 'data-locale': currentLocale },
           h('div', { className: 'ssl-head' },
             h(Seal, { name: 'app' }),
             h('div', { className: 'ssl-head-text' },
@@ -3667,17 +4064,17 @@ select.ssl-input { cursor: pointer; }
               h('div', { className: 'ssl-stat' }, h('b', null, archived), h('span', null, t('statArchived')))) : null),
           h('nav', { className: 'ssl-nav', role: 'tablist' }, tabs.map(([id, text, badge]) => h('button', {
             key: id, role: 'tab', 'aria-selected': tab === id, className: cx(tab === id && 'is-active'),
-            onClick: () => { setTab(id); if (id !== 'memorial') setFocusId(null); },
+            onClick: () => setTab(id),
           }, text, badge))),
           error && !state ? h('div', { className: 'ssl-card' },
             h('div', { className: 'ssl-alert', style: { marginTop: 0 } }, t('noHost', { error })),
             h('p', { className: 'ssl-caption', style: { margin: '10px 0 0' } }, t('noHostHint')))
             : !state ? h('div', { className: 'ssl-card ssl-empty' }, t('loading'))
-            : tab === 'court' ? h(CourtTab, { state, onRefresh: refresh, notify, onGo: setTab })
+            : tab === 'court' ? h(CourtTab, { state, onRefresh: refresh, notify, onGo: setTab, selected: selected || '', onSelect: setSelected })
             : tab === 'roster' ? h(RosterTab, { state, onRefresh: refresh, notify })
             : tab === 'biography' ? h(BiographyTab, { state, onGo: setTab })
             : tab === 'workroom' ? h(WorkroomTab, { state, onOpenEdict: openEdict })
-            : tab === 'memorial' ? h(MemorialTab, { state, onRefresh: refresh, notify, focusId })
+            : tab === 'memorial' ? h(ForumTab, { state, notify, selected: selected || '', onSelect: setSelected, onGo: setTab })
             : tab === 'annals' ? h(AnnalsTab, { state, onRefresh: refresh, notify })
             : tab === 'treasury' ? h(TreasuryTab, { state, onRefresh: refresh, notify })
             : tab === 'hall' ? h(HallTab, { state, onRefresh: refresh, notify })
@@ -3957,24 +4354,6 @@ select.ssl-input { cursor: pointer; }
           .then(data => setDoc({ name, text: data.text || '' }))
           .catch(err => notify(String(err.message || err), 'err'));
 
-        const bubble = item => {
-          const mine = partyId(item.from) === 'emperor';
-          const summary = prettySummary(item.summary) || item.title || t('noSummary');
-          return h('div', { key: item.seq, className: cx('ssl-msg', mine && 'is-mine') },
-            h(Avatar, { party: item.from }),
-            h('div', { className: 'ssl-msg-main' },
-              h('div', { className: 'ssl-msg-meta' },
-                h('b', null, roleName(item.from)),
-                h('span', null, `→ ${roleName(item.to)}`),
-                h(KindPill, { item }),
-                h('span', null, timeText(item.at))),
-              h('div', { className: cx('ssl-bubble', item.ok === false && 'is-err') },
-                summary,
-                item.model || item.durationMs || item.artifact ? h('div', { className: 'ssl-bubble-foot' },
-                  item.model ? h('span', { className: 'ssl-mono' }, item.model) : null,
-                  item.durationMs ? h('span', null, t('tookN', { t: fmtElapsed(item.durationMs) })) : null,
-                  item.artifact ? h('button', { className: 'ssl-link', onClick: () => openDoc(item.artifact) }, t('viewDoc')) : null) : null)));
-        };
         const waiting = detail ? detail.steps.filter(step => step.status === 'awaiting-input') : [];
         const workflowSteps = (state && state.workflow) || [];
 
@@ -3997,16 +4376,8 @@ select.ssl-input { cursor: pointer; }
           !edictId ? h('div', { className: 'ssl-empty' }, t('chatEmpty'))
             : !messages.length && !live.length ? h('div', { className: 'ssl-empty' }, t('waitingReports'))
             : null,
-          messages.map(bubble),
-          live.map(item => h('div', { key: `live-${item.callId || item.roleId}`, className: 'ssl-msg' },
-            h(Avatar, { party: item.roleId }),
-            h('div', { className: 'ssl-msg-main' },
-              h('div', { className: 'ssl-msg-meta' },
-                h('b', null, roleName(item.roleId)),
-                h('span', null, `${kindLabel(item.kind)} · ${t('workingFor', { t: fmtElapsed(item.elapsedMs) })}`)),
-              h('div', { className: 'ssl-bubble is-live' },
-                item.tail ? h('div', { className: 'ssl-mono', style: { whiteSpace: 'pre-wrap' } }, item.tail.slice(-260)) : null,
-                h('span', { className: 'ssl-typing', 'aria-label': t('typing') }, h('i'), h('i'), h('i')))))),
+          messages.map(item => h(DispatchBubble, { key: item.seq, item, onOpen: openDoc })),
+          live.map(item => h(LiveBubble, { key: `live-${item.callId || item.roleId}`, item })),
           waiting.map(step => h('div', { key: `fill-${step.seq}`, style: { margin: '4px 0 14px' } },
             h(FillCard, { edictId: detail.id, step, notify, compact: true, onOpen: openDoc })))),
           h('div', { className: 'ssl-chat-compose' }, h(Composer, {
