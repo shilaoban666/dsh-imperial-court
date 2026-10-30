@@ -1169,6 +1169,8 @@ export function createCourt(config = {}, { log = console } = {}) {
         recalledLessons: edict.recalled || [],
         chronicle: edict.chronicle || '',
         calls: (edict.calls || []).slice(-200),
+        // 各部回奏全文：朝堂中栏直接摆出来，不必翻到公文往来里看截断的摘要
+        results: (edict.steps || []).filter(step => step.summary).map(step => ({ seq: step.seq, summary: String(step.summary) })),
         messages: edict.messages || [],
         events: edict.events.slice(-200),
         artifacts: store.listArtifacts(edict),

@@ -168,7 +168,9 @@
       after: () => ({ from: 'menxia', to: 'zhongshu', kind: 'assent', title: L('第 1 轮', 'Round 1'), summary: L('风险：测试依赖本地数据库', 'Risk: tests need the local database'), artifact: '02-review-r1.md', model: 'gpt-5-codex', durationMs: 5000 }) },
     { id: 'revenue', role: 'revenue', kind: 'order', from: 'shangshu', step: 1, title: L('汇总 CSV 为月度报表', 'Monthly report from the CSVs'), start: 13, end: 23, artifact: '04-exec/01-revenue.md',
       out: L('加载 12 个 CSV，共 48,210 行\n按部门 / 周聚合…\n写出 reports/2026-09-月报.xlsx\n完成：3 张表、2 张图', 'Loading 12 CSVs, 48,210 rows\nAggregating by team / week…\nWrote reports/2026-09-monthly.xlsx\nDone: 3 sheets, 2 charts'),
-      report: L('月报已写到 reports/2026-09-月报.xlsx（3 张表、2 张图）', 'Monthly report written to reports/2026-09-monthly.xlsx (3 sheets, 2 charts)') },
+      report: L('月报已写到 reports/2026-09-月报.xlsx（3 张表、2 张图）', 'Monthly report written to reports/2026-09-monthly.xlsx (3 sheets, 2 charts)'),
+      result: L('## 九月月报\n\n已写到 `reports/2026-09-月报.xlsx`，共 **3 张表、2 张图**。\n\n- 收入 128.4 万，环比 **+6.2%**\n- 支出 97.1 万，环比 -1.8%\n- 12 个 CSV、48,210 行，无缺失日期\n\n### 口径\n1. 按自然周汇总，跨月的周拆到各月\n2. 退款记在发生当月\n\n```text\n部门    收入(万)  支出(万)\n华东    52.3      38.0\n华南    41.7      31.2\n华北    34.4      27.9\n```',
+        '## September report\n\nWritten to `reports/2026-09-monthly.xlsx`: **3 sheets, 2 charts**.\n\n- Revenue 1.284M, **+6.2%** month on month\n- Costs 0.971M, -1.8%\n- 12 CSVs, 48,210 rows, no missing days\n\n### Method\n1. Weekly totals; weeks spanning months are split\n2. Refunds count in the month they happen\n\n```text\nRegion  Revenue  Costs\nEast    523k     380k\nSouth   417k     312k\nNorth   344k     279k\n```') },
     { id: 'justice', role: 'justice', kind: 'order', from: 'shangshu', step: 2, title: L('运行本周改动相关测试', 'Run tests for this week\'s changes'), start: 13, end: 21, artifact: '04-exec/02-justice.md',
       out: '$ pnpm test --changed\n ✓ store.test.mjs (14)\n ✓ court.test.mjs (9)\n ✗ adapters.test.mjs > windows shim\n   Expected "a b", received "a"',
       report: L('2 个文件通过，adapters.test.mjs 失败：Windows 下带空格的参数被拆开', '2 files pass; adapters.test.mjs fails: arguments with spaces are split on Windows'),
@@ -233,6 +235,7 @@
     const once = (key, fn) => { if (!sim.done.has(key)) { sim.done.add(key); fn(); } };
     if (t >= 12) once('dispatch', () => {
       stage(edict, 'dispatching', L('尚书省派单', 'Proconsul dispatching'));
+      edict.plan = { summary: L('户部汇总九月 CSV 出月报，礼部据此写周报；刑部同时跑本周改动的测试。', 'The Quaestor builds the September report from the CSVs and the Pontifex writes the weekly summary from it; meanwhile the Praetor runs this week\'s tests.') };
       edict.steps = [
         { seq: 1, ministry: 'revenue', title: L('汇总 CSV 为月度报表', 'Monthly report from the CSVs'), status: 'pending', after: [], agent: '', deliverable: 'reports/2026-09.xlsx' },
         { seq: 2, ministry: 'justice', title: L('运行本周改动相关测试', 'Run tests for this week\'s changes'), status: 'pending', after: [], agent: '', deliverable: 'reports/tests.txt' },
@@ -261,7 +264,7 @@
         if (!task.quiet) pushMsg(edict, { from: task.role, to: task.from, kind: 'report', title: task.title, summary: task.report || '', artifact: task.artifact, durationMs: (task.end - task.start) * 1000, model: db.roles[task.role].model });
         edict.artifacts.push(task.artifact);
         if (task.after) [].concat(task.after()).forEach(item => pushMsg(edict, item));
-        if (task.step) { const s = edict.steps.find(x => x.seq === task.step); if (s) { s.status = 'done'; s.agent = (db.agents.find(a => a.id === db.roles[task.role].agentId) || {}).name; } }
+        if (task.step) { const s = edict.steps.find(x => x.seq === task.step); if (s) { s.status = 'done'; s.agent = (db.agents.find(a => a.id === db.roles[task.role].agentId) || {}).name; s.summary = task.result || task.report || ''; } }
         if (task.id === 'justice') edict.steps.push({ seq: 4, ministry: 'war', title: L('移文 · 修复参数转义', 'Referral · fix argument escaping'), status: 'pending', after: [2], agent: '', deliverable: 'lib/adapters.mjs' });
       });
     }
@@ -278,6 +281,7 @@
     if (t >= AUTOFILL_AT && !sim.filled) fill(edict, 3, L('（演示自动回填）周报已写好，存为 reports/weekly.docx', '(demo auto-fill) Weekly summary written to reports/weekly.docx'), false);
     if (t >= END_AT) once('end', () => {
       edict.git.finalized = true;
+      edict.recheck = { verdict: 'approve', issues: [] };
       edict.git.stat = { files: [{ file: 'lib/adapters.mjs', add: 18, del: 4 }, { file: 'reports/2026-09-monthly.xlsx', add: 0, del: 0, binary: true }, { file: 'reports/tests.txt', add: 12, del: 0 }, { file: 'test/adapters.test.mjs', add: 9, del: 1 }], insertions: 39, deletions: 5 };
       edict.artifacts.push('06-memorial.md', '07-changes.patch');
       pushMsg(edict, { from: 'shangshu', to: 'emperor', kind: 'memorial', title: L('奏折', 'Report'), summary: L('九月月报已出，周报已回填，测试全部通过（含一次移文修复）', 'Monthly report done, weekly summary filled in, all tests pass (one referral fix)'), artifact: '06-memorial.md' });
@@ -293,6 +297,7 @@
     if (!s || s.status !== 'awaiting-input') throw new Error(L('这件差事不在等待回填', 'This order is not waiting for input'));
     s.status = skip ? 'skipped' : 'done';
     s.agent = L('皇帝回填', 'Filled in by Caesar');
+    s.summary = skip ? L('皇帝跳过此差事', 'Caesar skipped this order') : text;
     pushMsg(edict, { from: 'emperor', to: 'rites', kind: 'fill', title: s.title, summary: skip ? L('皇帝跳过此差事', 'Caesar skipped this order') : text });
     edict.status = 'running';
     if (sim && sim.edict === edict) sim.filled = true;
@@ -328,9 +333,11 @@
       createdAt: Date.now() - 20 * hour, updatedAt: Date.now() - 19 * hour, error: '', haltedAt: '', recalled: 0,
       git: { branch: 'court/edict-20261027153012-k3x9', base: 'main', merged: true, finalized: true, stat: { files: [{ file: 'README.md', add: 46, del: 6 }], insertions: 46, deletions: 6 } },
       steps: [
-        { seq: 1, ministry: 'rites', title: L('撰写安装排错章节', 'Write the troubleshooting section'), status: 'done', after: [], agent: L('皇帝回填', 'Filled in by Caesar') },
-        { seq: 2, ministry: 'war', title: L('核对路径示例', 'Check the path examples'), status: 'done', after: [], agent: 'Claude Code' },
+        { seq: 1, ministry: 'rites', title: L('撰写安装排错章节', 'Write the troubleshooting section'), status: 'done', after: [], agent: L('皇帝回填', 'Filled in by Caesar'), summary: L('README 新增「安装排错」一节：找不到 CLI、PATH 未生效、Windows 下 .cmd 转义三类问题，各附解决办法。', 'Added a "Troubleshooting install" section to the README: CLI not found, PATH not refreshed, .cmd escaping on Windows, each with a fix.') },
+        { seq: 2, ministry: 'war', title: L('核对路径示例', 'Check the path examples'), status: 'done', after: [], agent: 'Claude Code', summary: L('核对 README 里 9 处 Windows 路径，修正 6 处：\n- 反斜杠未转义 4 处\n- 盘符大小写不一致 2 处', 'Checked 9 Windows paths in the README and fixed 6:\n- 4 unescaped backslashes\n- 2 inconsistent drive letters') },
       ],
+      plan: { summary: L('礼部写排错章节，兵部核对路径示例。', 'The Pontifex writes the section; the Legate checks the paths.') },
+      recheck: { verdict: 'approve', issues: [] },
       messages: [], events: [], artifacts: ['01-draft-r1.md', '01-draft-r2.md', '02-review-r1.md', '02-review-r2.md', '04-exec/01-rites-workorder.md', '04-exec/02-war.md', '05-recheck.md', '06-memorial.md', '07-changes.patch'],
     };
     pushMsg(done, { from: 'emperor', to: 'zhongshu', kind: 'draft', title: L('第 1 轮拟旨', 'Draft, round 1'), summary: done.brief, model: 'opus' });
@@ -528,7 +535,7 @@
     const m = pathname.match(/^\/edicts\/([A-Za-z0-9-]+)(\/[a-z-]+)?$/);
     if (m) {
       const e = find(m[1]);
-      if (method === 'GET' && !m[2]) return { ...summary(e), recalledLessons: e.recalledLessons || [], calls: e.calls || [], messages: e.messages, events: e.events, live: liveNow().filter(l => l.edictId === e.id) };
+      if (method === 'GET' && !m[2]) return { ...summary(e), plan: e.plan || null, recheck: e.recheck || null, results: (e.steps || []).filter(s => s.summary).map(s => ({ seq: s.seq, summary: s.summary })), recalledLessons: e.recalledLessons || [], calls: e.calls || [], messages: e.messages, events: e.events, live: liveNow().filter(l => l.edictId === e.id) };
       if (method === 'GET' && m[2] === '/files') {
         const changed = e.git && e.git.stat ? e.git.stat.files : (e.steps || []).filter(s => s.status === 'done').map(s => ({ file: s.deliverable || 'out.txt', add: 12, del: 2 }));
         return { source: e.git && e.git.finalized ? 'branch' : e.git ? 'worktree' : 'workspace', changed, deliverables: (e.steps || []).filter(s => s.deliverable).map(s => ({ path: s.deliverable, exists: s.status === 'done' })) };
