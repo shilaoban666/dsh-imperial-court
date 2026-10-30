@@ -154,7 +154,10 @@ test('approval refuses to merge onto the wrong branch and leaves the decree pend
   const repo = makeRepo();
   const { api } = makeCourt();
   const { id } = api.createEdict({ brief: 'write a hello file', workspace: repo });
-  await waitFor(api, id, ['awaiting-approval']);
+  const waiting = await waitFor(api, id, ['awaiting-approval']);
+  // 朝堂中栏要的是各部回奏全文，按差事序号对得上
+  assert.ok(waiting.results.length >= 1);
+  assert.ok(waiting.results.every(item => waiting.steps.some(step => step.seq === item.seq) && item.summary.includes('done: wrote')));
   sh(repo, 'checkout', '-q', '-b', 'other');
   assert.throws(() => api.approve(id), /other/);
   assert.equal(api.getEdict(id).status, 'awaiting-approval');
