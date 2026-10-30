@@ -64,6 +64,9 @@
 .ssl *, .ssl-overlay * { box-sizing: border-box; }
 /* min-width: 0：宿主容器若是 flex，单行省略的长标题会按全文宽度撑开整页 */
 .ssl { padding: 22px 28px 96px; max-width: 1200px; min-width: 0; width: 100%; margin: 0 auto; }
+/* 外壳自己滚动，并作为容器查询的基准：宽窄按插件实际拿到的宽度算，而不是整个窗口（DSH 侧栏、右侧面板都会吃掉宽度） */
+.ssl-root { container-type: inline-size; flex: 1 1 auto; width: 100%; min-width: 0; height: 100%; overflow-x: hidden; overflow-y: auto; }
+.ssl-root.is-embedded { height: auto; overflow: visible; }
 
 /* 头部 */
 .ssl-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
@@ -85,20 +88,21 @@
 .ssl-stat--warn b { color: var(--ssl-warn); }
 .ssl-stat--seal b { color: var(--ssl-seal); }
 
-/* 页签 */
+/* 页签：照 DSH 插件市场的样子，纯文字，选中加粗 + 下划线；放不下就横向滑动 */
 .ssl-nav {
-  display: inline-flex; gap: 2px; padding: 3px; margin: 20px 0 18px; border-radius: 11px;
-  background: var(--ssl-sunken); border: 1px solid var(--ssl-line); max-width: 100%; overflow-x: auto;
+  display: flex; gap: 4px 26px; margin: 18px 0 18px; padding: 0 2px; max-width: 100%;
+  overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
 }
+.ssl-nav::-webkit-scrollbar { display: none; }
 .ssl-nav button {
-  display: inline-flex; align-items: center; gap: 6px; padding: 6px 15px; border: 0; border-radius: 8px;
-  background: transparent; color: var(--ssl-mut); font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap;
-  transition: background .15s, color .15s;
+  position: relative; flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 0 9px; border: 0;
+  background: transparent; color: var(--ssl-fg2); font: inherit; font-size: 14.5px; cursor: pointer; white-space: nowrap;
+  transition: color .15s;
 }
 .ssl-nav button:hover { color: var(--ssl-fg); }
-.ssl-nav button.is-active {
-  background: var(--ssl-panel); color: var(--ssl-fg); font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 0 0 1px var(--ssl-line);
+.ssl-nav button.is-active { color: var(--ssl-fg); font-weight: 700; }
+.ssl-nav button.is-active::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 1px; background: currentColor;
 }
 .ssl-count {
   min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; display: inline-grid; place-items: center;
@@ -115,10 +119,11 @@
 .ssl-card-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 .ssl-card-t { margin: 0; font-size: 14px; font-weight: 600; color: var(--ssl-fg); }
 .ssl-section { display: flex; align-items: center; gap: 10px; margin: 26px 0 10px; }
-.ssl-section h3 { margin: 0; font: 600 14px/1 var(--ssl-serif); letter-spacing: .12em; color: var(--ssl-fg); }
+.ssl-section h3 { margin: 0; flex: none; white-space: nowrap; font: 600 14px/1 var(--ssl-serif); letter-spacing: .12em; color: var(--ssl-fg); }
+.ssl-section span { min-width: 0; }
 .ssl-section span { font-size: 12px; color: var(--ssl-mut); }
 .ssl-section::after { content: ""; flex: 1; height: 1px; background: var(--ssl-line); }
-.ssl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 12px; }
+.ssl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(268px, 100%), 1fr)); gap: 12px; }
 .ssl-grid > .ssl-card + .ssl-card { margin-top: 0; }
 .ssl-cols { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 12px; align-items: start; }
 .ssl-cols > .ssl-card + .ssl-card { margin-top: 0; }
@@ -495,7 +500,7 @@ select.ssl-input { cursor: pointer; }
 .ssl-header-btn b { width: 16px; height: 16px; border-radius: 4px; display: grid; place-items: center; background: var(--dsw-alias-state-business-primary, #b4362b); color: #fff; font: 700 10px/1 var(--ssl-serif, serif); }
 
 /* 头部视图与右侧面板：宿主给的是一块定高区域，滚动由我们自己管 */
-.ssl-scroll { height: 100%; overflow: auto; }
+.ssl-scroll { container-type: inline-size; height: 100%; overflow-x: hidden; overflow-y: auto; }
 .ssl.ssl-view { padding-top: 18px; }
 .ssl.ssl-pane { padding: 12px 12px 40px; max-width: none; }
 .ssl-pane .ssl-card { padding: 14px; }
@@ -637,7 +642,7 @@ select.ssl-input { cursor: pointer; }
 .sc--compact .sc-stamp b { font-size: 16px; }
 
 /* 上手检查 */
-.ssl-ready { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px 14px; margin-top: 10px; }
+.ssl-ready { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr)); gap: 6px 14px; margin-top: 10px; }
 .ssl-ready-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; min-width: 0; }
 .ssl-ready-item .ssl-dot { width: 8px; height: 8px; flex-basis: 8px; }
 .ssl-ready-item b { flex: 0 0 auto; white-space: nowrap; }
@@ -649,7 +654,7 @@ select.ssl-input { cursor: pointer; }
 .ssl-steps-guide b { display: block; margin-bottom: 2px; font-size: 13px; color: var(--ssl-fg); }
 
 /* 术语表 */
-.ssl-gloss { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px 18px; margin-top: 10px; }
+.ssl-gloss { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap: 8px 18px; margin-top: 10px; }
 .ssl-gloss-item { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; color: var(--ssl-fg2); }
 .ssl-gloss-item .ssl-pill { flex: 0 0 auto; }
 
@@ -771,12 +776,12 @@ select.ssl-input { cursor: pointer; }
 .ssl-table tr.is-waste td { color: var(--ssl-mut); }
 .ssl-table .ssl-input { height: 28px; padding: 0 6px; min-width: 70px; }
 
-@media (max-width: 900px) {
+@container (max-width: 900px) {
   .ssl-rules2 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   .ssl-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ssl-steps-guide { grid-template-columns: minmax(0, 1fr); }
 }
-@media (max-width: 900px) {
+@container (max-width: 900px) {
   .ssl { padding: 16px 16px 80px; }
   .ssl-cols, .ssl-split, .ssl-detail-cols { grid-template-columns: minmax(0, 1fr); }
   .ssl-rules { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 12px; }
@@ -785,10 +790,28 @@ select.ssl-input { cursor: pointer; }
   .ssl-stats { width: 100%; }
   .ssl-stat { flex: 1; }
 }
-@media (max-width: 560px) {
-  .ssl-role-fields, .ssl-agent-fields, .ssl-rules { grid-template-columns: minmax(0, 1fr); }
+@container (max-width: 560px) {
+  .ssl { padding: 12px 12px 64px; }
+  .ssl-role-fields, .ssl-agent-fields, .ssl-rules, .ssl-rules2 { grid-template-columns: minmax(0, 1fr); }
   .ssl-wf-row { grid-template-columns: 22px 84px minmax(0, 1fr) auto; gap: 6px; }
+  .ssl-head-text { min-width: 0; }
+  .ssl-sub { display: none; }
+  .ssl-nav { gap: 4px 18px; margin: 12px 0 14px; }
+  .ssl-nav button { font-size: 13.5px; }
+  .ssl-kpis { grid-template-columns: minmax(0, 1fr); }
+  .zz-sub, .zz-date { display: none; }
+  .zz-head { width: 46px; }
+  .zz-tail { width: 72px; padding-left: 7px; padding-right: 7px; justify-content: center; }
 }
+
+/* 朝堂页只放下旨框：跟 DSH 的输入框一样，框下面不再挂别的卡片 */
+.ssl-court { margin-top: 2px; }
+.ssl-court > .ssl-card { padding: 18px 20px 14px; }
+.ssl-court-note {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 12px; padding: 9px 12px; border-radius: 10px; font-size: 12.5px;
+  border: 1px solid color-mix(in srgb, var(--ssl-warn) 40%, var(--ssl-line)); background: color-mix(in srgb, var(--ssl-warn) 8%, transparent);
+}
+.ssl-court-note .ssl-grow { min-width: 200px; }
 @media (prefers-reduced-motion: reduce) {
   .ssl *, .ssl-overlay * { animation: none !important; transition: none !important; }
 }
@@ -2170,7 +2193,7 @@ select.ssl-input { cursor: pointer; }
       }
 
       // ---------- 朝堂：下旨 + 编队 ----------
-      function CourtTab({ state, onRefresh, notify, onOpenEdict }) {
+      function CourtTab({ state, onRefresh, notify, onGo }) {
         const [brief, setBrief] = useState('');
         const [workspace, setWorkspace] = useState('');
         const [criteria, setCriteria] = useState('');
@@ -2183,51 +2206,41 @@ select.ssl-input { cursor: pointer; }
           submit({ brief, workspace: workspace || undefined, criteria: criteria || undefined, mode: mode || undefined }, () => { clearAfterStamp(setBrief, brief); setCriteria(''); });
         };
 
-        const recent = state.edicts.slice(0, 5);
-        const current = state.edicts.filter(item => isLive(item.status) || item.status === 'awaiting-approval');
         const runningCount = state.busy ? state.busy.length : 0;
+        // 只做不花钱的检查（有没有人、是否停用）；真正探测 CLI 在「群臣」页
+        const broken = ALL_ROLES.filter(id => !BUILT_IN.has(id)).filter(roleId => {
+          const agent = state.agents.find(item => item.id === (state.roles[roleId] || {}).agentId);
+          return !agent || agent.enabled === false;
+        }).length;
+        const note = broken ? t('courtNoteBroken', { n: broken }) : state.edicts.length ? '' : t('courtNoteFirst');
 
-        return h('div', null,
-          state.edicts.length ? null : h('div', { style: { marginBottom: '12px' } }, h(ReadinessCard, { state, notify })),
-          h('div', { className: 'ssl-cols' },
-            h('div', { className: 'ssl-card' },
-              h('div', { className: 'ssl-card-h' },
-                h('h4', { className: 'ssl-card-t' }, t('issueTitle')),
-                runningCount ? h(StatusPill, { status: 'running', text: t('inSessionN', { n: runningCount, cap: state.capacity || 2 }) }) : h('span', { className: 'ssl-caption' }, t('issueHint'))),
-              h(Composer, {
-                value: brief,
-                onChange: setBrief,
-                onSubmit: send,
-                canSubmit: !full && !sending && !!brief.trim(),
-                sending,
-                stamp,
-                placeholder: t('briefPh'),
-                extra: h(EdictSlips, { workspace, setWorkspace, criteria, setCriteria, workspaces: state.recentWorkspaces || [], mode, setMode, brief }),
-                caption: full ? t('fullCaption', { n: state.capacity || 2 })
-                  : autonomous ? t('autoCaption')
-                  : t('normalCaption'),
-              })),
-            h('div', { className: 'ssl-card' },
-              h('div', { className: 'ssl-card-h' },
-                h('h4', { className: 'ssl-card-t' }, t('recentTitle')),
-                state.edicts.length ? h('button', { className: 'ssl-btn ssl-btn--ghost ssl-btn--sm', onClick: () => onOpenEdict(null) }, t('allArrow')) : null),
-              recent.length
-                ? h('div', { className: 'ssl-list', style: { margin: '-4px -8px' } }, recent.map(item => h('button', {
-                    key: item.id, className: 'ssl-item', onClick: () => onOpenEdict(item.id),
-                  },
-                  h('div', { className: 'ssl-item-t ssl-ellipsis' }, item.brief),
-                  h('div', { className: 'ssl-item-m' }, h(StatusPill, { status: item.status }), dateTimeText(item.createdAt)))))
-                : h('div', { className: 'ssl-empty' }, t('noEdicts')))),
-          current.map(item => h('div', { key: item.id, className: 'ssl-card', style: { marginTop: '12px' } },
+        return h('div', { className: 'ssl-court' },
+          note ? h('div', { className: 'ssl-court-note' },
+            h('span', { className: 'ssl-grow' }, note),
+            h('button', { className: 'ssl-btn ssl-btn--sm', onClick: () => onGo('agents') }, t('goSetup'))) : null,
+          h('div', { className: 'ssl-card' },
             h('div', { className: 'ssl-card-h' },
-              h('div', { className: 'ssl-grow' },
-                h('h4', { className: 'ssl-card-t ssl-ellipsis' }, item.brief),
-                h('div', { className: 'ssl-caption' }, item.note || item.id)),
-              h(StatusPill, { status: item.status }),
-              h('button', { className: 'ssl-btn ssl-btn--sm', onClick: () => onOpenEdict(item.id) }, t('openEdict'))),
-            h(Flow, { edict: item }))),
+              h('h4', { className: 'ssl-card-t' }, t('issueTitle')),
+              runningCount ? h(StatusPill, { status: 'running', text: t('inSessionN', { n: runningCount, cap: state.capacity || 2 }) }) : h('span', { className: 'ssl-caption' }, t('issueHint'))),
+            h(Composer, {
+              value: brief,
+              onChange: setBrief,
+              onSubmit: send,
+              canSubmit: !full && !sending && !!brief.trim(),
+              sending,
+              stamp,
+              placeholder: t('briefPh'),
+              extra: h(EdictSlips, { workspace, setWorkspace, criteria, setCriteria, workspaces: state.recentWorkspaces || [], mode, setMode, brief }),
+              caption: full ? t('fullCaption', { n: state.capacity || 2 })
+                : autonomous ? t('autoCaption')
+                : t('normalCaption'),
+            })));
+      }
+
+      // ---------- 官职：谁担任哪个岗位、朝规、术语 ----------
+      function RosterTab({ state, onRefresh, notify }) {
+        return h('div', null,
           h(CourtRoster, { state, onRefresh, notify }),
-          state.edicts.length ? h('div', { style: { marginTop: '12px' } }, h(ReadinessCard, { state, notify, compact: true })) : null,
           h('div', { style: { marginTop: '12px' } }, h(Glossary)));
       }
 
@@ -2235,7 +2248,8 @@ select.ssl-input { cursor: pointer; }
       function WorkroomTab({ state, onOpenEdict }) {
         const live = state.live || [];
         const liveByRole = useMemo(() => liveByRoleOf(live), [live]);
-        const running = state.edicts.filter(item => isLive(item.status));
+        // 办理中与待批红的都摆在这里（原先挂在朝堂下旨框下面）
+        const running = state.edicts.filter(item => isLive(item.status) || item.status === 'awaiting-approval');
         const recent = state.recent || [];
 
         return h('div', null,
@@ -2243,7 +2257,8 @@ select.ssl-input { cursor: pointer; }
             h('div', { className: 'ssl-card-h', style: { marginBottom: '16px' } },
               h('div', { className: 'ssl-grow' },
                 h('h4', { className: 'ssl-card-t ssl-ellipsis' }, item.brief),
-                h('div', { className: 'ssl-caption' }, `${item.note || ''} · ${item.id}`)),
+                h('div', { className: 'ssl-caption ssl-ellipsis' }, `${item.note || ''} · ${item.id}`)),
+              h(StatusPill, { status: item.status }),
               h('button', { className: 'ssl-btn ssl-btn--sm', onClick: () => onOpenEdict(item.id) }, t('openEdict'))),
             h(Flow, { edict: item })))
             : h('div', { className: 'ssl-card' },
@@ -2933,12 +2948,13 @@ select.ssl-input { cursor: pointer; }
           h('input', { className: 'ssl-input ssl-mono', value: valueOf(id, key, value), placeholder, onChange: event => edit(id, { [key]: event.target.value }) }));
 
         return h('div', null,
+          h('div', { style: { marginBottom: '12px' } }, h(ReadinessCard, { state, notify, compact: state.edicts.length > 0 })),
           h('div', { className: 'ssl-between', style: { marginBottom: '12px', flexWrap: 'wrap' } },
             h('span', { className: 'ssl-caption' }, t('agentsIntro')),
             h('div', { className: 'ssl-actions' },
               h('span', { className: 'ssl-caption ssl-mono ssl-ellipsis', title: state.root, style: { maxWidth: '360px' } }, state.root),
               h('button', { className: 'ssl-btn ssl-btn--sm', onClick: probeAll }, t('probeAll')))),
-          h('div', { className: 'ssl-grid', style: { gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))' } }, state.agents.map(item => {
+          h('div', { className: 'ssl-grid', style: { gridTemplateColumns: 'repeat(auto-fill, minmax(min(420px, 100%), 1fr))' } }, state.agents.map(item => {
             const check = probe[item.id];
             const enabled = valueOf(item.id, 'enabled', item.enabled !== false);
             const posts = postsOf(item.id);
@@ -3097,7 +3113,7 @@ select.ssl-input { cursor: pointer; }
           h('button', { className: cx(currentLocale === 'en' && 'is-active'), onClick: () => choose('en') }, 'EN'));
       }
 
-      function App() {
+      function App({ embedded }) {
         useLocale();
         const { state, error, refresh } = useCourtState();
         const [tab, setTab] = useState('court');
@@ -3131,13 +3147,14 @@ select.ssl-input { cursor: pointer; }
           ['court', t('tabCourt'), null],
           ['workroom', t('tabWorkroom'), liveCount ? h('span', { className: 'ssl-count' }, liveCount) : null],
           ['memorial', t('tabMemorials'), awaiting ? h('span', { className: 'ssl-count ssl-count--seal' }, awaiting) : null],
+          ['roster', t('tabRoster'), null],
           ['annals', t('tabAnnals'), null],
           ['treasury', t('tabTreasury'), null],
-          ['hall', t('tabHall'), null],
           ['agents', t('tabAgents'), null],
+          ['hall', t('tabHall'), null],
         ];
 
-        return h('div', { className: 'ssl', 'data-locale': currentLocale },
+        return h('div', { className: cx('ssl-root', embedded && 'is-embedded') }, h('div', { className: 'ssl', 'data-locale': currentLocale },
           h('div', { className: 'ssl-head' },
             h(Seal, { name: 'app' }),
             h('div', { className: 'ssl-head-text' },
@@ -3156,7 +3173,8 @@ select.ssl-input { cursor: pointer; }
             h('div', { className: 'ssl-alert', style: { marginTop: 0 } }, t('noHost', { error })),
             h('p', { className: 'ssl-caption', style: { margin: '10px 0 0' } }, t('noHostHint')))
             : !state ? h('div', { className: 'ssl-card ssl-empty' }, t('loading'))
-            : tab === 'court' ? h(CourtTab, { state, onRefresh: refresh, notify, onOpenEdict: openEdict })
+            : tab === 'court' ? h(CourtTab, { state, onRefresh: refresh, notify, onGo: setTab })
+            : tab === 'roster' ? h(RosterTab, { state, onRefresh: refresh, notify })
             : tab === 'workroom' ? h(WorkroomTab, { state, onOpenEdict: openEdict })
             : tab === 'memorial' ? h(MemorialTab, { state, onRefresh: refresh, notify, focusId })
             : tab === 'annals' ? h(AnnalsTab, { state, onRefresh: refresh, notify })
@@ -3164,7 +3182,7 @@ select.ssl-input { cursor: pointer; }
             : tab === 'hall' ? h(HallTab, { state, onRefresh: refresh, notify })
             : h(AgentsTab, { state, onRefresh: refresh, notify }),
           error && state ? h('div', { className: 'ssl-alert' }, t('hostLost', { error })) : null,
-          toastNode);
+          toastNode));
       }
 
       const SID = 'sansheng-liubu';
@@ -4009,7 +4027,8 @@ select.ssl-input { cursor: pointer; }
         zh: {
           appName: '三省六部',
           appSub: '把本机的 AI 工具排成朝堂：中书拟旨、门下封驳、尚书派单、六部并行办差，全程在隔离分支里进行，批红才合并。',
-          tabCourt: '朝堂', tabWorkroom: '值房', tabMemorials: '奏折', tabAnnals: '史馆', tabHall: '殿宇', tabAgents: '群臣',
+          tabCourt: '朝堂', tabWorkroom: '值房', tabMemorials: '奏折', tabAnnals: '史馆', tabHall: '殿宇', tabAgents: '群臣', tabRoster: '官职',
+          courtNoteFirst: '头一回上朝：先去「群臣」点一下一键探测，确认每个岗位的 CLI 都找得到。', courtNoteBroken: '{n} 个岗位没人或已停用，派到那里的差事会失败。', goSetup: '去检查 →',
           statRunning: '在办', statAwaiting: '待你处理', statArchived: '已归档',
           noHost: '无法连接宿主：{error}', noHostHint: '确认插件的宿主半已加载（设置 → 插件），或重启 DSH 后再试。',
           hostLost: '与宿主的连接中断：{error}（显示的是最后一次拿到的状态）',
@@ -4132,7 +4151,8 @@ select.ssl-input { cursor: pointer; }
         en: {
           appName: 'Imperial Senate',
           appSub: 'Your AI tools as a Roman Senate: the Consul drafts, the Tribune vetoes, the Proconsul dispatches, the magistrates work in parallel, all on an isolated branch that is merged only under your seal.',
-          tabCourt: 'Senate', tabWorkroom: 'Officium', tabMemorials: 'Decrees', tabAnnals: 'Annals', tabHall: 'Palace', tabAgents: 'Cohort',
+          tabCourt: 'Senate', tabWorkroom: 'Officium', tabMemorials: 'Decrees', tabAnnals: 'Annals', tabHall: 'Palace', tabAgents: 'Cohort', tabRoster: 'Offices',
+          courtNoteFirst: 'First session: open Cohort and press Probe all to check every office can find its CLI.', courtNoteBroken: '{n} offices are vacant or disabled; orders sent there will fail.', goSetup: 'Check →',
           statRunning: 'In session', statAwaiting: 'Need you', statArchived: 'Archived',
           noHost: 'Cannot reach the host: {error}', noHostHint: 'Check that the plugin\'s host half is loaded (Settings → Plugins), or restart DSH.',
           hostLost: 'Lost contact with the host: {error} (showing the last known state)',
@@ -4377,7 +4397,7 @@ select.ssl-input { cursor: pointer; }
         try {
           ctx.slots.inject('settings.section', function* () {
             try {
-              yield ctx.slots.register({ name: 'settings.section', id: SID, order: 41, label: () => t('appName'), inject: () => ({}) }, App);
+              yield ctx.slots.register({ name: 'settings.section', id: SID, order: 41, label: () => t('appName'), inject: () => ({ embedded: true }) }, App);
             } catch (error) {
               console.warn('[sansheng-liubu] settings.section registration failed:', error);
             }
