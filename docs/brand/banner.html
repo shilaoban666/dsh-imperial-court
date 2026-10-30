@@ -1,0 +1,77 @@
+<!doctype html>
+<!-- README 顶部横幅与 GitHub 社交预览图的源文件：用 Edge 无头模式截图生成 docs/brand/*.jpg -->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>三省六部 banner</title>
+<style>
+  :root { --w: 1280px; --h: 400px; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: var(--w); height: var(--h); overflow: hidden; position: relative;
+    font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
+    color: #f7ecd8;
+    background:
+      radial-gradient(ellipse 60% 90% at 78% 110%, rgba(226, 97, 75, .38), transparent 70%),
+      radial-gradient(ellipse 50% 70% at 12% -10%, rgba(233, 196, 106, .18), transparent 70%),
+      linear-gradient(160deg, #23130d 0%, #160c08 55%, #0e0806 100%);
+  }
+  /* 宫墙与台阶的剪影 */
+  .palace { position: absolute; right: 250px; bottom: 0; width: 440px; height: 196px; opacity: .32; }
+  .grain { position: absolute; inset: 0; background-image: repeating-linear-gradient(90deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px); }
+  .wrap { position: absolute; left: 72px; top: 0; bottom: 0; display: flex; flex-direction: column; justify-content: center; gap: 18px; width: 720px; }
+  .head { display: flex; align-items: center; gap: 22px; }
+  .seal {
+    width: 92px; height: 92px; border-radius: 20px; flex: none; display: grid; place-items: center;
+    background: linear-gradient(150deg, #e2614b, #9e2a20); box-shadow: inset 0 0 0 3px rgba(255, 231, 176, .3), 0 14px 40px rgba(226, 97, 75, .35);
+    font-size: 58px; font-weight: 800; color: #fff3d6; letter-spacing: 0;
+  }
+  h1 { margin: 0; font-size: 64px; line-height: 1; letter-spacing: .08em; font-weight: 800; }
+  h1 small { display: block; margin-top: 12px; font: 600 22px/1.2 Georgia, "Times New Roman", serif; letter-spacing: .32em; color: #e9c46a; text-transform: uppercase; }
+  .tag { margin: 0; font-size: 24px; white-space: nowrap; line-height: 1.55; color: #ecdcc0; letter-spacing: .02em; }
+  .tag b { color: #ffd98a; font-weight: 700; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; font: 600 17px/1 "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .chips span { padding: 9px 14px; border-radius: 999px; border: 1px solid rgba(233, 196, 106, .45); background: rgba(233, 196, 106, .08); color: #f3dfb4; }
+  .flow { position: absolute; right: 70px; top: 54px; display: flex; flex-direction: column; gap: 9px; font: 600 17px/1 "Microsoft YaHei", sans-serif; color: #f1e0c0; }
+  .flow div { display: flex; align-items: center; gap: 10px; }
+  .flow i { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font-style: normal; font: 700 14px/1 serif; color: #fff; }
+  .flow em { font-style: normal; color: #b49a74; font-weight: 400; margin-left: 4px; }
+  body.social { --h: 640px; }
+  body.social .wrap { gap: 26px; }
+  body.social .palace { right: 200px; width: 620px; height: 276px; }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<svg class="palace" viewBox="0 0 560 250" aria-hidden="true">
+  <defs>
+    <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9c46a"/><stop offset="1" stop-color="#8c5a1c"/></linearGradient>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9e2a20"/><stop offset="1" stop-color="#4a120d"/></linearGradient>
+  </defs>
+  <path d="M120 92 Q280 40 440 92 L470 104 L90 104 Z" fill="url(#roof)"/>
+  <rect x="150" y="104" width="260" height="70" fill="url(#wall)"/>
+  <g fill="#2a0d08" opacity=".75"><rect x="190" y="124" width="22" height="50"/><rect x="240" y="124" width="22" height="50"/><rect x="298" y="124" width="22" height="50"/><rect x="348" y="124" width="22" height="50"/></g>
+  <path d="M100 60 Q280 18 460 60 L484 70 L76 70 Z" fill="url(#roof)" opacity=".85"/>
+  <rect x="60" y="174" width="440" height="14" fill="#6b4a2c"/>
+  <rect x="30" y="188" width="500" height="14" fill="#55391f"/>
+  <rect x="0" y="202" width="560" height="48" fill="#3b2614"/>
+</svg>
+<div class="wrap">
+  <div class="head">
+    <div class="seal">三</div>
+    <h1>三省六部<small>Imperial Senate · DSH Plugin</small></h1>
+  </div>
+  <p class="tag">把本机的 AI 工具排成朝堂：<b>一家拟旨、另一家封驳</b>，<br>六部<b>并行办差</b>，复核过了你再<b>批红合并</b>，全程在隔离分支里。</p>
+  <div class="chips"><span>Claude Code</span><span>Codex</span><span>WorkBuddy</span><span>DSH</span><span>中文 · English</span></div>
+</div>
+<div class="flow" aria-hidden="true">
+  <div><i style="background:#b4362b">中</i>中书拟旨<em>Draft</em></div>
+  <div><i style="background:#2e6f9e">门</i>门下封驳<em>Veto</em></div>
+  <div><i style="background:#7d4a9e">尚</i>尚书派单<em>Dispatch</em></div>
+  <div><i style="background:#1f8a70">部</i>六部并行<em>Work</em></div>
+  <div><i style="background:#c27c0e">御</i>御史巡查<em>Inspect</em></div>
+  <div><i style="background:#c9a227">朱</i>批红合并<em>Seal</em></div>
+</div>
+<script>if (location.hash === '#social') document.body.classList.add('social');</script>
+</body>
+</html>
