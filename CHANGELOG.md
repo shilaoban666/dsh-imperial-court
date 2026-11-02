@@ -2,6 +2,25 @@
 
 > [← 首页 / Home](README.md) · 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.0.0] - 2026-11-02
+
+第一个稳定版本：把 0.9 到 0.11 的东西定下来，代码与 0.11.0 相同。The first stable release: it settles everything from 0.9 to 0.11; the code is the same as 0.11.0.
+
+### 这一版有什么 What 1.0 includes
+
+- **朝堂**：中书拟旨、门下换一家工具封驳、六部按依赖并行办差、御史巡查、门下复核，你批红才合并；全程在隔离的 git 分支里。英文是古罗马元老院。
+- **装上即用**：自动找到本机的 DSH、Claude Code、Codex 并排好岗位；没装的一键安装、没登录的一键登录。
+- **看得懂**：古代官名后面带白话小字（门下省 · 审方案）；不喜欢古风可在「殿宇」换成「一人公司」皮肤。
+- **不打扰**：「待你处理」只摆出要你出手的事，被 DSH 重启打断的任务一键接着办。
+- **算得清**：「成效」跟单干比快了多少、好了多少；「国库」逐次记账、预算超支即停。
+- **朝局定皇权**、帝王传记、功勋、史馆实录、六套主题、中英双语。
+
+### 验证 Verified
+
+- `npm test` 65 项通过（真 git 仓库 + 假 CLI，含界面文案逐条检查）。
+- 真机：真的 `dsh headless` 跑通一整份急递；本机找到桌面版自带的 Claude Code 与 Codex 并正确判断登录状态。
+- 尚未在真机跑完多家 CLI 协作的常朝，真正的一键安装与登录也没有在维护者机器上跑过（见 README「已知限制」）。
+
 ## [0.11.0] - 2026-11-02
 
 回到三省六部：只有一个身份，一人公司降为皮肤。Back to the court: one identity, with the One-Person Company as a skin.
@@ -107,5 +126,6 @@
 
 [0.9.0]: https://github.com/shilaoban666/dsh-imperial-court/releases/tag/v0.9.0
 
+[1.0.0]: https://github.com/shilaoban666/dsh-imperial-court/releases/tag/v1.0.0
 [0.11.0]: https://github.com/shilaoban666/dsh-imperial-court/releases/tag/v0.11.0
 [0.10.0]: https://github.com/shilaoban666/dsh-imperial-court/releases/tag/v0.10.0
