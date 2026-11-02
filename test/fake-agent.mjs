@@ -3,6 +3,7 @@
 // FAKE_FORMAT=claude-stream 时模仿 claude -p --output-format stream-json：带会话 id、用量与花销。
 import fs from 'node:fs';
 import path from 'node:path';
+import { modernize } from '../lib/modern.mjs';
 
 const prompt = fs.readFileSync(0, 'utf8');
 const flags = new Set(String(process.env.FAKE_FLAGS || '').split(',').filter(Boolean));
@@ -11,7 +12,9 @@ const log = process.env.FAKE_LOG;
 const args = process.argv.slice(2);
 const resumeAt = args.indexOf('--resume');
 const resumed = resumeAt >= 0 ? args[resumeAt + 1] : '';
-const has = (...markers) => markers.some(marker => prompt.includes(marker));
+// 古代与现代（一人公司）两种说法都认：现代提示词就是古代模板过一遍 modernize
+const modern = marker => modernize(marker, /[一-鿿]/.test(marker) ? 'zh' : 'en');
+const has = (...markers) => markers.some(marker => prompt.includes(marker) || prompt.includes(modern(marker)));
 // FAKE_PERM / FAKE_MODEL：插件按权限、岗位模型设的环境变量（模拟 dsh headless 的 DSH_PERMISSION_MODE / SANSHENG_DSH_MODEL）
 const record = entry => {
   if (log) fs.appendFileSync(log, `${JSON.stringify({ ...entry, resumed, perm: process.env.FAKE_PERM || '', envModel: process.env.FAKE_MODEL || '', at: Date.now() })}\n`);
@@ -44,6 +47,9 @@ const json = (value, session) => emit(JSON.stringify(value), session);
 const TITLES = {
   吏部: 'personnel', 户部: 'revenue', 礼部: 'rites', 兵部: 'war', 刑部: 'justice', 工部: 'works',
   Censor: 'personnel', Quaestor: 'revenue', Pontifex: 'rites', Legate: 'war', Praetor: 'justice', Aedile: 'works',
+  // 现代风格（一人公司）
+  'IT 与行政部': 'personnel', 财务与数据部: 'revenue', 市场与公关部: 'rites', 研发部: 'war', 质量与法务部: 'justice', 设计部: 'works',
+  'IT & Admin': 'personnel', 'Finance & Analytics': 'revenue', 'Marketing & Comms': 'rites', Engineering: 'war', 'QA & Legal': 'justice', Design: 'works',
 };
 
 function plan() {
@@ -94,7 +100,7 @@ async function task(ministry, deliverable) {
     chronicle: has('【实录】', '[Chronicle]'),
   });
   let out = `done: wrote ${deliverable.trim()}`;
-  if (flags.has('handoff') && ministry === 'war' && !prompt.includes('【移文】') && !prompt.includes('[Referral] While')) {
+  if (flags.has('handoff') && ministry === 'war' && !has('【移文】', '[Referral] While')) {
     out += '\n{"handoff":{"to":"justice","reason":"needs regression tests"}}';
   }
   return emit(out, `sess-task-${ministry}`);
