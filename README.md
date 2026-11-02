@@ -136,10 +136,10 @@ flowchart LR
 **1. 安装**（需要 DSH，以及 Node 20+ 与 git）
 
 ```bash
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v0.11.0
+dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.0.0
 ```
 
-Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v0.11.0`。
+Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.0.0`。
 
 **2. 打开**：重启 DSH，点侧栏的「三」。插件会自己找本机的 DSH、Claude Code、Codex 并排好岗位，什么都不用设。
 
