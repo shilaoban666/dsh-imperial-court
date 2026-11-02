@@ -2,11 +2,13 @@
 
 <img src="docs/brand/banner.jpg" alt="Imperial Senate: a multi-tool DSH plugin" width="100%">
 
-### Turn the AI tools on your machine into a Roman Senate: one drafts, another vetoes, magistrates work in parallel, and nothing merges until you seal it
+### Turn the AI tools on your machine into your one-person company: one plans, another reviews, departments work in parallel, and nothing merges until you approve
+
+Two styles, each in English and Chinese: **Modern · One-Person Company** and **Ancient · Roman Senate / 三省六部**
 
 [![Release](https://img.shields.io/github/v/release/shilaoban666/dsh-imperial-court?color=b4362b&label=release)](https://github.com/shilaoban666/dsh-imperial-court/releases)
 [![DSH plugin](https://img.shields.io/badge/DSH-plugin-e9c46a)](https://dshbase.com/zh/plugins/)
-[![Tests](https://img.shields.io/badge/tests-48%20passing-1f8a70)](test/court.test.mjs)
+[![Tests](https://img.shields.io/badge/tests-64%20passing-1f8a70)](test/court.test.mjs)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-3c873a)](package.json)
 [![Languages](https://img.shields.io/badge/English-%E4%B8%AD%E6%96%87-2e6f9e)](README.md)
 [![License](https://img.shields.io/badge/license-MIT-5d5348)](LICENSE)
@@ -19,7 +21,14 @@
 
 An AI tool that writes and reviews its own work has not been reviewed. **Imperial Senate** is a native [DeepSeek Harness (DSH)](https://dshbase.com/zh/plugins/) plugin that seats the tools on your machine (**Claude Code, Codex, WorkBuddy and DSH itself**) in a Roman Senate. The **Consul** drafts a plan, the **Tribune** (a different tool) reviews it and may veto, the **Proconsul** dispatches orders, six **magistrates** work **in parallel** where they can, inspectors check the results, the Tribune audits, and only your **seal** merges it. Everything happens on an **isolated git branch**; your folder is untouched until you seal.
 
-It ships in two languages that share one engine: **English · Roman Senate** and **中文 · 三省六部** (the Tang dynasty's *Three Departments and Six Ministries*). Prompts switch language too.
+**Two styles, switch any time** (Modern / Ancient in the header):
+
+- **Modern · One-Person Company** (the default for new users): you are the CEO, with a Chief Strategy Officer, Chief Risk Officer and Chief Operating Officer, plus IT & Admin, Finance & Analytics, Marketing & Comms, Engineering, QA & Legal and Design; the PMO keeps work moving and Internal Audit checks quality. Titles everyone knows, and a plain task card.
+- **Ancient · Roman Senate** (Consul, Tribune, Proconsul and magistrates; papyrus scroll and SPQR seal), or in Chinese **三省六部** (the Tang dynasty's *Three Departments and Six Ministries*).
+
+Both come in English and Chinese, and prompts switch with them.
+
+**Works out of the box**: install it and send a task. DSH alone covers every role; Claude Code and Codex on your machine (including the copies bundled with their desktop apps) are found and placed automatically, and the ones you lack install or sign in with one click. No command line needed. **Quiet**: things show up under *Needs you* only when you have to approve, answer a question, or pick up a task that a DSH restart cut short (one click).
 
 ## Why
 
@@ -78,6 +87,9 @@ Five regimes: the more tools, the safer your throne; one tool alone makes you *D
 
 <table>
 <tr>
+<td colspan="2"><b>Modern · One-Person Company</b>: your team (install, sign in, add in one click) and the task card<br><img src="docs/screenshots/en-10-modern.jpg" alt="One-Person Company workbench"></td>
+</tr>
+<tr>
 <td width="50%"><b>Senate</b>: decrees, each magistrate's full report, the flow<br><img src="docs/screenshots/en-09-senate.jpg" alt="Senate"></td>
 <td width="50%"><b>Gains</b>: the same work against one tool alone<br><img src="docs/screenshots/en-08-gains.jpg" alt="Gains"></td>
 </tr>
@@ -123,22 +135,16 @@ Small jobs go **express** (straight to one magistrate); long ones go to the **Co
 **1. Install** (DSH, Node 20+ and git)
 
 ```bash
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v0.9.0
+dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v0.10.0
 ```
 
-Use `--profile web` for the web build; drop `#v0.9.0` to follow the latest code.
+Use `--profile web` for the web build; drop `#v0.10.0` to follow the latest code.
 
-**2. Open**: restart DSH, click the seal in the sidebar, switch to **EN**, and press **Probe all** in the *Cohort* tab.
+**2. Open**: restart DSH, click the seal in the sidebar and switch to **EN**. The plugin finds DSH, Claude Code and Codex on your machine and fills the roles by itself; there is nothing to set up.
 
-**3. Issue your first decree**: write what you need in the *Senate* tab and press **Enter**, or click a **starter** (fix a bug, review changes, weekly report…).
+**3. Send your first task**: write what you need on the *Workbench* and press **Enter**, or click a **starter** (product one-pager, competitor scan, launch copy, fix a bug…).
 
-DSH alone works: DSH itself can hold any office. For a real cross-check, add a second tool:
-
-```bash
-npm i -g @anthropic-ai/claude-code   # or npm i -g @openai/codex; run it once to sign in
-```
-
-The Senate tab then offers to seat it as the Tribune in one click, lifting you to *East and West*.
+DSH alone works: DSH itself can hold any role. For a real cross-check (models from different vendors reviewing each other), press **Install** / **Sign in** under *Your team*. It uses the official Claude Code and Codex installers and sign-in, and each tool joins the team once it is ready. Claude Code needs a Claude subscription or an Anthropic API key; Codex needs a ChatGPT plan or an OpenAI API key.
 
 > **Just want to look?** Run `python -m http.server` in the repo and open `http://localhost:8000/preview.html?lang=en` for a full replayed session.
 
@@ -157,7 +163,10 @@ The Senate tab then offers to seat it as the Tribune in one click, lifting you t
 | 📜 | **Annals and Chronicle** | Lessons feed the next decree; a sourced notebook per folder |
 | 🧭 | **DSH in office** | Any office via `dsh headless`, with your desktop sign-in and a model per office |
 | 📂 | **Open the output** | Open the output folder, open documents and media, reveal files |
-| 🌏 | **Two languages** | Roman Senate / 三省六部, six themes, prompts in either language |
+| 🏢 | **Two styles** | Modern · One-Person Company / Ancient · Roman Senate (三省六部), each in English and Chinese; prompts switch too |
+| 📥 | **Needs you** | Only what needs you: approvals, questions, and one-click *Pick up* for tasks cut short by a restart |
+| 🧰 | **Your team** | Finds the tools on your machine and fills the roles; one-click install, sign-in and add; hand back to automatic any time |
+| 🌏 | **Two languages** | Six themes, prompts in either language |
 
 Every tab and setting is explained in the **[guide](docs/GUIDE.en.md)**.
 
