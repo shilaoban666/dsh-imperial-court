@@ -499,9 +499,9 @@ export function createCourt(config = {}, { log = console } = {}) {
   store.load(preset);
   migrateDshAgent(store, preset);
   if (!store.state.ui || typeof store.state.ui !== 'object') store.state.ui = { skin: 'default', theme: 'default' };
-  // 风格：新用户默认现代（一人公司），零学习成本；已经在用古代朝堂的老用户保持原样
+  // 风格：默认三省六部；一人公司是「殿宇」页里可换的一套皮肤，换过的保持原样
   if (!STYLES.includes(store.state.ui.style)) {
-    store.state.ui.style = store.listEdicts().length ? 'ancient' : 'modern';
+    store.state.ui.style = 'ancient';
     store.save();
   }
   // 编制：新用户「自动」（按本机能用的工具排岗位）；老用户「手动」，他排好的不动
@@ -1178,7 +1178,7 @@ export function createCourt(config = {}, { log = console } = {}) {
       const dim = Number(input.backgroundDim ?? prev.backgroundDim ?? 0.45);
       const wantsCustom = (input.background ?? prev.background) === 'custom';
       const locale = input.locale ?? prev.locale;
-      const style = STYLES.includes(input.style) ? input.style : (STYLES.includes(prev.style) ? prev.style : 'modern');
+      const style = STYLES.includes(input.style) ? input.style : (STYLES.includes(prev.style) ? prev.style : 'ancient');
       // 换成现代风格时，古风整套主题（宫殿、罗马广场……）一并换回 DSH 自己的样子；用户之后仍可再选
       const ancientTheme = ['gong', 'mo', 'zijin', 'marble', 'nox', 'roma'].includes(theme);
       const nextTheme = style === 'modern' && prev.style !== 'modern' && input.style === 'modern' && ancientTheme && input.theme === undefined ? 'default' : theme;

@@ -2,6 +2,20 @@
 
 > [← 首页 / Home](README.md) · 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.11.0] - 2026-11-02
+
+回到三省六部：只有一个身份，一人公司降为皮肤。Back to the court: one identity, with the One-Person Company as a skin.
+
+### 改进 Changed
+
+- **默认打开三省六部**（英文是古罗马元老院）。「一人公司」改成「殿宇」页里的一套**皮肤**：功能一样，只换说法；标题栏不再放「现代 / 古代」切换。已经换成一人公司的用户保持原样。
+- **官名带白话注解**：古代官名后面跟一个小字说明干什么（门下省 · 审方案、兵部 · 写代码……），鼠标移上去看职掌。出现在朝堂的对话、方案、各部回奏、官职卡片和就绪检查里。
+- README、插件市场的标题与简介回到朝堂这一个故事，一人公司只提两句。
+
+### 验证 Verified
+
+- `npm test` 65 项通过，新增：新用户默认朝堂、换皮肤后保持、每个官名都有中英文白话注解、一人公司皮肤下不加注解。
+
 ## [0.10.0] - 2026-11-02
 
 一人公司：现代风格、装上即用、不打扰。One-Person Company: a modern style, works out of the box, stays quiet.
@@ -92,3 +106,6 @@
 | 测试 | 无 | 21 个端到端测试 |
 
 [0.9.0]: https://github.com/shilaoban666/dsh-imperial-court/releases/tag/v0.9.0
+
+[0.11.0]: https://github.com/shilaoban666/dsh-imperial-court/releases/tag/v0.11.0
+[0.10.0]: https://github.com/shilaoban666/dsh-imperial-court/releases/tag/v0.10.0

@@ -763,9 +763,15 @@ test('modern style: a whole session speaks One-Person Company, in Chinese and En
   }
 });
 
-test('new users start modern and auto-staffed; old users keep the court and their own staffing', () => {
+test('new users open the court (One-Person Company is a skin) and are auto-staffed; old users keep their own staffing', () => {
   const fresh = createCourt({ dataDir: tmp('court-new-') }, { log: { info() {}, error() {} } });
+  assert.equal(fresh.api.getState().ui.style, 'ancient');
+  // 换成一人公司皮肤，重开还是它
+  fresh.api.setUi({ style: 'modern' });
   assert.equal(fresh.api.getState().ui.style, 'modern');
+  fresh.api.setUi({ theme: 'default' });
+  assert.equal(fresh.api.getState().ui.style, 'modern', 'other appearance changes keep the skin');
+  fresh.api.setUi({ style: 'ancient' });
   assert.equal(fresh.api.getState().staffing, 'auto');
   // 用户亲手换人：转为手动
   const state = fresh.api.getState();
