@@ -151,10 +151,27 @@
   const db = {
     agents: AGENTS, roles: ROLES,
     rules: { separationOfPowers: true, maxReviewRounds: 3, maxSteps: 8, autonomous: params.get('auto') === '1', maxFixRounds: 2, fallbackAgentId: 'cc', isolation: 'worktree', autoMerge: false, execWrites: true, parallel: 2, maxConcurrent: 2, useMemory: true, maxRetries: 1, pressure: 'standard', stallSeconds: 300, mode: 'auto', historian: true, historianAgentId: 'cc', historianModel: 'haiku', treasury: { currency: LANG === 'en' ? 'USD' : 'CNY', rate: 7.1, budgetPerEdictUsd: 2, monthlyBudgetUsd: 60 }, prices: {} },
-    ui: { skin: 'default', theme: params.get('theme') || (LANG === 'en' ? 'roma' : 'zijin'), background: 'palace', backgroundDim: 0.45, locale: LANG },
+    // ?style=ancient 看古代风格；默认现代（一人公司），新用户就是这样
+    ui: { skin: 'default', theme: params.get('theme') || (params.get('style') === 'ancient' ? (LANG === 'en' ? 'roma' : 'zijin') : 'default'), background: 'palace', backgroundDim: 0.45, locale: LANG, style: params.get('style') === 'ancient' ? 'ancient' : 'modern' },
     edicts: [],
     workflow: [],
+    staffing: params.get('staffing') === 'manual' ? 'manual' : 'auto',
   };
+  // 开箱即用的演示：?tools=none 两个都没装 / signin 装了没登录 / all 都接好（默认：Claude Code 在岗，Codex 没装）
+  const NEEDS = {
+    claude: { zh: '需要 Claude 订阅（Pro / Max）或 Anthropic API Key', en: 'Needs a Claude subscription (Pro / Max) or an Anthropic API key' },
+    codex: { zh: '需要 ChatGPT 订阅或 OpenAI API Key', en: 'Needs a ChatGPT plan or an OpenAI API key' },
+  };
+  const TOOLS_MODE = params.get('tools') || '';
+  const setupDb = {
+    dsh: true,
+    tools: {
+      claude: { id: 'claude', name: 'Claude Code', agentId: 'cc', found: TOOLS_MODE !== 'none', signedIn: TOOLS_MODE !== 'none' && TOOLS_MODE !== 'signin', source: 'desktop', needs: NEEDS.claude },
+      codex: { id: 'codex', name: 'Codex', agentId: 'codex', found: TOOLS_MODE === 'all' || TOOLS_MODE === 'signin', signedIn: TOOLS_MODE === 'all', source: 'path', needs: NEEDS.codex },
+    },
+    jobs: { claude: null, codex: null },
+  };
+  const setupNow = () => ({ ...setupDb, staffing: db.staffing, checkedAt: Date.now() });
   const annals = [];
 
   // 一次朝会的剧本（秒）：户部与刑部并行，礼部是人工岗位（暂停等回填），刑部移文兵部
@@ -427,6 +444,14 @@
 
   // 截图/调试用：把演示朝会拨到第 N 秒，或者停掉它（停掉后才能试下旨与盖印）
   window.__preview = {
+    // 模拟 DSH 重启把正在办的任务打断
+    interrupt() {
+      if (!sim) return;
+      const e = sim.edict;
+      sim = null;
+      e.status = 'failed'; e.stage = 'failed'; e.haltedAt = e.haltedAt || 'executing'; e.interrupted = true;
+      e.note = L('DSH 重启，办到一半被打断', 'Interrupted by a DSH restart');
+    },
     at(seconds) {
       if (!sim) startSim(BRIEF());
       sim.start = Date.now() - seconds * 1000;
@@ -454,7 +479,9 @@
     const live = liveNow();
     return {
       root: 'C:\\Users\\you\\.dsh\\sansheng-liubu', locale: db.ui.locale, agents: db.agents, roles: db.roles, rules: db.rules, ui: db.ui,
-      edicts: db.edicts.map(e => ({ id: e.id, brief: e.brief, workspace: e.workspace, status: e.status, stage: e.stage, note: e.note, createdAt: e.createdAt, updatedAt: e.updatedAt, haltedAt: e.haltedAt })),
+      edicts: db.edicts.map(e => ({ id: e.id, brief: e.brief, workspace: e.workspace, status: e.status, stage: e.stage, note: e.note, createdAt: e.createdAt, updatedAt: e.updatedAt, haltedAt: e.haltedAt, interrupted: !!e.interrupted, redoneAs: e.redoneAs || '', redoOf: e.redoOf || '' })),
+      staffing: db.staffing,
+      setup: { dsh: setupDb.dsh, tools: setupDb.tools },
       busy: sim ? [sim.edict.id] : [], capacity: regimeNow().power.concurrent, full: false, live,
       recent: db.edicts[0] && db.edicts[0].messages.filter(m => m.kind === 'report' && m.durationMs).slice(-3).map(m => ({ edictId: db.edicts[0].id, roleId: m.from, agent: 'Claude Code', kind: 'order', title: m.title, ok: true, endedAt: m.at, durationMs: m.durationMs })) || [],
       ministries: ['personnel', 'revenue', 'rites', 'war', 'justice', 'works'].map(id => ({ id, title: TITLES[db.ui.locale][id], duty: db.roles[id].duty })),
@@ -497,6 +524,23 @@
     tickSim();
     const find = id => { const e = db.edicts.find(x => x.id === id); if (!e) throw new Error(L('奏折不存在', 'Decree not found')); return e; };
     if (pathname === '/state' && method === 'GET') return state();
+    if (pathname === '/setup' && method === 'GET') return setupNow();
+    if (pathname === '/setup/install' && method === 'POST') {
+      const id = body.tool;
+      setupDb.jobs[id] = { state: 'running', log: '', startedAt: Date.now() };
+      setTimeout(() => { setupDb.jobs[id] = { state: 'done', log: '', endedAt: Date.now() }; setupDb.tools[id].found = true; setupDb.tools[id].signedIn = false; }, 4000);
+      return { started: true, ...setupNow() };
+    }
+    if (pathname === '/setup/signin' && method === 'POST') { const id = body.tool; setTimeout(() => { setupDb.tools[id].signedIn = true; }, 5000); return { opened: true }; }
+    if (pathname === '/setup/connect' && method === 'POST') {
+      const tool = setupDb.tools[body.tool];
+      if (!tool.found) return { ok: false, reason: 'missing', ...setupNow() };
+      if (!tool.signedIn) return { ok: false, reason: 'signin', ...setupNow() };
+      db.agents = db.agents.map(a => (a.id === tool.agentId ? { ...a, enabled: true } : a));
+      db.roles = { ...db.roles, menxia: { ...db.roles.menxia, agentId: tool.agentId, model: '' } };
+      return { ok: true, ...setupNow() };
+    }
+    if (pathname === '/setup/auto' && method === 'POST') { db.staffing = 'auto'; return state(); }
     if (pathname === '/ui' && method === 'PUT') { db.ui = { ...db.ui, ...body }; return db.ui; }
     if (pathname === '/background' && method === 'PUT') { if (!/^data:image\//.test(body.dataUrl || '')) throw new Error('image only'); db.ui = { ...db.ui, background: 'custom', backgroundVersion: Date.now() }; return db.ui; }
     if (pathname === '/background' && method === 'DELETE') { db.ui = { ...db.ui, background: 'palace', backgroundVersion: Date.now() }; return db.ui; }
@@ -564,6 +608,7 @@
       if (m[2] === '/merge') { e.git.merged = true; e.note = L('成果已合并进 main', 'Changes merged into main'); event(e, 'merge', {}); return summary(e); }
       if (m[2] === '/discard') { e.git.discarded = true; event(e, 'discard', {}); return summary(e); }
       if (m[2] === '/fill') { fill(e, body.seq, body.text, body.skip === true); return { ok: true }; }
+      if (m[2] === '/redo') { if (sim) window.__preview.stop(); e.redoneAs = 'x'; const fresh = startSim(e.brief, e.workspace); fresh.redoOf = e.id; e.redoneAs = fresh.id; return { id: fresh.id, status: 'running' }; }
       if (m[2] === '/reject') return stop('rejected', body.note || L('驳回，未说明理由', 'Rejected without a reason'), 'reject');
       if (m[2] === '/cancel') return stop('cancelled', L('皇帝叫停', 'Halted by Caesar'), 'cancel');
     }

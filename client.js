@@ -15,10 +15,23 @@
     }
   })();
 
+  // 风格：modern = 一人公司（现代职位），ancient = 三省六部 / 古罗马。与语言各自独立，新用户默认现代
+  const STYLE_KEY = 'sansheng-liubu.style';
+  let currentStyle = (() => {
+    try {
+      const saved = localStorage.getItem(STYLE_KEY);
+      return saved === 'ancient' ? 'ancient' : 'modern';
+    } catch {
+      return 'modern';
+    }
+  })();
+  // 发给宿主的 locale 带上风格：'zh' | 'en' | 'zh-m' | 'en-m'
+  const voiceNow = () => `${currentLocale}${currentStyle === 'modern' ? '-m' : ''}`;
+
   async function apiJson(path, options = {}) {
     // Content-Type 必须是 JSON：宿主半据此拒绝跨站表单请求；X-Court-Locale 让报错按当前语言返回
     const res = await fetch(API + path, {
-      headers: { 'Content-Type': 'application/json', 'X-Court-Locale': currentLocale },
+      headers: { 'Content-Type': 'application/json', 'X-Court-Locale': voiceNow() },
       ...options,
     });
     let data = {};
@@ -101,6 +114,7 @@
   transition: color .15s;
 }
 .ssl-nav button:hover { color: var(--ssl-fg); }
+.ssl-subnav { display: flex; flex-wrap: wrap; gap: 6px; margin: -10px 0 16px; }
 .ssl-nav button.is-active { color: var(--ssl-fg); font-weight: 700; }
 .ssl-nav button.is-active::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 1px; background: currentColor;
@@ -589,6 +603,46 @@ select.ssl-input { cursor: pointer; }
 .zz-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
 .zz-tools .zz-caption { margin-top: 0; }
 
+/* 现代风格（一人公司）的任务卡：干净的卡片 + 一个主按钮，派出时盖一枚「已派出 / SENT」 */
+.bf { position: relative; }
+.bf-card {
+  position: relative; overflow: hidden; border: 1px solid var(--ssl-line2); border-radius: 12px; background: var(--ssl-raised);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 8px 24px rgba(0, 0, 0, .06); transition: border-color .15s, box-shadow .15s;
+}
+.bf-card:focus-within { border-color: var(--ssl-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ssl-brand) 18%, transparent), 0 8px 24px rgba(0, 0, 0, .08); }
+.bf-head { display: flex; align-items: center; gap: 8px; padding: 10px 14px 0; font-size: 12px; color: var(--ssl-mut); }
+.bf-tag { padding: 2px 8px; border-radius: 999px; font-weight: 600; color: var(--ssl-brand); background: color-mix(in srgb, var(--ssl-brand) 12%, transparent); }
+.bf-text {
+  display: block; width: 100%; min-height: 132px; box-sizing: border-box; margin: 0; padding: 10px 14px; border: 0; outline: none; resize: vertical;
+  font: 15px/1.6 inherit; font-family: inherit; color: var(--ssl-fg); background: transparent;
+}
+.bf-text::placeholder { color: var(--ssl-mut); }
+.bf-text:disabled { cursor: not-allowed; }
+.bf-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px 10px 14px; border-top: 1px solid var(--ssl-line); }
+.bf-hint { font-size: 12px; color: var(--ssl-mut); }
+.bf-send {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border: 0; border-radius: 8px; cursor: pointer;
+  font: 600 13.5px/1.2 inherit; font-family: inherit; color: var(--ssl-brand-fg); background: var(--ssl-brand); transition: filter .15s, transform .1s, opacity .15s;
+}
+.bf-send:hover:not(:disabled) { filter: brightness(1.08); }
+.bf-send:active:not(:disabled) { transform: scale(.97); }
+.bf-send:disabled { cursor: not-allowed; opacity: .4; }
+.bf-stamp {
+  position: absolute; right: 22%; top: 42%; padding: 6px 14px; pointer-events: none; border: 3px solid var(--ssl-ok); border-radius: 8px;
+  font: 800 20px/1 inherit; font-family: inherit; letter-spacing: .08em; color: var(--ssl-ok); opacity: 0;
+  animation: bf-stamp 2s cubic-bezier(.2, .8, .3, 1) forwards;
+}
+@keyframes bf-stamp {
+  0% { opacity: 0; transform: scale(1.8) rotate(-8deg); }
+  20% { opacity: .9; transform: scale(.96) rotate(-8deg); }
+  28% { transform: scale(1) rotate(-8deg); }
+  80% { opacity: .85; }
+  100% { opacity: 0; transform: scale(1) rotate(-8deg); }
+}
+.bf--compact .bf-text { min-height: 72px; font-size: 14px; }
+.bf--compact .bf-head { display: none; }
+@media (prefers-reduced-motion: reduce) { .bf-stamp, .zz-stamp { animation-duration: .01s; } }
+
 /* 罗马卷轴下旨框：木轴 + 莎草纸 + 火漆印（SPQR），盖下去是一枚「APPROBATVM」 */
 .sc { position: relative; }
 .sc-scroll { position: relative; display: flex; align-items: stretch; filter: drop-shadow(0 10px 16px rgba(30, 15, 5, .28)); }
@@ -1028,13 +1082,21 @@ select.ssl-input { cursor: pointer; }
 .ssl-power-table tr.is-current td:first-child { box-shadow: inset 3px 0 0 var(--ssl-seal); }
 /* 文书房：产出所在的文件夹 */
 .ssl-files-where { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 6px 8px; border-radius: 8px; background: var(--ssl-sunken); }
-/* 再接一家工具 */
-.ssl-upgrade {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin-bottom: 12px; padding: 12px 14px; border-radius: 12px; font-size: 12.5px; color: var(--ssl-fg2);
-  border: 1px solid color-mix(in srgb, var(--ssl-seal) 45%, var(--ssl-line)); background: color-mix(in srgb, var(--ssl-seal) 9%, transparent);
+/* 待你处理 / 你的团队 */
+.ssl-inbox, .ssl-team {
+  margin-bottom: 12px; padding: 10px 14px; border-radius: 12px; font-size: 12.5px; color: var(--ssl-fg2);
+  border: 1px solid var(--ssl-line2); background: var(--ssl-raised);
 }
-.ssl-upgrade .ssl-grow { min-width: 260px; }
-.ssl-upgrade b { color: var(--ssl-fg); margin-right: 4px; }
+.ssl-inbox { border-color: color-mix(in srgb, var(--ssl-seal) 45%, var(--ssl-line)); background: color-mix(in srgb, var(--ssl-seal) 7%, var(--ssl-raised)); }
+.ssl-inbox-h { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.ssl-inbox-h b, .ssl-team b { color: var(--ssl-fg); }
+.ssl-inbox-row, .ssl-team-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--ssl-line); }
+.ssl-inbox-h + .ssl-inbox-row { border-top: 0; }
+.ssl-inbox-t { color: var(--ssl-fg); font-weight: 500; }
+@media (max-width: 640px) { .ssl-bench-head > .ssl-caption { display: none; } }
+.ssl-inbox-ok { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 12.5px; color: var(--ssl-mut); }
+.ssl-team-row > .ssl-dot { color: var(--ssl-mut); }
+.ssl-dot--ok { background: var(--ssl-ok) !important; }
 /* 新旨的起手式 */
 .ssl-starters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
 .ssl-starters > span { font-size: 12px; color: var(--ssl-mut); margin-right: 2px; }
@@ -1762,6 +1824,114 @@ select.ssl-input { cursor: pointer; }
         },
       };
 
+      // ---------- 风格：现代（一人公司）/ 古代（三省六部 · 古罗马）；词汇表与宿主 lib/modern.mjs 相同 ----------
+      // <glossary> 这一段原样复制在 client.js 里（test/modern.test.mjs 校验两边一致）
+      // 古代 → 现代。中文按字面替换；单字（朕、旨、奏、部）只在不会误伤的组合里出现。
+      const ZH = [
+        ['中书省中书舍人', '首席战略官'], ['门下省给事中', '首席风控官'], ['中书舍人', '首席战略官'], ['给事中', '首席风控官'],
+        ['中书省', '首席战略官'], ['门下省', '首席风控官'], ['尚书省', '首席运营官'],
+        ['中书', '首席战略官'], ['门下', '首席风控官'], ['尚书', '首席运营官'], ['国库预算', '预算'],
+        ['三省六部', '一人公司'], ['三省', '高管'], ['六部', '各部门'],
+        ['吏部', 'IT 与行政部'], ['户部', '财务与数据部'], ['礼部', '市场与公关部'], ['兵部', '研发部'], ['刑部', '质量与法务部'], ['工部', '设计部'],
+        ['锦衣卫', 'PMO'], ['监察御史', '内部审计'], ['御史', '审计'],
+        ['史臣曰', '点评'], ['史官', '知识管理员'], ['史臣', '知识管理员'], ['史馆', '知识库'], ['实录', '知识库'], ['修史', '整理知识'],
+        ['帝王传记', '创始人档案'], ['皇帝六能', 'CEO 六项能力'], ['傀儡皇帝', '甩手掌柜'], ['皇帝', 'CEO'], ['皇上', 'CEO'], ['圣上', 'CEO'], ['陛下', '您'], ['帝王', '创始人'], ['朕', '我'],
+        ['丞相模式', '全权交办'], ['丞相', '全权交办'],
+        ['再下一道旨', '再派一个任务'], ['下一道旨', '派一个任务'], ['一道旨', '一个任务'], ['道旨', '个任务'],
+        ['圣旨', '任务'], ['圣意', '需求'], ['旨意', '需求'], ['奉旨', '按要求'], ['领旨', '接到任务'], ['遵旨', '收到'],
+        ['下旨', '派任务'], ['拟旨', '出方案'], ['新旨', '新任务'],
+        ['大朝会', '全面评审'], ['急递', '快速'], ['常朝', '标准'],
+        ['朝会全景', '协作全景'], ['朝会', '任务'], ['开朝', '开工'], ['停朝', '停工'],
+        ['朝制', '评审方式'], ['朝规', '公司规则'], ['朝局', '公司阶段'], ['朝堂', '公司'], ['朝廷', '公司'], ['朝中', '公司里'], ['本朝', '本次'],
+        ['前朝经验', '过往经验'], ['前朝', '过往'], ['皇权', '决策权'], ['权臣', '一家独大的工具'], ['傀儡', '甩手掌柜'],
+        ['加九锡', '单打独斗'], ['权倾朝野', '多面手'], ['两党争霸', '合伙人'], ['三巨头', '董事会'], ['乾纲独断', '集团化'], ['架空指数', '放权指数'],
+        ['奏折编号', '任务编号'], ['以上奏折', '以上任务'], ['份奏折', '个任务'], ['奏折', '任务'], ['奏章', '任务'], ['上奏', '提交汇报'], ['回奏', '汇报'], ['回文', '汇报'],
+        ['批红', '批准'], ['朱批', '批示'], ['准奏', '通过'], ['封驳', '否决'], ['驳回', '打回'], ['弹劾', '退回'], ['督办', '督促'],
+        ['移文', '协作请求'], ['派单', '派活'], ['办差中', '进行中'], ['办差', '干活'], ['差事', '工作'], ['部务', '部门工作'],
+        ['公文往来', '部门往来'], ['公文', '消息'], ['告示', '通知'],
+        ['群臣', 'AI 员工'], ['百官', '全员'], ['官职', '职位'], ['值房', '工作台'], ['殿宇', '外观'], ['本纪', '创始人档案'], ['功勋', '成就'], ['国库', '预算'],
+        ['官制模板', '职位模板'], ['官制', '职位设置'], ['职掌', '职责'], ['上朝', '上手'],
+        ['钦定流程', '指定流程'], ['钦定', '指定'], ['起手式', '快速开始'], ['亲裁', '亲自决定'],
+        // 锦衣卫督办的四级说法
+        ['申饬', '提醒'], ['诏狱问话', '追问'], ['考成', '逐项复盘'], ['革职留任', '最后机会'],
+        ['执行的部(?!门)', '执行的部门'], ['各部(?!门)', '各部门'], ['个部(?!门)', '个部门'], ['本部(?!门)', '本部门'], ['该部(?!门)', '该部门'], ['他部(?!门)', '其他部门'],
+      ];
+
+      // 古罗马 → 现代英文。区分大小写、按整词；替换成小写冠词开头的，句首再改成大写。
+      const EN = [
+        ['[Caesar’s will]', '[Brief]'], ["[Caesar's will]", '[Brief]'],
+        ['Caesar’s will', 'the brief'], ["Caesar's will", 'the brief'], ['his will', 'the brief'],
+        ['Caesar’s seal', 'your approval'], ["Caesar's seal", 'your approval'],
+        ['Awaiting your seal', 'Awaiting your approval'], ['Awaiting seal', 'Awaiting approval'], ['your seal', 'your approval'],
+        ['Auto-sealed', 'Auto-approved'], ['Sealed', 'Approved'], ['sealed', 'approved'], ['seal', 'approve'], ['Seal', 'Approve'],
+        ['treasury budget', 'budget'],
+        ['Report to Caesar', 'Report'], ['Halted by Caesar', 'Stopped by the CEO'],
+        ['Caesar', 'the CEO'],
+        ['Consul’s scribe', 'CSO'], ["Consul's scribe", 'CSO'],
+        ['Proconsul', 'COO'], ['Consul', 'CSO'], ['Tribune', 'CRO'],
+        ['Praetorian Guard', 'PMO'], ['Praetorian', 'PMO'], ['Praetor', 'QA & Legal'], ['Censor', 'IT & Admin'], ['Quaestor', 'Finance'],
+        ['Pontifex', 'Marketing'], ['Legate', 'Engineering'], ['Aedile', 'Design'],
+        ['Agens in rebus', 'Internal Audit'], ['agens in rebus', 'internal auditor'], ['Annalist', 'Knowledge manager'], ['annalist', 'knowledge manager'],
+        ['the Guard', 'the PMO'], ['Guard', 'PMO'], ['agentes in rebus', 'internal auditors'],
+        ['magistrates', 'departments'], ['Magistrates', 'Departments'], ['magistrate', 'department'], ['Magistrate', 'Department'],
+        ['decrees', 'tasks'], ['Decrees', 'Tasks'], ['decree', 'task'], ['Decree', 'Task'], ['edicts', 'tasks'], ['edict', 'task'],
+        ['Imperial Senate', 'One-Person Company'], ['Senate floor', 'team chat'], ['the Senate', 'the company'], ['Senate', 'company'],
+        ['impeachment', 'flag'], ['Impeachment', 'Flag'], ['impeached', 'flagged'], ['impeaches', 'flags'], ['impeach', 'flag'], ['Impeach', 'Flag'],
+        ['admonition', 'nudge'], ['Admonition', 'Nudge'], ['admonishes', 'nudges'], ['admonish', 'nudge'],
+        ['the annals', 'the knowledge base'], ['annals', 'knowledge base'], ['the Annals', 'the knowledge base'], ['Annals', 'knowledge base'],
+        ['the chronicle', 'the knowledge base'], ['chronicle', 'knowledge base'], ['Chronicle', 'knowledge base'],
+        ['treasury', 'budget'], ['Treasury', 'Budget'], ['Aerarium', 'Budget'],
+        ['Cohort', 'Team'], ['Officium', 'Live desk'], ['Res Gestae', 'Founder profile'],
+        ['standing orders', 'company rules'], ['strongman', 'dominant tool'],
+        ['Dictator Perpetuo', 'Solo'], ['Sejanus’ Rome', 'Generalist'], ['East and West', 'Partners'], ['Triumvirate', 'Board'], ['Tetrarchy', 'Group'],
+        ['Cursus publicus', 'Quick'], ['by courier', 'on the Quick path'], ['Acta', 'Run'], ['Comitia', 'Full review'],
+        ['regimes', 'stages'], ['regime', 'stage'], ['Regime', 'Stage'],
+        ['houses', 'vendors'], ['house', 'vendor'],
+        ['offices', 'roles'], ['Offices', 'Roles'], ['office', 'role'], ['Office', 'Role'],
+        ['Referral', 'Handoff'], ['referral', 'handoff'], ['Assent', 'Approved'],
+      ];
+      // </glossary>
+      // 一次替换：所有词条合成一条正则（长的在前），{占位符} 原样放过；英文句首换进来的词首字母大写，中文里换进来的英文词两边留空格
+      const escapeRe = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      function compileGlossary(entries, wordBoundary) {
+        const sorted = [...entries].sort((a, b) => b[0].length - a[0].length);
+        const lookup = new Map();
+        const parts = sorted.map(([from, to]) => {
+          const plain = from.replace(/\(\?!.*?\)$/, '');
+          lookup.set(plain, to);
+          const body = from === plain ? escapeRe(from) : `${escapeRe(plain)}${from.slice(plain.length)}`;
+          return wordBoundary ? `(?<![\w])${body}(?![\w])` : body;
+        });
+        return { re: new RegExp(['\\{\\w+\\}', ...parts].join('|'), 'g'), lookup };
+      }
+      const GLOSSARY = { zh: compileGlossary(ZH, false), en: compileGlossary(EN, true) };
+      const modernCache = { zh: new Map(), en: new Map() };
+      function modernize(text, lang) {
+        const value = String(text);
+        const key = lang === 'en' ? 'en' : 'zh';
+        const memo = modernCache[key];
+        if (memo.has(value)) return memo.get(value);
+        const { re, lookup } = GLOSSARY[key];
+        const out = value.replace(re, (match, offset, whole) => {
+          let to = lookup.get(match);
+          if (to === undefined) return match;
+          if (key === 'en') {
+            if (/^[a-z]/.test(to) && /(^|[.!?]\s+|\n\s*|[["“]\s*)$/.test(whole.slice(0, offset))) to = to[0].toUpperCase() + to.slice(1);
+            return to;
+          }
+          const before = whole[offset - 1];
+          const after = whole[offset + match.length];
+          if (/^[A-Za-z]/.test(to) && before && /[\u3400-\u9fff]/.test(before)) to = ` ${to}`;
+          if (/[A-Za-z]$/.test(to) && after && /[\u3400-\u9fff]/.test(after)) to = `${to} `;
+          return to;
+        });
+        if (memo.size < 5000) memo.set(value, out);
+        return out;
+      }
+      const isModernStyle = () => currentStyle === 'modern';
+      /** 现代风格下把古代说法换成现代说法；古代风格原样返回 */
+      const mz = text => (isModernStyle() && typeof text === 'string' && text ? modernize(text, currentLocale) : text);
+
       // ---------- 语言：zh = 三省六部，en = 古罗马元老院 ----------
       const localeStore = {
         listeners: new Set(),
@@ -1774,6 +1944,19 @@ select.ssl-input { cursor: pointer; }
             /* 存不了就只在本次生效 */
           }
           for (const listener of localeStore.listeners) listener(value);
+        },
+      };
+      // 风格与语言共用一组监听：切换任何一个，整个界面都重画
+      const styleStore = {
+        set(value) {
+          if ((value !== 'modern' && value !== 'ancient') || value === currentStyle) return;
+          currentStyle = value;
+          try {
+            localStorage.setItem(STYLE_KEY, value);
+          } catch {
+            /* 存不了就只在本次生效 */
+          }
+          for (const listener of localeStore.listeners) listener(currentLocale);
         },
       };
       const isEn = () => currentLocale === 'en';
@@ -1789,6 +1972,11 @@ select.ssl-input { cursor: pointer; }
       function t(key, vars) {
         const table = TEXT[currentLocale] || TEXT.zh;
         let text = table[key] !== undefined ? table[key] : (TEXT.zh[key] !== undefined ? TEXT.zh[key] : key);
+        // 现代风格：专门写过的用专门写的，其余按词汇表换说法
+        if (isModernStyle()) {
+          const own = MODERN_TEXT[currentLocale] && MODERN_TEXT[currentLocale][key];
+          text = own !== undefined ? own : mz(text);
+        }
         if (vars) text = String(text).replace(/\{(\w+)\}/g, (match, name) => (vars[name] !== undefined ? String(vars[name]) : match));
         return text;
       }
@@ -1832,26 +2020,70 @@ select.ssl-input { cursor: pointer; }
       const LEGACY_PARTY = {};
       Object.entries(ROLE_TEXT.zh).forEach(([id, item]) => { LEGACY_PARTY[item.title] = id; });
       const partyId = key => LEGACY_PARTY[key] || key;
+      // 现代风格：大公司里人人都懂的职位（与宿主 lib/modern.mjs 的 MODERN_ROLE_TEXT 一致，多了头像上的字）
+      const MODERN_ROLE_TEXT = {
+        zh: {
+          emperor: { title: 'CEO', glyph: 'CEO' },
+          ministries: { title: '各部门', glyph: '部' },
+          zhongshu: { title: '首席战略官', glyph: '策', duty: '出方案、拆任务' },
+          menxia: { title: '首席风控官', glyph: '控', duty: '挑毛病，可一票否决' },
+          shangshu: { title: '首席运营官', glyph: '运', duty: '派活与汇总' },
+          personnel: { title: 'IT 与行政部', glyph: 'IT', duty: '账号、权限、配置' },
+          revenue: { title: '财务与数据部', glyph: '财', duty: '数据、表格、报表、财务' },
+          rites: { title: '市场与公关部', glyph: '市', duty: '文案、汇报、PPT、对外沟通' },
+          war: { title: '研发部', glyph: '研', duty: '写代码、构建、部署' },
+          justice: { title: '质量与法务部', glyph: '质', duty: '测试、审查、合规' },
+          works: { title: '设计部', glyph: '设', duty: '界面、视觉、设计' },
+          jinyiwei: { title: 'PMO', glyph: 'PMO', duty: '盯进度：卡住就处理、推脱就督促、超预算就停' },
+          yushi: { title: '内部审计', glyph: '审', duty: '逐件核查各部门的产出，不实就退回重做' },
+          historian: { title: '知识管理员', glyph: '知' },
+        },
+        en: {
+          emperor: { title: 'CEO', glyph: 'CEO' },
+          ministries: { title: 'Departments', glyph: 'DEP' },
+          zhongshu: { title: 'Chief Strategy Officer', glyph: 'CSO', duty: 'Drafts the plan and splits the work' },
+          menxia: { title: 'Chief Risk Officer', glyph: 'CRO', duty: 'Finds the holes and can veto the plan' },
+          shangshu: { title: 'Chief Operating Officer', glyph: 'COO', duty: 'Assigns the work and sums it up' },
+          personnel: { title: 'IT & Admin', glyph: 'IT', duty: 'Accounts, permissions, configuration' },
+          revenue: { title: 'Finance & Analytics', glyph: 'FIN', duty: 'Data, spreadsheets, reports, finance' },
+          rites: { title: 'Marketing & Comms', glyph: 'MKT', duty: 'Copy, briefings, slides, outside communication' },
+          war: { title: 'Engineering', glyph: 'ENG', duty: 'Code, builds, deployment' },
+          justice: { title: 'QA & Legal', glyph: 'QA', duty: 'Tests, review, compliance' },
+          works: { title: 'Design', glyph: 'DSN', duty: 'UI, visuals, design' },
+          jinyiwei: { title: 'PMO', glyph: 'PMO', duty: 'Watches progress: unblocks stalls, chases excuses, stops overspending' },
+          yushi: { title: 'Internal Audit', glyph: 'AUD', duty: 'Checks each department\'s output and sends back what does not hold up' },
+          historian: { title: 'Knowledge manager', glyph: 'KM' },
+        },
+      };
+      const roleTable = () => (isModernStyle() ? MODERN_ROLE_TEXT : ROLE_TEXT)[currentLocale];
       const roleName = key => {
-        const item = ROLE_TEXT[currentLocale][partyId(key)];
+        const item = roleTable()[partyId(key)];
         return item ? item.title : String(key || '');
       };
       const roleGlyph = key => {
-        const item = ROLE_TEXT[currentLocale][partyId(key)];
+        const item = roleTable()[partyId(key)];
         return item ? item.glyph : String(key || '?').slice(0, 1);
       };
-      /** 职掌：用户改过的原样显示；还是某种语言的默认值时，按当前语言显示 */
+      /** 职掌：用户改过的原样显示；还是某种语言、某种风格的默认值时，按当前的显示 */
       const roleDuty = (id, duty) => {
         const own = String(duty || '').trim();
-        const zh = ROLE_TEXT.zh[id] && ROLE_TEXT.zh[id].duty;
-        const en = ROLE_TEXT.en[id] && ROLE_TEXT.en[id].duty;
-        if (!own || own === zh || own === en) return (ROLE_TEXT[currentLocale][id] || {}).duty || own;
+        const defaults = [ROLE_TEXT.zh, ROLE_TEXT.en, MODERN_ROLE_TEXT.zh, MODERN_ROLE_TEXT.en].map(table => table[id] && table[id].duty).filter(Boolean);
+        if (!own || defaults.includes(own)) return (roleTable()[id] || {}).duty || own;
         return own;
       };
       const latinClass = text => (/^[\x20-\x7e]{2,}$/.test(String(text || '')) ? 'is-latin' : '');
 
+      /** 按风格取一行 [中文, English, …]：现代风格有专门写的用专门写的，否则把古代那行换说法 */
+      const styledRow = (table, modern, key) => {
+        const own = isModernStyle() && modern && modern[key];
+        if (own) return own;
+        const row = table[key];
+        return row && isModernStyle() ? row.map(mz) : row;
+      };
+
       const SEALS = { treasury: ['帑', 'AER'], files: ['档', 'TAB'], app: ['三', 'SPQR'], roster: ['职', 'IX'], flow: ['流', 'ITER'], exec: ['令', 'ACTA'], chat: ['议', 'VOX'], edict: ['旨', 'E'], annals: ['史', 'LIB'] };
-      const sealText = name => (SEALS[name] || ['?', '?'])[isEn() ? 1 : 0];
+      const MODERN_SEALS = { treasury: ['账', 'FIN'], files: ['档', 'DOC'], app: ['一', 'OPC'], roster: ['职', 'ORG'], flow: ['流', 'FLOW'], exec: ['办', 'RUN'], chat: ['聊', 'CHAT'], edict: ['任', 'TASK'], annals: ['知', 'KB'] };
+      const sealText = name => (styledRow(SEALS, MODERN_SEALS, name) || ['?', '?'])[isEn() ? 1 : 0];
       function Seal({ name, size }) {
         const full = sealText(name);
         // 极小的印章放不下 ACTA / SPQR，只留首字母
@@ -1891,7 +2123,13 @@ select.ssl-input { cursor: pointer; }
         skipped: ['已跳过', 'Skipped', 'mut'],
         idle: ['空闲', 'Idle', 'mut'],
       };
-      const statusLabel = status => (STATUS[status] ? STATUS[status][isEn() ? 1 : 0] : status);
+      const MODERN_STATUS = {
+        queued: ['排队中', 'Queued'], running: ['进行中', 'In progress'], 'awaiting-input': ['待你补充', 'Needs your input'],
+        'awaiting-approval': ['待批准', 'Awaiting approval'], done: ['已完成', 'Done'], failed: ['没办成', 'Failed'],
+        rejected: ['已打回', 'Sent back'], cancelled: ['已暂停', 'Stopped'], pending: ['未开始', 'Pending'],
+        'handed-off': ['已出工单', 'Work order'], skipped: ['已跳过', 'Skipped'], idle: ['空闲', 'Idle'],
+      };
+      const statusLabel = status => (STATUS[status] ? styledRow(STATUS, MODERN_STATUS, status)[isEn() ? 1 : 0] : status);
 
       // 公文性质 → [中文, English, 色调, 白话说明（中）, 白话说明（英）]
       const KINDS = {
@@ -1917,9 +2155,38 @@ select.ssl-input { cursor: pointer; }
         chronicle: ['修史', 'Chronicle', 'plain', '史官把这份奏折值得记住的写进实录', 'The annalist writes what is worth keeping into the chronicle'],
       };
       const LEGACY_KIND = { 拟旨: 'draft', 送审: 'submit', 封驳: 'veto', 准奏: 'assent', 保留: 'overrule', 派单: 'dispatch', 差事: 'order', 重办: 'retry', 回文: 'report', 移文: 'referral', 复核: 'audit', 补救: 'remedy', 上奏: 'memorial', 文书: 'notice' };
+      // 现代风格：[中文, English, 色调, 白话说明（中）, 白话说明（英）]，色调沿用古代那张表
+      const MODERN_KINDS = {
+        draft: ['出方案', 'Brief', '', '你把需求交给首席战略官出方案', 'You hand the brief to the CSO to plan'],
+        submit: ['送审', 'For review', '', '首席战略官把方案交给首席风控官审', 'The CSO sends the plan to the CRO for review'],
+        veto: ['否决', 'Veto', '', '审核不通过：首席风控官把方案打回重做', 'Review failed: the CRO sends the plan back'],
+        assent: ['通过', 'Approved', '', '审核通过，可以派活', 'Review passed; work can be assigned'],
+        overrule: ['保留', 'Overruled', '', '全权交办时否决未解决，按最后一版执行，意见转为注意事项', 'Full delegation: unresolved vetoes become cautions and the last draft goes ahead'],
+        dispatch: ['派活', 'Assign', '', '首席运营官把方案拆成工作派给各部门', 'The COO splits the plan into work for the departments'],
+        order: ['工作', 'Work item', '', '派给某个部门的一件具体工作', 'One concrete piece of work for one department'],
+        retry: ['重做', 'Retry', '', '失败后带着失败原因再做一次', 'A failed item tried again with the error in hand'],
+        report: ['汇报', 'Report', '', '做完后的汇报', 'The report back after the work'],
+        referral: ['协作请求', 'Handoff', '', '某部门请另一个部门帮忙，由首席运营官转办（只转一层）', 'One department asks another for help; the COO forwards it (one hop only)'],
+        fill: ['你来填', 'Filled in', '', '只有图形界面的岗位，由你手动完成并填写结果', 'A GUI-only role: you did the work and filled in the result'],
+        audit: ['复核', 'Check', '', '首席风控官按验收标准检查结果', 'The CRO checks the results against the acceptance criteria'],
+        remedy: ['补救', 'Remedy', '', '复核不过：首席战略官拟补救工作，各部门补做', 'The check failed: remedial work is planned and carried out'],
+        memorial: ['提交汇报', 'Report', '', '首席运营官汇总结果，交你批准', 'The COO sums up and asks for your approval'],
+        notice: ['通知', 'Notice', '', '说明：评审方式、隔离分支、过往经验、知识库、未办的协作请求等', 'Notices: review level, isolation, lessons, knowledge base, dropped handoffs'],
+        inspect: ['核查', 'Audit', '', '内部审计检查这件工作的产出', 'Internal Audit checks this item’s output'],
+        impeach: ['退回', 'Flag', '', '审计发现产出不实（缺文件、说的和做的对不上），退回重做', 'Audit found the output does not hold up; the item is redone'],
+        admonish: ['督促', 'Nudge', '', 'PMO 发现推脱或失败，逐级督促重做（提醒 → 追问 → 逐项复盘 → 最后机会）', 'The PMO saw shirking or failure and escalates the redo (reminder → questions → checklist → last chance)'],
+        guard: ['PMO', 'PMO', '', 'PMO 出手：卡住叫停、超预算停工', 'The PMO stepped in: stopped a stalled task or overspending'],
+        chronicle: ['整理知识', 'Knowledge', '', '知识管理员把这次值得记住的写进知识库', 'The knowledge manager saves what is worth keeping'],
+      };
       const kindOf = kind => KINDS[LEGACY_KIND[kind] || kind];
-      const kindLabel = kind => { const item = kindOf(kind); return item ? item[isEn() ? 1 : 0] : String(kind || ''); };
-      const kindGloss = kind => { const item = kindOf(kind); return item ? item[isEn() ? 4 : 3] : ''; };
+      const kindRow = kind => {
+        const key = LEGACY_KIND[kind] || kind;
+        if (!KINDS[key]) return null;
+        const own = isModernStyle() && MODERN_KINDS[key];
+        return own ? [own[0], own[1], KINDS[key][2], own[3], own[4]] : styledRow(KINDS, null, key);
+      };
+      const kindLabel = kind => { const item = kindRow(kind); return item ? item[isEn() ? 1 : 0] : String(kind || ''); };
+      const kindGloss = kind => { const item = kindRow(kind); return item ? item[isEn() ? 4 : 3] : ''; };
       const kindTone = item => (item.ok === false ? 'err' : (kindOf(item.kind) || [])[2] || 'plain');
       function KindPill({ item }) {
         return h('span', { className: cx('ssl-pill', `ssl-pill--${kindTone(item)}`), title: kindGloss(item.kind) }, kindLabel(item.kind));
@@ -1931,7 +2198,13 @@ select.ssl-input { cursor: pointer; }
         reject: ['驳回', 'Rejected'], cancel: ['叫停', 'Halted'], fail: ['失败', 'Failed'], remedy: ['补救', 'Remedy'],
         merge: ['合并', 'Merged'], discard: ['丢弃分支', 'Discarded'], guard: ['锦衣卫', 'Guard'],
       };
-      const eventLabel = type => (EVENTS[type] ? EVENTS[type][isEn() ? 1 : 0] : type);
+      const MODERN_EVENTS = {
+        open: ['开工', 'Started'], stage: ['阶段', 'Stage'], message: ['消息', 'Message'], task: ['部门完成', 'Item done'],
+        dispatch: ['派活', 'Assigned'], memorial: ['提交汇报', 'Reported'], autoApprove: ['自动批准', 'Auto-approved'], approve: ['批准', 'Approved'],
+        reject: ['打回', 'Sent back'], cancel: ['暂停', 'Stopped'], fail: ['失败', 'Failed'], remedy: ['补救', 'Remedy'],
+        merge: ['合并', 'Merged'], discard: ['丢弃分支', 'Discarded'], guard: ['PMO', 'PMO'],
+      };
+      const eventLabel = type => (EVENTS[type] ? styledRow(EVENTS, MODERN_EVENTS, type)[isEn() ? 1 : 0] : type);
 
       const ADAPTER_LABEL = { cli: ['命令行', 'Command line'], self: ['DSH 本体', 'DSH itself'], manual: ['人工', 'Manual'] };
 
@@ -1943,7 +2216,11 @@ select.ssl-input { cursor: pointer; }
         { id: 'rechecking', label: ['门下复核', 'Audit'] },
         { id: 'memorial', label: ['上奏批红', 'Seal'] },
       ];
-      const flowLabel = step => step.label[isEn() ? 1 : 0];
+      const MODERN_FLOW = {
+        drafting: ['出方案', 'Plan'], reviewing: ['审方案', 'Review'], dispatching: ['派活', 'Assign'],
+        executing: ['各部门干活', 'Work'], rechecking: ['复核', 'Check'], memorial: ['你来批准', 'Approve'],
+      };
+      const flowLabel = step => (isModernStyle() && MODERN_FLOW[step.id] ? MODERN_FLOW[step.id] : step.label)[isEn() ? 1 : 0];
       const isLive = status => status === 'running' || status === 'awaiting-input';
 
       function timeText(ts) {
@@ -2037,7 +2314,29 @@ select.ssl-input { cursor: pointer; }
 
       function Composer(props) {
         useLocale();
+        if (isModernStyle()) return h(Brief, props);
         return isEn() ? h(Scroll, props) : h(Zouzhe, props);
+      }
+
+      /** 现代风格的任务卡：写需求，按「派出」；盖一枚「已派出」表示收到了 */
+      function Brief({ value, onChange, onSubmit, canSubmit, sending, disabled, placeholder, extra, caption, stamp, compact, autoFocus }) {
+        return h('div', { className: cx('bf', compact && 'bf--compact') },
+          h('div', { className: 'bf-card' },
+            h('div', { className: 'bf-head', 'aria-hidden': true },
+              h('span', { className: 'bf-tag' }, isEn() ? 'Brief' : '需求'),
+              h('span', null, isEn() ? 'What should your team get done?' : '想让团队办成什么事？')),
+            h('textarea', {
+              className: 'bf-text', value, disabled, placeholder, autoFocus, 'aria-label': t('briefLabel'),
+              onChange: event => onChange(event.target.value),
+              onKeyDown: submitOnEnter(canSubmit, onSubmit),
+            }),
+            h('div', { className: 'bf-foot' },
+              h('span', { className: 'bf-hint' }, compact ? '' : t('issueHint')),
+              h('button', { className: 'bf-send', disabled: !canSubmit, onClick: onSubmit, title: t('sealTitle') },
+                sending ? '…' : (isEn() ? 'Send ↵' : '派出 ↵'))),
+            stamp ? h('span', { key: stamp, className: 'bf-stamp', 'aria-hidden': true }, isEn() ? 'SENT' : '已派出') : null),
+          extra ? h('div', { className: 'zz-slips' }, extra) : null,
+          caption ? h('div', { className: 'zz-caption' }, caption) : null);
       }
 
       const submitOnEnter = (canSubmit, onSubmit) => event => {
@@ -2301,7 +2600,7 @@ select.ssl-input { cursor: pointer; }
           if (!template) return;
           const roles = { ...state.roles };
           Object.entries(template.duties[isEn() ? 'en' : 'zh']).forEach(([roleId, duty]) => { roles[roleId] = { ...(roles[roleId] || {}), duty }; });
-          onSave({ roles }, t('templateApplied', { name: template.name[isEn() ? 1 : 0] }));
+          onSave({ roles }, t('templateApplied', { name: mz(template.name[isEn() ? 1 : 0]) }));
         };
         const check = (key, label, title) => h('label', { className: 'ssl-check', title },
           h('input', { type: 'checkbox', checked: key === 'isolation' ? rules.isolation !== 'off' : rules[key] !== false && (key !== 'autoMerge' || rules.autoMerge === true), onChange: event => {
@@ -2344,7 +2643,7 @@ select.ssl-input { cursor: pointer; }
                 onChange: event => { applyTemplate(event.target.value); event.target.value = ''; },
               },
               h('option', { value: '' }, t('applyTemplate')),
-              Object.entries(COURT_TEMPLATES).map(([key, template]) => h('option', { key, value: key }, template.name[isEn() ? 1 : 0]))))),
+              Object.entries(COURT_TEMPLATES).map(([key, template]) => h('option', { key, value: key }, mz(template.name[isEn() ? 1 : 0])))))),
           h('div', { className: 'ssl-rules2' },
             check('isolation', t('ruleIsolation'), t('ruleIsolationTitle')),
             check('execWrites', t('ruleWrites'), t('ruleWritesTitle')),
@@ -2521,7 +2820,7 @@ select.ssl-input { cursor: pointer; }
         full: [['完全权限', '放开各工具自己的确认，可跑命令、联网、改工作目录外的文件'], ['Full access', 'Lifts each tool’s own confirmations: commands, network and files outside the folder']],
       };
       const permissionInfo = key => {
-        const row = (PERMISSION_INFO[key] || PERMISSION_INFO.workspace)[isEn() ? 1 : 0];
+        const row = (PERMISSION_INFO[key] || PERMISSION_INFO.workspace)[isEn() ? 1 : 0].map(mz);
         return { name: row[0], desc: row[1] };
       };
       const MODE_KEYS = ['', 'express', 'standard', 'grand'];
@@ -2710,7 +3009,8 @@ select.ssl-input { cursor: pointer; }
           const agent = state.agents.find(item => item.id === (state.roles[roleId] || {}).agentId);
           return !agent || agent.enabled === false;
         }).length;
-        const note = broken ? t('courtNoteBroken', { n: broken }) : state.edicts.length ? '' : t('courtNoteFirst');
+        // 自动编制会自己补齐岗位；只有真缺人时才提醒（头一回用的引导交给「你的团队」）
+        const note = broken ? t('courtNoteBroken', { n: broken }) : '';
         const composerProps = {
           value: brief,
           onChange: setBrief,
@@ -2760,7 +3060,8 @@ select.ssl-input { cursor: pointer; }
               note ? h('div', { className: 'ssl-court-note' },
                 h('span', { className: 'ssl-grow' }, note),
                 h('button', { className: 'ssl-btn ssl-btn--sm', onClick: () => onGo('agents') }, t('goSetup'))) : null,
-              h(UpgradeCard, { state, notify, onRefresh, onGo }),
+              h(Inbox, { state, onSelect, notify, onRefresh }),
+              h(TeamCard, { state, notify, onRefresh, onGo }),
               h(Composer, {
                 ...composerProps,
                 placeholder: t('briefPh'),
@@ -2809,10 +3110,20 @@ select.ssl-input { cursor: pointer; }
         ['写文档', 'Write docs', '给 <模块> 写一份使用说明：安装、最小示例、常见问题，放在 docs/ 下。', 'Write a guide for <module>: install, a minimal example and FAQ, under docs/.'],
         ['写首诗', 'Write a poem', '写一首关于 <主题> 的七言绝句，附一句白话解释。', 'Write a short poem about <theme>, with one line explaining it.'],
       ];
+      // 现代风格：一人公司天天要干的活，写代码以外的也有
+      const MODERN_STARTERS = [
+        ['写产品介绍', 'Product one-pager', '给 <产品> 写一页产品介绍：解决谁的什么问题、三个卖点、价格与下一步行动，语气专业但不浮夸。', 'Write a one-page intro for <product>: whose problem it solves, three selling points, pricing and a call to action. Professional, not hype.'],
+        ['竞品调研', 'Competitor scan', '调研 <领域> 的 3–5 个主要竞品：定位、价格、优缺点，做成对比表，最后给出我们该怎么差异化的三条建议。', 'Research 3–5 main competitors in <field>: positioning, pricing, strengths and weaknesses, as a comparison table, plus three ways we can stand out.'],
+        ['写推广文案', 'Launch copy', '为 <产品或活动> 写推广文案：一条朋友圈、一条小红书、一条 X/Twitter，各配一个标题，风格贴合各平台。', 'Write launch copy for <product or event>: one LinkedIn post, one X/Twitter thread opener and one email subject + body, each in the platform’s style.'],
+        ['做 PPT 大纲', 'Pitch outline', '为 <主题> 做一份 10 页以内的 PPT 大纲：每页标题、三个要点和建议配图，最后一页是行动号召。', 'Outline a pitch deck of at most 10 slides on <topic>: a title, three points and a suggested visual per slide, ending with a call to action.'],
+        ['修 bug', 'Fix a bug', STARTERS[0][2], STARTERS[0][3]],
+        ['写周报', 'Weekly report', STARTERS[2][2], STARTERS[2][3]],
+        ['整理数据', 'Tidy data', STARTERS[3][2], STARTERS[3][3]],
+      ];
       function DecreeStarters({ onPick }) {
         return h('div', { className: 'ssl-starters' },
           h('span', null, zhEn('起手式', 'Start from')),
-          STARTERS.map(row => h('button', { key: row[0], className: 'ssl-chip', title: zhEn(row[2], row[3]), onClick: () => onPick(zhEn(row[2], row[3])) }, zhEn(row[0], row[1]))));
+          (isModernStyle() ? MODERN_STARTERS : STARTERS).map(row => h('button', { key: row[0], className: 'ssl-chip', title: zhEn(row[2], row[3]), onClick: () => onPick(zhEn(row[2], row[3])) }, zhEn(row[0], row[1]))));
       }
 
       /** 回奏里常见的 Markdown：标题、列表、代码块、粗体、行内代码；其余照原样显示（不用 innerHTML） */
@@ -3209,9 +3520,33 @@ select.ssl-input { cursor: pointer; }
               h('span', { className: 'ssl-role-title' }, title),
               current === value ? h('span', { className: 'ssl-pill ssl-pill--seal' }, t('inUse')) : null),
             h('div', { className: 'ssl-caption', style: { marginTop: '2px' } }, desc))));
+        if (isModernStyle()) {
+          return h('div', { className: 'ssl-grid' },
+            option('zh', '中文', '界面、消息与给模型的提示词都用中文。', '中'),
+            option('en', 'English', 'Interface, messages and prompts in English.', 'EN'));
+        }
         return h('div', { className: 'ssl-grid' },
           option('zh', '中文 · 三省六部', '中书拟旨、门下封驳、尚书派单、六部办差；奏折竖排、朱印下旨。', '三'),
           option('en', 'English · Roman Senate', 'The Consul drafts, the Tribune vetoes, the Proconsul dispatches to six magistrates. Papyrus scroll and SPQR seal.', 'SPQR'));
+      }
+
+      /** 风格：现代（一人公司）/ 古代（三省六部 · 古罗马）。两种风格都有中英文 */
+      function StyleCard() {
+        const option = (value, seal, title, desc) => h('button', {
+          key: value, className: cx('ssl-card ssl-pick', currentStyle === value && 'is-active'), onClick: () => chooseStyle(value),
+        },
+        h('div', { className: 'ssl-row', style: { alignItems: 'center' } },
+          h('span', { className: 'ssl-seal ssl-seal--sm' }, seal),
+          h('div', { className: 'ssl-grow' },
+            h('div', { className: 'ssl-between' },
+              h('span', { className: 'ssl-role-title' }, title),
+              currentStyle === value ? h('span', { className: 'ssl-pill ssl-pill--seal' }, t('inUse')) : null),
+            h('div', { className: 'ssl-caption', style: { marginTop: '2px' } }, desc))));
+        return h('div', { className: 'ssl-grid', style: { marginBottom: '10px' } },
+          option('modern', '一', isEn() ? 'Modern · One-Person Company' : '现代 · 一人公司',
+            isEn() ? 'CEO, CSO, CRO, COO and departments: titles everyone already knows. Plain task card.' : 'CEO、首席战略官、首席风控官、首席运营官和各部门：人人都懂的职位，简洁的任务卡。'),
+          option('ancient', '三', isEn() ? 'Ancient · Roman Senate' : '古代 · 三省六部',
+            isEn() ? 'Consul, Tribune, Proconsul and magistrates. Papyrus scroll and SPQR seal.' : '中书拟旨、门下封驳、尚书派单、六部办差；奏折竖排、朱印下旨。'));
       }
 
       function HallTab({ state, onRefresh, notify }) {
@@ -3340,6 +3675,7 @@ select.ssl-input { cursor: pointer; }
 
         return h('div', null,
           h(Section, { title: t('langTitle'), note: t('langNote') }),
+          h(StyleCard),
           h(LanguageCard, { ui, onChoose: chooseLocale }),
           h(Section, { title: t('themesTitle'), note: t('themesNote') }),
           h('div', { className: 'ssl-grid' }, themeCards),
@@ -3818,6 +4154,7 @@ select.ssl-input { cursor: pointer; }
               courtStore.state = data;
               courtStore.error = '';
               if (data && data.ui && data.ui.locale) localeStore.set(data.ui.locale);
+              if (data && data.ui && data.ui.style) styleStore.set(data.ui.style);
               if (data && data.rules && data.rules.treasury) moneySettings = data.rules.treasury;
               courtStore.emit();
             })
@@ -3906,8 +4243,24 @@ select.ssl-input { cursor: pointer; }
           h('button', { className: cx(currentLocale === 'en' && 'is-active'), onClick: () => choose('en') }, 'EN'));
       }
 
+      /** 换风格：现代（一人公司）/ 古代（三省六部 · 古罗马）。换成现代时古风整套主题一并换回默认（宿主同样处理） */
+      function chooseStyle(value) {
+        if (value === currentStyle) return Promise.resolve();
+        styleStore.set(value);
+        if (value === 'modern' && ANCIENT_THEMES.includes(activeTheme)) applyTheme('default');
+        return apiJson('/ui', { method: 'PUT', body: JSON.stringify({ style: value }) }).then(courtStore.pull).catch(() => {});
+      }
+      const ANCIENT_THEMES = ['gong', 'mo', 'zijin', 'marble', 'nox', 'roma'];
+
+      function StyleSwitch() {
+        return h('div', { className: 'ssl-lang', role: 'group', 'aria-label': 'Style' },
+          h('button', { className: cx(currentStyle === 'modern' && 'is-active'), title: isEn() ? 'Modern: One-Person Company' : '现代：一人公司', onClick: () => chooseStyle('modern') }, isEn() ? 'Modern' : '现代'),
+          h('button', { className: cx(currentStyle === 'ancient' && 'is-active'), title: isEn() ? 'Ancient: Roman Senate' : '古代：三省六部', onClick: () => chooseStyle('ancient') }, isEn() ? 'Ancient' : '古代'));
+      }
+
       // ================= 朝局与帝王传记 =================
-      const zhEn = (zh, en) => (isEn() ? en : zh);
+      // 现代风格下同样换成现代说法
+      const zhEn = (zh, en) => mz(isEn() ? en : zh);
       const REGIME_KEYS = ['jiuxi', 'quanchen', 'liangdang', 'sanju', 'qiangang'];
       // 五级朝局：[中, 英] 各自的 名字 / 条件 / 典故 / 得 / 失
       const REGIME_INFO = {
@@ -3932,8 +4285,32 @@ select.ssl-input { cursor: pointer; }
           ['Tetrarchy', 'Four tools or more', 'Diocletian shared the empire among four, yet kept the final word', 'Every office goes to the house that suits it, and no house can rule alone', 'More tools to keep in order; a decree still calls only the one or two that fit'],
         ],
       };
+      // 现代风格：公司阶段。名字 / 条件 / 打个比方 / 得 / 失
+      const MODERN_REGIME_INFO = {
+        jiuxi: [
+          ['单打独斗', '只用一家工具，模型也出自同一家', '像一个人既写方案又自己验收：快，但没人挑毛病', '最快最省，缓存命中最高', '自己审自己，问题容易漏到你手上'],
+          ['Solo', 'One tool, one model family', 'One person writes and signs off their own work: fast, but nobody checks it', 'Fastest and cheapest, best cache reuse', 'Self-review lets problems slip through to you'],
+        ],
+        quanchen: [
+          ['多面手', '一家工具，但用了不同家的模型', '同一个团队换着脑子想，比单打独斗多一层把关', '不同模型盲区不同', '都在同一个工具里跑，工具层面的毛病会一起犯'],
+          ['Generalist', 'One tool calling models from different vendors', 'Same team, different brains: one more layer of checking', 'Different models have different blind spots', 'Everything runs in one tool, so tool-level mistakes are shared'],
+        ],
+        liangdang: [
+          ['合伙人', '两家工具，如 DSH + Claude Code', '两个合伙人：一个干、一个审，是真正的交叉检查', '别家来审，问题在你看到之前就被拦下', '来回多、花钱多；意见不合时要你拍板'],
+          ['Partners', 'Two tools, e.g. DSH + Claude Code', 'Two partners: one does, one checks. A real cross-check', 'Another vendor reviews, so problems are caught before you see them', 'More rounds and spend; you settle disagreements'],
+        ],
+        sanju: [
+          ['董事会', '三家工具，如 DSH + Claude Code + Codex', '三方各管擅长的事，互相制衡', '各展所长，审议可以多数表决', '交接多、花钱多'],
+          ['Board', 'Three tools, e.g. DSH + Claude Code + Codex', 'Three parties each run what they do best and keep each other in check', 'Each does what it does best; reviews can go by majority', 'More hand-offs and spend'],
+        ],
+        qiangang: [
+          ['集团化', '四家及以上工具', '像集团一样按专长分工：每个岗位交给最合适的那家', '量才用人，没有哪家能一家独大', '要管的工具多；每个任务仍只调用对口的一两家'],
+          ['Group', 'Four tools or more', 'Run like a group: every role goes to the vendor that suits it', 'Right tool for every job; no single vendor dominates', 'More tools to manage; each task still calls only one or two'],
+        ],
+      };
       const regimeInfo = key => {
-        const row = (REGIME_INFO[key] || REGIME_INFO.jiuxi)[isEn() ? 1 : 0];
+        const table = isModernStyle() ? MODERN_REGIME_INFO : REGIME_INFO;
+        const row = (table[key] || table.jiuxi)[isEn() ? 1 : 0];
         return { name: row[0], when: row[1], story: row[2], gain: row[3], cost: row[4] };
       };
       // ---------- 朝局定皇权：看得见多少、能决定多少、能办成多少（宿主按现任官员算好，放在 state.regime.power） ----------
@@ -3948,7 +4325,7 @@ select.ssl-input { cursor: pointer; }
         ['公文往来与朝会全景', 'Dispatches and the panorama'],
         ['原始过程（命令与输出）', 'Raw process (commands and output)'],
       ];
-      const seeName = n => SEE_TEXT[n][isEn() ? 1 : 0];
+      const seeName = n => mz(SEE_TEXT[n][isEn() ? 1 : 0]);
       const seeList = n => [1, 2, 3, 4, 5].filter(i => i <= n).map(seeName).join(isEn() ? ', ' : '、');
       const decideList = power => [zhEn('批红', 'Seal'), zhEn('叫停', 'Halt'), power.mode ? zhEn('选朝制', 'Pick procedure') : '', power.reject ? zhEn('驳回 / 丢弃分支', 'Reject / discard') : '']
         .filter(Boolean).join(isEn() ? ', ' : '、');
@@ -4004,51 +4381,178 @@ select.ssl-input { cursor: pointer; }
         return gains;
       }
 
-      // ---------- 只用一家工具时：告诉你再接一家能多得什么，并一键接入 ----------
-      const UPGRADE_KEY = 'sansheng-liubu.upgrade-dismissed';
-      const INSTALL_HINTS = { claude: 'npm i -g @anthropic-ai/claude-code', codex: 'npm i -g @openai/codex', gemini: 'npm i -g @google/gemini-cli', qwen: 'npm i -g @qwen-code/qwen-code' };
-      function UpgradeCard({ state, notify, onRefresh, onGo }) {
-        const regime = state.regime;
-        const [hidden, setHidden] = useState(() => {
-          try { return !!regime && localStorage.getItem(UPGRADE_KEY) === regime.level; } catch { return false; }
-        });
+      // ---------- 待你处理：只把需要你出手的事摆出来；没有就一行「一切正常」 ----------
+      function Inbox({ state, onSelect, notify, onRefresh }) {
         const [busy, setBusy] = useState('');
-        if (!regime || !regime.power || !regime.power.bound || regime.rank > 2 || hidden || !regime.powers) return null;
-        const holding = new Set(Object.values(state.roles || {}).map(role => role.agentId));
-        // 候选：有命令行、还没任职的工具（停用的也算，接入时顺手启用）
-        const candidates = state.agents.filter(agent => agent.adapter === 'cli' && !holding.has(agent.id)).slice(0, 3);
-        const gains = gainsOf(regime.power, regime.powers.liangdang);
-        const dismiss = () => {
-          try { localStorage.setItem(UPGRADE_KEY, regime.level); } catch { /* 存不了就只在这次隐藏 */ }
-          setHidden(true);
-        };
-        // 接入：先探测 CLI 在不在，在就启用并让它当门下省（别家来审，封驳才算数）
-        const join = agent => {
-          setBusy(agent.id);
-          apiJson('/probe', { method: 'POST', body: JSON.stringify({ agentId: agent.id }) })
-            .then(result => {
-              if (!result || !result.ok) {
-                const hint = INSTALL_HINTS[String(agent.command || '').replace(/\.cmd$/i, '').toLowerCase()];
-                notify(zhEn(`本机没找到 ${agent.command}。${hint ? `先在终端运行 ${hint} 并登录一次，` : '先装好它，'}再点一次。`, `${agent.command} was not found. ${hint ? `Run ${hint} and sign in once, ` : 'Install it, '}then try again.`), 'err');
-                return;
-              }
-              const agents = state.agents.map(item => (item.id === agent.id ? { ...item, enabled: true } : item));
-              const roles = { ...state.roles, menxia: { ...(state.roles.menxia || {}), agentId: agent.id, model: '' } };
-              savePresetPatch({ ...state, agents }, { agents, roles }, onRefresh, notify, zhEn(`${agent.name} 已接入，担任门下省`, `${agent.name} joined as the Tribune`));
-            })
+        const edicts = state.edicts || [];
+        const items = [];
+        for (const item of edicts) {
+          if (item.status === 'awaiting-approval') items.push({ item, kind: 'approve' });
+          else if (item.status === 'awaiting-input') items.push({ item, kind: 'input' });
+          else if (item.interrupted && !item.redoneAs && !isLive(item.status)) items.push({ item, kind: 'interrupted' });
+        }
+        if (!edicts.length) return null;
+        const running = (state.busy || []).length;
+        if (!items.length) {
+          return h('div', { className: 'ssl-inbox-ok' },
+            h('span', { className: 'ssl-dot', style: { background: 'var(--ssl-ok)' } }),
+            running ? zhEn(`${running} 个任务在办，办完要你过目的会出现在这里`, `${running} running; anything that needs you lands here`)
+              : zhEn('没有待你处理的任务', 'No tasks need you'));
+        }
+        const redo = item => {
+          setBusy(item.id);
+          apiJson(`/edicts/${encodeURIComponent(item.id)}/redo`, { method: 'POST' })
+            .then(result => { notify(zhEn('已接着办', 'Picked up again')); onRefresh(); if (result && result.id) onSelect(result.id); })
             .catch(error => notify(String(error.message || error), 'err'))
             .finally(() => setBusy(''));
         };
-        return h('div', { className: 'ssl-upgrade' },
-          h('div', { className: 'ssl-grow' },
-            h('b', null, zhEn(`现在是「${regimeInfo(regime.level).name}」：一家工具包办。`, `Now “${regimeInfo(regime.level).name}”: one tool does everything. `)),
-            h('span', null, zhEn(`再接一家升为「${regimeInfo('liangdang').name}」：${gains.join('，')}，而且别家来审，把关分会明显上去。`, `Add one more to reach “${regimeInfo('liangdang').name}”: ${gains.join(', ')}, and a second tool reviews the work.`))),
-          h('div', { className: 'ssl-actions' },
-            candidates.map(agent => h('button', { key: agent.id, className: 'ssl-btn ssl-btn--seal ssl-btn--sm', disabled: !!busy, onClick: () => join(agent) },
-              busy === agent.id ? zhEn('探测中…', 'Checking…') : zhEn(`接入 ${agent.name}`, `Add ${agent.name}`))),
-            candidates.length ? null : h('button', { className: 'ssl-btn ssl-btn--sm', onClick: () => onGo('agents') }, zhEn('去群臣添加工具', 'Add a tool in Cohort')),
-            h('button', { className: 'ssl-btn ssl-btn--ghost ssl-btn--sm', onClick: dismiss }, zhEn('知道了', 'Dismiss'))));
+        const LABEL = {
+          approve: ['办完了，等你过目批准', 'Done; waiting for your approval'],
+          input: ['有一步要你补一句', 'One step needs your input'],
+          interrupted: ['DSH 重启时被打断了', 'Cut short by a DSH restart'],
+        };
+        const shown = items.slice(0, 5);
+        return h('div', { className: 'ssl-inbox' },
+          h('div', { className: 'ssl-inbox-h' },
+            h('b', null, zhEn('待你处理', 'Needs you')),
+            h('span', { className: 'ssl-count ssl-count--seal' }, items.length)),
+          shown.map(({ item, kind }) => h('div', { key: item.id, className: 'ssl-inbox-row' },
+            h('div', { className: 'ssl-grow', style: { minWidth: 0 } },
+              h('div', { className: 'ssl-ellipsis ssl-inbox-t', title: item.brief }, item.brief),
+              h('div', { className: 'ssl-caption' }, zhEn(...LABEL[kind]), ' · ', dateTimeText(item.createdAt))),
+            kind === 'interrupted'
+              ? h('button', { className: 'ssl-btn ssl-btn--seal ssl-btn--sm', disabled: !!busy, onClick: () => redo(item) }, busy === item.id ? '…' : zhEn('接着办', 'Pick up'))
+              : null,
+            h('button', { className: cx('ssl-btn ssl-btn--sm', kind !== 'interrupted' && 'ssl-btn--seal'), onClick: () => onSelect(item.id) },
+              kind === 'approve' ? zhEn('去看并批准', 'Review') : kind === 'input' ? zhEn('去补一句', 'Answer') : zhEn('去看', 'Open')))),
+          items.length > shown.length ? h('div', { className: 'ssl-caption' }, zhEn(`还有 ${items.length - shown.length} 件，在左边列表里`, `${items.length - shown.length} more in the list on the left`)) : null);
       }
+
+      // ---------- 你的团队：DSH 一个人就能顶上所有岗位；本机的 Claude Code / Codex 一键装好、登录、接上 ----------
+      const TEAM_KEY = 'sansheng-liubu.team-dismissed';
+      function TeamCard({ state, notify, onRefresh, onGo }) {
+        const [setup, setSetup] = useState(state.setup || null);
+        const [busy, setBusy] = useState('');
+        // 点了登录之后，在后台每几秒查一次，登好了自动接上，不用再点
+        const [waiting, setWaiting] = useState(() => new Set());
+        const [hiddenSig, setHiddenSig] = useState(() => {
+          try { return localStorage.getItem(TEAM_KEY) || ''; } catch { return ''; }
+        });
+        const pull = useCallback(() => apiJson('/setup').then(data => { setSetup(data); return data; }).catch(() => null), []);
+        useEffect(() => { pull(); }, [pull]);
+        const tools = setup && setup.tools ? Object.entries(setup.tools) : [];
+        const jobs = (setup && setup.jobs) || {};
+        const installing = tools.some(([id, tool]) => ((jobs[id] || tool.job || {}).state === 'running'));
+        useEffect(() => {
+          if (!installing && !waiting.size) return undefined;
+          const timer = setInterval(() => {
+            pull().then(data => {
+              if (!data || !waiting.size) return;
+              for (const id of waiting) {
+                const tool = data.tools && data.tools[id];
+                if (tool && tool.found && tool.signedIn !== false) {
+                  setWaiting(prev => { const next = new Set(prev); next.delete(id); return next; });
+                  connect(id, true);
+                }
+              }
+            });
+          }, 4000);
+          // 最多等 5 分钟，免得一直在后台查
+          const stop = setTimeout(() => setWaiting(new Set()), 5 * 60 * 1000);
+          return () => { clearInterval(timer); clearTimeout(stop); };
+        }, [installing, waiting.size]);
+
+        if (!setup) return null;
+        const roles = state.roles || {};
+        const holding = agentId => ALL_ROLES.filter(id => (roles[id] || {}).agentId === agentId);
+        const stateOf = (id, tool) => {
+          const job = jobs[id] || tool.job;
+          if (job && job.state === 'running') return 'installing';
+          if (!tool.found) return job && job.state === 'failed' ? 'failed' : 'missing';
+          if (tool.signedIn === false) return 'signin';
+          return holding(tool.agentId).length ? 'working' : 'ready';
+        };
+        const rows = tools.map(([id, tool]) => ({ id, tool, status: stateOf(id, tool) }));
+        const pending = rows.filter(row => row.status !== 'working');
+        const manual = (setup.staffing || state.staffing) === 'manual';
+        // 都接好了、而且是自动编制：不打扰
+        if (!pending.length && !manual) return null;
+        const sig = rows.map(row => `${row.id}:${row.status}`).join(',') + (manual ? ',manual' : '');
+        if (hiddenSig === sig) return null;
+        const dismiss = () => {
+          try { localStorage.setItem(TEAM_KEY, sig); } catch { /* 只在这次隐藏 */ }
+          setHiddenSig(sig);
+        };
+        const run = (key, request, after) => {
+          setBusy(key);
+          return request.then(after).catch(error => notify(String(error.message || error), 'err')).finally(() => setBusy(''));
+        };
+        const install = id => run(`i:${id}`, apiJson('/setup/install', { method: 'POST', body: JSON.stringify({ tool: id }) }), data => {
+          setSetup(data);
+          if (data.needNode) notify(zhEn('Codex 要用 npm 安装：先装好 Node.js（nodejs.org），再点一次。', 'Codex installs through npm: install Node.js (nodejs.org) first, then try again.'), 'err');
+          else notify(zhEn('开始安装了，装好会自动接上，你可以先去忙别的。', 'Installing in the background; it joins the team by itself when done.'));
+        });
+        const signIn = id => run(`s:${id}`, apiJson('/setup/signin', { method: 'POST', body: JSON.stringify({ tool: id }) }), data => {
+          if (data.opened) {
+            setWaiting(prev => new Set(prev).add(id));
+            notify(zhEn('已在新窗口打开官方登录，按提示在浏览器里登好就行，登好会自动接上。', 'The official sign-in opened in a new window. Finish it in the browser; the tool joins by itself.'));
+          } else notify(zhEn(`请在终端运行：${data.manual || ''}`, `Run this in a terminal: ${data.manual || ''}`), 'err');
+        });
+        function connect(id, quiet) {
+          return run(`c:${id}`, apiJson('/setup/connect', { method: 'POST', body: JSON.stringify({ tool: id }) }), data => {
+            setSetup(data);
+            onRefresh();
+            if (data.ok) notify(zhEn(`${data.tools[id].name} 已加入团队`, `${data.tools[id].name} joined the team`));
+            else if (!quiet) notify(data.reason === 'signin' ? zhEn('还没登录好，登好再点一次。', 'Not signed in yet. Finish signing in, then try again.') : zhEn('本机还没装好。', 'Not installed yet.'), 'err');
+          });
+        }
+        const autoAgain = () => run('auto', apiJson('/setup/auto', { method: 'POST' }), () => { onRefresh(); pull(); notify(zhEn('已按本机工具重新分配岗位', 'Roles reassigned from the tools on this computer')); });
+
+        const STATUS_TEXT = {
+          working: ['在岗', 'On the team'], ready: ['已装好、已登录', 'Installed and signed in'], signin: ['已装好，还没登录', 'Installed, not signed in'],
+          missing: ['还没装', 'Not installed'], installing: ['安装中…', 'Installing…'], failed: ['安装没成功', 'Install failed'],
+        };
+        const action = row => {
+          const { id, status } = row;
+          if (status === 'missing' || status === 'failed') {
+            return h('button', { className: 'ssl-btn ssl-btn--seal ssl-btn--sm', disabled: !!busy, onClick: () => install(id) }, status === 'failed' ? zhEn('重试安装', 'Retry') : zhEn('一键安装', 'Install'));
+          }
+          if (status === 'signin') {
+            return waiting.has(id)
+              ? h('button', { className: 'ssl-btn ssl-btn--sm', disabled: !!busy, onClick: () => connect(id) }, zhEn('我登好了', 'I’m signed in'))
+              : h('button', { className: 'ssl-btn ssl-btn--seal ssl-btn--sm', disabled: !!busy, onClick: () => signIn(id) }, zhEn('一键登录', 'Sign in'));
+          }
+          if (status === 'ready') return h('button', { className: 'ssl-btn ssl-btn--seal ssl-btn--sm', disabled: !!busy, onClick: () => connect(id) }, zhEn('接上', 'Add to team'));
+          if (status === 'working') return h('span', { className: 'ssl-caption ssl-ellipsis' }, holding(row.tool.agentId).map(roleName).join(isEn() ? ', ' : '、'));
+          return null;
+        };
+        return h('div', { className: 'ssl-team' },
+          h('div', { className: 'ssl-between' },
+            h('b', null, zhEn('你的团队', 'Your team')),
+            h('button', { className: 'ssl-btn ssl-btn--ghost ssl-btn--sm', onClick: dismiss, title: zhEn('情况有变化时会再出现', 'Comes back when something changes') }, zhEn('收起', 'Hide'))),
+          h('div', { className: 'ssl-caption', style: { margin: '2px 0 8px' } },
+            setup.dsh
+              ? zhEn('DSH 一个人就能把所有岗位顶上，现在就能派任务。接上 Claude Code / Codex，方案和审查会更强（不同家的模型互相审，漏洞更少）。',
+                'DSH alone covers every role, so you can send tasks right now. Add Claude Code / Codex for stronger plans and reviews (models from different vendors check each other).')
+              : zhEn('没找到 DSH 的命令行；装好下面任意一个就能开工。', 'DSH’s command line was not found; install either tool below to get going.')),
+          rows.map(row => h('div', { key: row.id, className: 'ssl-team-row' },
+            h('span', { className: cx('ssl-dot', row.status === 'working' || row.status === 'ready' ? 'ssl-dot--ok' : row.status === 'installing' ? 'ssl-dot--pulse' : '') }),
+            h('div', { className: 'ssl-grow', style: { minWidth: 0 } },
+              h('div', null, h('b', null, row.tool.name), ' ', h('span', { className: 'ssl-caption' }, zhEn(...STATUS_TEXT[row.status]))),
+              row.status === 'missing' || row.status === 'signin' || row.status === 'failed'
+                ? h('div', { className: 'ssl-caption' }, (row.tool.needs || (TEAM_NEEDS[row.id] || {}))[isEn() ? 'en' : 'zh'] || '') : null),
+            action(row))),
+          manual ? h('div', { className: 'ssl-team-row' },
+            h('div', { className: 'ssl-grow ssl-caption' }, zhEn('岗位是你手动排的，新装的工具不会自动上岗。', 'You arranged the roles by hand, so newly added tools are not placed automatically.')),
+            h('button', { className: 'ssl-btn ssl-btn--sm', disabled: !!busy, onClick: autoAgain }, zhEn('交给自动分配', 'Assign automatically'))) : null,
+          h('div', { style: { marginTop: '6px' } },
+            h('button', { className: 'ssl-btn ssl-btn--ghost ssl-btn--sm', onClick: () => onGo('roster') }, zhEn('看谁在什么岗位 →', 'See who does what →'))));
+      }
+      // /state 里的 setup 不带「需要什么订阅」，这里补上
+      const TEAM_NEEDS = {
+        claude: { zh: '需要 Claude 订阅（Pro / Max）或 Anthropic API Key', en: 'Needs a Claude subscription (Pro / Max) or an Anthropic API key' },
+        codex: { zh: '需要 ChatGPT 订阅或 OpenAI API Key', en: 'Needs a ChatGPT plan or an OpenAI API key' },
+      };
 
       /** 五级朝局各自的皇权，当前这一级高亮（官职页） */
       function PowerTable({ state }) {
@@ -4126,8 +4630,17 @@ select.ssl-input { cursor: pointer; }
         slipping: [['大权旁落', '一家独大，或者多半由丞相代你拍板。'], ['Power slipping', 'One house dominates, or the regent decides most decrees for you.']],
         figurehead: [['形同傀儡', '权臣包办一切，你只在最后盖个印，像汉献帝。'], ['Figurehead', 'One house does everything and you only stamp the end, like Honorius at Ravenna.']],
       };
+      // 现代风格：放权指数的评语
+      const MODERN_PUPPET_INFO = {
+        supreme: [['亲力亲为', '分工清楚，大事你亲自拍板。'], ['Hands-on', 'Work is well divided and you make the big calls yourself.']],
+        steady: [['张弛有度', '分工得当，偶尔放手全权交办。'], ['Balanced', 'Work is well divided; now and then you delegate fully.']],
+        shared: [['共同决策', '一两家工具说了算，但批准权还在你手里。'], ['Shared calls', 'One or two tools run things, but approval is still yours.']],
+        slipping: [['放权偏多', '一家独大，或多半由全权交办替你拍板。'], ['Hands-off', 'One tool dominates, or full delegation decides most tasks for you.']],
+        figurehead: [['甩手掌柜', '一家工具包办一切，你只在最后点一下。'], ['Absentee', 'One tool does everything and you only click at the end.']],
+      };
       const puppetInfo = key => {
-        const row = (PUPPET_INFO[key] || PUPPET_INFO.shared)[isEn() ? 1 : 0];
+        const table = isModernStyle() ? MODERN_PUPPET_INFO : PUPPET_INFO;
+        const row = (table[key] || table.shared)[isEn() ? 1 : 0];
         return { name: row[0], desc: row[1] };
       };
       // 皇帝六能：名字 / 怎么算 / 怎么补
@@ -4140,9 +4653,19 @@ select.ssl-input { cursor: pointer; }
         zhiji: [['治绩', '办成的奏折占比', '去奏折页看失败原因，常见是 CLI 没装好或权限不够'], ['Results', 'Share of decrees that succeeded', 'Check failed decrees: usually a missing CLI or missing write permission']],
       };
       const ABILITY_KEYS = Object.keys(ABILITY_INFO);
+      // 现代风格：CEO 六项能力的名字（怎么算、怎么补沿用原句换说法）
+      const MODERN_ABILITY_NAME = {
+        zhiren: ['识人', 'Hiring'], mingcha: ['把关', 'Oversight'], jiejian: ['省钱', 'Thrift'],
+        shengming: ['说清楚', 'Clarity'], qinzheng: ['勤奋', 'Diligence'], zhiji: ['成果', 'Results'],
+      };
       const abilityInfo = key => {
-        const row = ABILITY_INFO[key][isEn() ? 1 : 0];
-        return { name: row[0], how: row[1], tip: row[2] };
+        const row = ABILITY_INFO[key][isEn() ? 1 : 0].map(mz);
+        const name = isModernStyle() ? MODERN_ABILITY_NAME[key][isEn() ? 1 : 0] : row[0];
+        return { name, how: row[1], tip: row[2] };
+      };
+      const MODERN_TITLES_BY_ABILITY = {
+        zhiren: ['知人善任的 CEO', 'the Talent Scout'], mingcha: ['明察秋毫的 CEO', 'the Watchful'], jiejian: ['精打细算的 CEO', 'the Frugal'],
+        shengming: ['表达清晰的 CEO', 'the Clear Communicator'], qinzheng: ['勤勉的 CEO', 'the Tireless'], zhiji: ['成绩斐然的 CEO', 'the Achiever'],
       };
       const TITLES_BY_ABILITY = {
         zhiren: ['知人善任之君', 'the Judge of Men'], mingcha: ['明察秋毫之君', 'the Watchful'], jiejian: ['节用爱民之君', 'the Frugal'],
@@ -4266,7 +4789,15 @@ select.ssl-input { cursor: pointer; }
         guard: [['锦衣卫看守', '卡死不动、超支的被拿下'], ['Guard', 'Stalled or overspending work stopped']],
         remedy: [['复核补救', '复核不过，自动补办'], ['Remedy', 'Failed the audit and was fixed automatically']],
       };
-      const catchInfo = key => { const row = CATCH_INFO[key][isEn() ? 1 : 0]; return { name: row[0], desc: row[1] }; };
+      // 现代风格：在你看到之前被拦下的问题
+      const MODERN_CATCH_INFO = {
+        veto: [['风控否决', '方案没想清楚就被打回重拟'], ['Risk veto', 'Plans sent back before any work began']],
+        impeach: [['审计退回', '汇报不实、产出缺失，带着问题重做'], ['Audit flag', 'Reports that did not hold up, redone with the findings']],
+        admonish: [['PMO 督促', '推脱、说「请您手动」的被打回'], ['PMO nudge', 'Shirking (“you can do it manually”) sent back']],
+        guard: [['PMO 叫停', '卡住不动、超预算的被叫停'], ['PMO stop', 'Stalled or overspending work stopped']],
+        remedy: [['复核补救', '复核不过，自动补做'], ['Remedy', 'Failed the check and was fixed automatically']],
+      };
+      const catchInfo = key => { const row = (isModernStyle() ? MODERN_CATCH_INFO : CATCH_INFO)[key][isEn() ? 1 : 0]; return { name: row[0], desc: row[1] }; };
 
       /** 两根条对比：单干（灰）与三省六部（主色），数值写在条后面 */
       function CompareRow({ label, solo, court, soloText, courtText, max, better }) {
@@ -4412,7 +4943,7 @@ select.ssl-input { cursor: pointer; }
         const worst = scored.slice().sort((a, b) => bio.abilities[a] - bio.abilities[b])[0];
         const title = !reign.edicts ? zhEn('新君初立', 'a new Caesar')
           : regime.puppet.verdict === 'figurehead' ? zhEn('傀儡天子', 'a figurehead Caesar')
-          : TITLES_BY_ABILITY[best || 'qinzheng'][isEn() ? 1 : 0];
+          : (isModernStyle() ? MODERN_TITLES_BY_ABILITY : TITLES_BY_ABILITY)[best || 'qinzheng'][isEn() ? 1 : 0];
         const days = reign.since ? Math.max(1, Math.ceil((Date.now() - reign.since) / 86400000)) : 0;
 
         const taskAxes = MINISTRY_IDS.map(id => {
@@ -4513,10 +5044,12 @@ select.ssl-input { cursor: pointer; }
           })));
       }
 
+      const PRIMARY_TABS = ['court', 'workroom', 'roster', 'hall'];
       function App({ embedded }) {
         useLocale();
         const { state, error, refresh } = useCourtState();
         const [tab, setTab] = useState('court');
+        const [moreOpen, setMoreOpen] = useState(false);
         const [toastNode, notify] = useToast();
         // 朝堂与朝会共用的「当前奏折」：null = 还没定，'' = 新旨
         const [selected, setSelected] = useState(null);
@@ -4551,7 +5084,7 @@ select.ssl-input { cursor: pointer; }
 
         const tabs = [
           ['court', t('tabCourt'), awaiting ? h('span', { className: 'ssl-count ssl-count--seal' }, awaiting) : null],
-          ['memorial', zhEn('朝会', 'Forum'), null],
+          ['memorial', isModernStyle() ? zhEn('群聊', 'Team chat') : zhEn('朝会', 'Forum'), null],
           ['workroom', t('tabWorkroom'), liveCount ? h('span', { className: 'ssl-count' }, liveCount) : null],
           ['roster', t('tabRoster'), null],
           ['annals', t('tabAnnals'), null],
@@ -4562,6 +5095,8 @@ select.ssl-input { cursor: pointer; }
           ['hall', t('tabHall'), null],
         ];
 
+        const moreShown = moreOpen || !PRIMARY_TABS.includes(tab);
+
         // 朝堂是三栏工作台：整页定高，三栏各自滚动
         const bench = tab === 'court' && !!state;
         return h('div', { className: cx('ssl-root', embedded && 'is-embedded', bench && 'is-bench') }, h('div', { className: cx('ssl', bench && 'is-bench'), 'data-locale': currentLocale },
@@ -4570,16 +5105,27 @@ select.ssl-input { cursor: pointer; }
             h('div', { className: 'ssl-head-text' },
               h('h2', { className: 'ssl-h1' }, t('appName')),
               h('p', { className: 'ssl-sub' }, t('appSub'))),
+            h(StyleSwitch),
             h(LanguageSwitch),
             state ? h(RegimeChip, { regime: state.regime, onClick: () => setTab('biography') }) : null,
             state ? h('div', { className: 'ssl-stats' },
               h('div', { className: cx('ssl-stat', running && 'ssl-stat--warn') }, h('b', null, running), h('span', null, t('statRunning'))),
               h('div', { className: cx('ssl-stat', awaiting && 'ssl-stat--seal') }, h('b', null, awaiting), h('span', null, t('statAwaiting'))),
               h('div', { className: 'ssl-stat' }, h('b', null, archived), h('span', null, t('statArchived')))) : null),
-          h('nav', { className: 'ssl-nav', role: 'tablist' }, tabs.map(([id, text, badge]) => h('button', {
-            key: id, role: 'tab', 'aria-selected': tab === id, className: cx(tab === id && 'is-active'),
+          // 常用的四个页签摆在外面，其余收进「更多」：第一眼只看到要用的
+          h('nav', { className: 'ssl-nav', role: 'tablist' },
+            tabs.filter(([id]) => PRIMARY_TABS.includes(id)).map(([id, text, badge]) => h('button', {
+              key: id, role: 'tab', 'aria-selected': tab === id, className: cx(tab === id && 'is-active'),
+              onClick: () => setTab(id),
+            }, text, badge)),
+            h('button', {
+              key: 'more', className: cx('ssl-nav-more', !PRIMARY_TABS.includes(tab) && 'is-active'), 'aria-expanded': moreShown,
+              onClick: () => setMoreOpen(!moreShown),
+            }, zhEn('更多', 'More'), h('span', { 'aria-hidden': true, style: { fontSize: '10px' } }, moreShown ? '▴' : '▾'))),
+          moreShown ? h('div', { className: 'ssl-subnav', role: 'tablist' }, tabs.filter(([id]) => !PRIMARY_TABS.includes(id)).map(([id, text, badge]) => h('button', {
+            key: id, role: 'tab', 'aria-selected': tab === id, className: cx('ssl-chip', tab === id && 'is-active'),
             onClick: () => setTab(id),
-          }, text, badge))),
+          }, text, badge))) : null,
           error && !state ? h('div', { className: 'ssl-card' },
             h('div', { className: 'ssl-alert', style: { marginTop: 0 } }, t('noHost', { error })),
             h('p', { className: 'ssl-caption', style: { margin: '10px 0 0' } }, t('noHostHint')))
@@ -4958,9 +5504,11 @@ select.ssl-input { cursor: pointer; }
       };
       function SideGlyph() {
         useLocale();
-        return isEn()
-          ? h('span', { style: { fontSize: '9px', fontWeight: 700, letterSpacing: '.04em', fontFamily: 'Georgia, serif' } }, 'SPQR')
-          : h('span', { style: { fontSize: '13px', fontWeight: 700, fontFamily: '"Noto Serif SC", "Songti SC", "STSong", serif' } }, '三');
+        // 跟着风格走：古代 三 / SPQR，现代 一 / OPC
+        const text = sealText('app');
+        return /^[A-Z]+$/.test(text)
+          ? h('span', { style: { fontSize: text.length > 3 ? '9px' : '10px', fontWeight: 700, letterSpacing: '.04em', fontFamily: 'Georgia, serif' } }, text)
+          : h('span', { style: { fontSize: '13px', fontWeight: 700, fontFamily: '"Noto Serif SC", "Songti SC", "STSong", serif' } }, text);
       }
 
       const PANES = [
@@ -5036,6 +5584,12 @@ select.ssl-input { cursor: pointer; }
 
       /** 金额：币 + 真实货币；estimated 时标「估」 */
       function Money({ usd, estimated, compact, big }) {
+        // 现代风格：只写真实金额，不换算成古钱
+        if (isModernStyle()) {
+          return h('span', { className: cx('ssl-money', big && 'is-big'), title: `$${(Number(usd) || 0).toFixed(5)}` },
+            h('b', { className: 'ssl-money-real', style: { color: 'var(--ssl-fg)' } }, realMoney(usd)),
+            estimated ? h('span', { className: 'ssl-money-est' }, t('estimatedTag')) : null);
+        }
         const coins = coinsOf(usd);
         const size = big ? 22 : 14;
         return h('span', { className: cx('ssl-money', big && 'is-big'), title: `${realMoney(usd)}${estimated ? ` · ${t('estimatedTag')}` : ''} · $${(Number(usd) || 0).toFixed(5)}` },
@@ -5734,6 +6288,70 @@ select.ssl-input { cursor: pointer; }
         },
       };
 
+      // 现代风格（一人公司）：词汇表换出来不顺、或要专门换个说法的，在这里写（没写的走词汇表）
+      const MODERN_TEXT = {
+        zh: {
+          appSub: '把本机的 AI 工具组成你的一人公司：首席战略官出方案、首席风控官把关、首席运营官派活、各部门并行干活，全程在隔离分支里进行，你批准才合并。',
+          tabCourt: '工作台', tabWorkroom: '实时', workroomTitle: '实时进展', hudTitle: '一人公司 · 实时', hudPill: '{n} 个任务在办',
+          courtNoteFirst: '头一回用：先去「AI 员工」点一下一键探测，确认每个岗位都有人能干活。',
+          fullCaption: '同时最多办 {n} 个任务，请等一个办完', fullShort: '已满额，办完一个后可再派任务',
+          autoCaption: '全权交办：出方案 → 风控把关 → 各部门并行执行 → 复核 → 自我修复 → 自动归档，全程不问你',
+          normalCaption: '战略出方案 → 风控把关 → 运营派活 → 各部门执行 → 风控复核 → 你来批准',
+          noEdicts: '还没有任务。写下需求，派出第一个任务。',
+          groupDepartmentsNote: '出方案 · 把关 · 派活', groupMinistriesNote: '各司其职，互不依赖的工作并行',
+          groupWatchNote: 'PMO 盯进度，内部审计查质量',
+          roleJinyiwei: 'PMO 由插件确定式执行，不耗 token：卡住就接手、推脱就督促（提醒 → 追问 → 逐项复盘 → 最后机会）、超预算就停',
+          roleYushi: '标准流程只做确定式检查（产出在不在、汇报空不空），不耗 token；全面评审再用这里的模型逐件细看',
+          modeDesc_auto: '短而单一的走快速通道，长或多步的走全面评审，其余走标准流程',
+          modeDesc_standard: '出方案、风控把关、派活、执行、复核；审计只做确定式检查',
+          modeDesc_grand: '在标准流程之外，审计再逐件调模型检查：最稳，也最贵',
+          adviceVeto: '被否决的草稿是最大的废料：小活改走快速通道，或在「公司职位」里把首席战略官的职责写得更具体。',
+          rubberStamp: '首席风控官已经五个以上任务一次都没否决过，可能在走过场：换一个更严的模型，或改 lib/prompts.mjs 里的判定标准。',
+          glossaryNote: '职位与术语的白话说明', langTitle: '语言与风格',
+          bgTitle: '背景', bgSectionNote: '紫禁城 / 罗马广场 主题专用（古代风格）',
+          headerBtnTitle: '派任务：交给你的一人公司去办', modalTitle: '派任务 · 交给团队去办',
+          quietCourt: '暂时没事', paneExecEmpty: '暂时没事。到头部「确定工作流」派任务，这里会显示执行进度。',
+          viewRosterSub: '各职位的人选、模型与职责，改完立即生效',
+          paneChatDesc: '高管与各部门之间的沟通，像群聊一样看',
+          chatEmpty: '在下面写需求派任务，各部门的沟通会像群聊一样出现在这里。',
+          ruleHistorian: '知识管理员整理知识库',
+          coinNote: '金额按真实货币显示；Claude Code 自己报花销时以它为准，其余按价目表算。',
+        },
+        en: {
+          appName: 'One-Person Company',
+          appSub: 'Your AI tools as a one-person company: the CSO plans, the CRO reviews, the COO dispatches, departments work in parallel, all on an isolated branch that merges only when you approve.',
+          tabCourt: 'Workbench', tabWorkroom: 'Live', workroomTitle: 'Live', hudTitle: 'One-Person Company · Live', hudPill: '{n} at work',
+          courtNoteFirst: 'First time: open Team and press Probe all to check every role has someone who can do the work.',
+          issue: 'New task', issueTitle: 'New task', sealTitle: 'Send the task (Enter)', opened: 'Started: {id}',
+          fullCaption: 'At most {n} tasks run at a time. Wait for one to finish', fullShort: 'Full right now; start another once one finishes',
+          noEdicts: 'No tasks yet. Write a brief and send your first task.',
+          noEdictsYet: 'No tasks yet. Start one from the Workbench tab, or let the model call sansheng_edict.',
+          groupDepartments: 'Executives', groupMinistries: 'Departments',
+          autoOffDesc: 'When off: GUI-only roles pause for your input, and the report waits for your approval (approving merges the branch)',
+          glossaryNote: 'Roles and terms in plain words',
+          quietCourt: 'Nothing running', paneExecEmpty: 'Nothing running. Start a task from the "Procedure" header view and progress appears here.',
+          feature1T: '"New task" button in the session header',
+          feature1: 'Start a task from any conversation (conversation.session.header.actions + shell.overlay)',
+          feature2T: 'Right pane: "Run" and "Team chat"',
+          feature2: 'Flow bar, live output, input requests and approval; messages shown as a group chat (sidebar.right.pane.tab)',
+          headerBtnTitle: 'New task: hand it to your one-person company', modalTitle: 'New task · hand it to your team',
+          noAnnals: 'The knowledge base is empty. After the first task, lessons and records appear here.',
+          paneChatDesc: 'Messages between the roles, read like a group chat',
+          chatEmpty: 'Write the brief below. Messages between the roles appear here like a group chat.',
+          groupWatchNote: 'The PMO keeps work moving; Internal Audit checks quality',
+          roleYushi: 'In a Standard review the auditor only runs free deterministic checks (does the deliverable exist, is the report empty); in a Full review it also inspects each order with this model',
+          mode_standard: 'Standard',
+          modeDesc_auto: 'Short single-clause briefs take the Quick path, long or multi-step ones get a Full review, the rest a Standard one',
+          modeDesc_grand: 'Standard plus a model inspection of every order: safest and dearest',
+          adviceTitle: 'Finance advises',
+          wikiTitle: 'Knowledge base (your company’s notebook)',
+          bgSectionNote: 'For the Forbidden City and Forum Romanum themes (ancient style)',
+          langTitle: 'Language and style',
+          tabHall: 'Appearance', statRunning: 'Running', fieldMode: 'Review',
+          coinNote: 'Amounts are real money; Claude Code’s own cost report wins, other calls use the price table.',
+        },
+      };
+
       // v0.7 文案：监察、朝制、国库、全景、文书房、实录
       Object.assign(TEXT.zh, {
         groupWatch: '监察', groupWatchNote: '锦衣卫看守督办，御史巡查弹劾',
@@ -5835,6 +6453,7 @@ select.ssl-input { cursor: pointer; }
         const boot = apiJson('/state')
           .then(data => {
             if (data && data.ui && data.ui.locale) localeStore.set(data.ui.locale);
+            if (data && data.ui && data.ui.style) styleStore.set(data.ui.style);
             return data;
           })
           .catch(() => null);
@@ -6015,7 +6634,14 @@ select.ssl-input { cursor: pointer; }
         }
       }
 
-      return { name: 'dsh-sansheng-liubu', inject: ['slots'], apply };
+      // __test：只给 test/client.test.mjs 用（在 Node 里加载本文件，核对每条文案在各种语言 × 风格下的样子）
+      const __test = {
+        t, statusLabel, kindLabel, kindGloss, eventLabel, flowLabel, roleName, roleDuty, regimeInfo, puppetInfo, abilityInfo, catchInfo, sealText, zhEn,
+        keys: () => Object.keys(TEXT.zh),
+        set: (locale, style) => { currentLocale = locale; currentStyle = style; },
+        glossary: { ZH, EN },
+      };
+      return { name: 'dsh-sansheng-liubu', inject: ['slots'], apply, __test };
     },
   });
 })();
