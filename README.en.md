@@ -2,13 +2,11 @@
 
 <img src="docs/brand/banner.jpg" alt="Imperial Senate: a multi-tool DSH plugin" width="100%">
 
-### Turn the AI tools on your machine into your one-person company: one plans, another reviews, departments work in parallel, and nothing merges until you approve
-
-Two styles, each in English and Chinese: **Modern · One-Person Company** and **Ancient · Roman Senate / 三省六部**
+### Turn the AI tools on your machine into a Roman Senate: one drafts, another vetoes, magistrates work in parallel, and nothing merges until you seal it
 
 [![Release](https://img.shields.io/github/v/release/shilaoban666/dsh-imperial-court?color=b4362b&label=release)](https://github.com/shilaoban666/dsh-imperial-court/releases)
 [![DSH plugin](https://img.shields.io/badge/DSH-plugin-e9c46a)](https://dshbase.com/zh/plugins/)
-[![Tests](https://img.shields.io/badge/tests-64%20passing-1f8a70)](test/court.test.mjs)
+[![Tests](https://img.shields.io/badge/tests-65%20passing-1f8a70)](test/court.test.mjs)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-3c873a)](package.json)
 [![Languages](https://img.shields.io/badge/English-%E4%B8%AD%E6%96%87-2e6f9e)](README.md)
 [![License](https://img.shields.io/badge/license-MIT-5d5348)](LICENSE)
@@ -21,14 +19,11 @@ Two styles, each in English and Chinese: **Modern · One-Person Company** and **
 
 An AI tool that writes and reviews its own work has not been reviewed. **Imperial Senate** is a native [DeepSeek Harness (DSH)](https://dshbase.com/zh/plugins/) plugin that seats the tools on your machine (**Claude Code, Codex, WorkBuddy and DSH itself**) in a Roman Senate. The **Consul** drafts a plan, the **Tribune** (a different tool) reviews it and may veto, the **Proconsul** dispatches orders, six **magistrates** work **in parallel** where they can, inspectors check the results, the Tribune audits, and only your **seal** merges it. Everything happens on an **isolated git branch**; your folder is untouched until you seal.
 
-**Two styles, switch any time** (Modern / Ancient in the header):
+**No Latin needed**: every title carries a plain gloss (*Tribune · reviews*, *Legate · code*); hover for the full duty. In Chinese it is the Tang court, **三省六部** (*Three Departments and Six Ministries*).
 
-- **Modern · One-Person Company** (the default for new users): you are the CEO, with a Chief Strategy Officer, Chief Risk Officer and Chief Operating Officer, plus IT & Admin, Finance & Analytics, Marketing & Comms, Engineering, QA & Legal and Design; the PMO keeps work moving and Internal Audit checks quality. Titles everyone knows, and a plain task card.
-- **Ancient · Roman Senate** (Consul, Tribune, Proconsul and magistrates; papyrus scroll and SPQR seal), or in Chinese **三省六部** (the Tang dynasty's *Three Departments and Six Ministries*).
+> Not into Rome? Switch to the **One-Person Company** skin on the Palace tab. The features are the same; only the titles become CEO, Chief Risk Officer, Engineering and so on.
 
-Both come in English and Chinese, and prompts switch with them.
-
-**Works out of the box**: install it and send a task. DSH alone covers every role; Claude Code and Codex on your machine (including the copies bundled with their desktop apps) are found and placed automatically, and the ones you lack install or sign in with one click. No command line needed. **Quiet**: things show up under *Needs you* only when you have to approve, answer a question, or pick up a task that a DSH restart cut short (one click).
+**Works out of the box**: install it and issue a decree. DSH alone covers every role; Claude Code and Codex on your machine (including the copies bundled with their desktop apps) are found and placed automatically, and the ones you lack install or sign in with one click. No command line needed. **Quiet**: things show up under *Needs you* only when you have to approve, answer a question, or pick up a task that a DSH restart cut short (one click).
 
 ## Why
 
@@ -87,10 +82,10 @@ Five regimes: the more tools, the safer your throne; one tool alone makes you *D
 
 <table>
 <tr>
-<td colspan="2"><b>Modern · One-Person Company</b>: your team (install, sign in, add in one click) and the task card<br><img src="docs/screenshots/en-10-modern.jpg" alt="One-Person Company workbench"></td>
+<td colspan="2"><b>New decree</b>: needs you, your team (install, sign in, add in one click), and the scroll<br><img src="docs/screenshots/en-11-senate-workbench.jpg" alt="New decree page"></td>
 </tr>
 <tr>
-<td width="50%"><b>Senate</b>: decrees, each magistrate's full report, the flow<br><img src="docs/screenshots/en-09-senate.jpg" alt="Senate"></td>
+<td width="50%"><b>Senate</b>: each magistrate's full report (with a plain gloss on every title), your power and the flow<br><img src="docs/screenshots/en-09-senate.jpg" alt="Senate"></td>
 <td width="50%"><b>Gains</b>: the same work against one tool alone<br><img src="docs/screenshots/en-08-gains.jpg" alt="Gains"></td>
 </tr>
 <tr>
@@ -100,7 +95,7 @@ Five regimes: the more tools, the safer your throne; one tool alone makes you *D
 </table>
 
 <details>
-<summary>More: a decree awaiting your seal, the scroll composer, Acta, Annals, the Marble theme</summary>
+<summary>More: a decree awaiting your seal, the scroll composer, Acta, Annals, the Marble theme, the One-Person Company skin</summary>
 
 <br>
 
@@ -109,6 +104,7 @@ Five regimes: the more tools, the safer your throne; one tool alone makes you *D
 | ![Decree](docs/screenshots/en-02-decree.jpg) | ![Scroll](docs/screenshots/en-03-scroll.jpg) |
 | ![Acta](docs/screenshots/en-04-acta.jpg) | ![Annals](docs/screenshots/en-05-annals.jpg) |
 | ![Marble](docs/screenshots/en-06-marble.jpg) | ![Panorama](docs/screenshots/11-panorama.jpg) |
+| ![One-Person Company skin](docs/screenshots/en-10-modern.jpg) | |
 
 </details>
 
@@ -135,14 +131,14 @@ Small jobs go **express** (straight to one magistrate); long ones go to the **Co
 **1. Install** (DSH, Node 20+ and git)
 
 ```bash
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v0.10.0
+dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v0.11.0
 ```
 
-Use `--profile web` for the web build; drop `#v0.10.0` to follow the latest code.
+Use `--profile web` for the web build; drop `#v0.11.0` to follow the latest code.
 
 **2. Open**: restart DSH, click the seal in the sidebar and switch to **EN**. The plugin finds DSH, Claude Code and Codex on your machine and fills the roles by itself; there is nothing to set up.
 
-**3. Send your first task**: write what you need on the *Workbench* and press **Enter**, or click a **starter** (product one-pager, competitor scan, launch copy, fix a bug…).
+**3. Issue your first decree**: write what you need in the *Senate* tab and press **Enter**, or click a **starter** (fix a bug, review changes, weekly report…).
 
 DSH alone works: DSH itself can hold any role. For a real cross-check (models from different vendors reviewing each other), press **Install** / **Sign in** under *Your team*. It uses the official Claude Code and Codex installers and sign-in, and each tool joins the team once it is ready. Claude Code needs a Claude subscription or an Anthropic API key; Codex needs a ChatGPT plan or an OpenAI API key.
 
@@ -163,7 +159,6 @@ DSH alone works: DSH itself can hold any role. For a real cross-check (models fr
 | 📜 | **Annals and Chronicle** | Lessons feed the next decree; a sourced notebook per folder |
 | 🧭 | **DSH in office** | Any office via `dsh headless`, with your desktop sign-in and a model per office |
 | 📂 | **Open the output** | Open the output folder, open documents and media, reveal files |
-| 🏢 | **Two styles** | Modern · One-Person Company / Ancient · Roman Senate (三省六部), each in English and Chinese; prompts switch too |
 | 📥 | **Needs you** | Only what needs you: approvals, questions, and one-click *Pick up* for tasks cut short by a restart |
 | 🧰 | **Your team** | Finds the tools on your machine and fills the roles; one-click install, sign-in and add; hand back to automatic any time |
 | 🌏 | **Two languages** | Six themes, prompts in either language |
