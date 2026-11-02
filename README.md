@@ -2,13 +2,11 @@
 
 <img src="docs/brand/banner.jpg" alt="三省六部 · Imperial Senate：DSH 多工具协作插件" width="100%">
 
-### 把本机的 AI 工具组成你的一人公司：一家出方案、另一家把关，各部门并行干活，复核过了你再批准合并
-
-**现代 · 一人公司** 与 **古代 · 三省六部 / 古罗马元老院** 两种风格，各有中英文
+### 把本机的 AI 工具排成朝堂：一家拟旨、另一家封驳，六部并行办差，复核过了你再批红合并
 
 [![Release](https://img.shields.io/github/v/release/shilaoban666/dsh-imperial-court?color=b4362b&label=release)](https://github.com/shilaoban666/dsh-imperial-court/releases)
 [![DSH plugin](https://img.shields.io/badge/DSH-plugin-e9c46a)](https://dshbase.com/zh/plugins/)
-[![Tests](https://img.shields.io/badge/tests-64%20passing-1f8a70)](test/court.test.mjs)
+[![Tests](https://img.shields.io/badge/tests-65%20passing-1f8a70)](test/court.test.mjs)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-3c873a)](package.json)
 [![Languages](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-English-2e6f9e)](README.en.md)
 [![License](https://img.shields.io/badge/license-MIT-5d5348)](LICENSE)
@@ -21,12 +19,11 @@
 
 一个 AI 工具自己写、自己审，等于没审。**三省六部**是一个 [DeepSeek Harness（DSH）](https://dshbase.com/zh/plugins/) 原生插件：把你本机装着的 **Claude Code、Codex、WorkBuddy 和 DSH 本体**按唐朝官制排成一个朝堂。中书省拟方案，门下省换一家工具来审、不行就封驳，六部按依赖**并行**办差，御史巡查、门下复核，最后你批红才合并。全程在一个**隔离的 git 分支**里，批红之前你的目录一个字节都不动。
 
-**两种风格，随时切换**（标题栏「现代 / 古代」）：
+**不懂官制也看得懂**：每个官名后面跟着白话小字，「门下省 · 审方案」「兵部 · 写代码」，鼠标移上去看职掌。英文版是一套完整的**古罗马元老院**，卷轴下旨，火漆盖印。
 
-- **现代 · 一人公司**（新用户默认）：CEO（你）、首席战略官、首席风控官、首席运营官，加上 IT 与行政部、财务与数据部、市场与公关部、研发部、质量与法务部、设计部，PMO 盯进度、内部审计查质量。人人都懂的职位，简洁的任务卡。
-- **古代 · 三省六部**：中书拟旨、门下封驳、尚书派单、六部办差，奏折竖排、朱印下旨；英文是一套完整的 **古罗马元老院**，卷轴下旨，火漆盖印。
+> 不喜欢古风？「殿宇」页可以换成**一人公司**皮肤。功能完全一样，只是官名换成 CEO、首席风控官、研发部这些现代职位。
 
-**开箱即用**：装上就能派任务。DSH 一个人能把所有岗位顶上；本机有 Claude Code / Codex（包括桌面版自带的那份）会自动找到、自动排岗，没装的一键安装、没登录的一键登录，不用自己敲命令行。**不打扰**：只有要你过目批准、要你补一句、或 DSH 重启打断了任务时，才出现在「待你处理」里，一键「接着办」。
+**开箱即用**：装上就能下旨。DSH 一个人能把所有岗位顶上；本机有 Claude Code / Codex（包括桌面版自带的那份）会自动找到、自动排岗，没装的一键安装、没登录的一键登录，不用自己敲命令行。**不打扰**：只有要你过目批准、要你补一句、或 DSH 重启打断了任务时，才出现在「待你处理」里，一键「接着办」。
 
 ## 为什么用它
 
@@ -85,10 +82,10 @@
 
 <table>
 <tr>
-<td colspan="2"><b>现代 · 一人公司</b>：待你处理、你的团队（一键安装 / 登录 / 接上）、任务卡<br><img src="docs/screenshots/15-modern-workbench.jpg" alt="一人公司工作台"></td>
+<td colspan="2"><b>新旨</b>：待你处理、你的团队（一键安装 / 登录 / 接上）、竖排圣旨<br><img src="docs/screenshots/15-court-workbench.jpg" alt="朝堂新旨页"></td>
 </tr>
 <tr>
-<td width="50%"><b>朝堂</b>：左边奏折，中间圣旨与各部回奏全文，右边流程与改动<br><img src="docs/screenshots/05-court.jpg" alt="朝堂三栏"></td>
+<td width="50%"><b>朝堂</b>：左边奏折，中间各部回奏全文（官名后带白话小字），右边皇权与流程<br><img src="docs/screenshots/05-court.jpg" alt="朝堂三栏"></td>
 <td width="50%"><b>成效</b>：同样的活，跟一个工具单干比快了多少、好了多少<br><img src="docs/screenshots/13-impact.jpg" alt="成效"></td>
 </tr>
 <tr>
@@ -102,7 +99,7 @@
 </table>
 
 <details>
-<summary>更多截图：各部门沟通、待回填、下旨、史馆、殿宇、英文版</summary>
+<summary>更多截图：各部门沟通、待回填、下旨、史馆、殿宇、英文版、一人公司皮肤</summary>
 
 <br>
 
@@ -112,7 +109,7 @@
 | ![下旨](docs/screenshots/03-edict.jpg) | ![史馆](docs/screenshots/09-annals.jpg) |
 | ![殿宇](docs/screenshots/06-hall.jpg) | ![默认浅色主题](docs/screenshots/07-default-light.jpg) |
 | ![Senate](docs/screenshots/en-09-senate.jpg) | ![Gains](docs/screenshots/en-08-gains.jpg) |
-| ![One-Person Company](docs/screenshots/en-10-modern.jpg) | ![风格与语言](docs/screenshots/17-style.jpg) |
+| ![一人公司皮肤](docs/screenshots/15-modern-workbench.jpg) | ![皮肤与语言](docs/screenshots/17-style.jpg) |
 
 </details>
 
@@ -139,14 +136,14 @@ flowchart LR
 **1. 安装**（需要 DSH，以及 Node 20+ 与 git）
 
 ```bash
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v0.10.0
+dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v0.11.0
 ```
 
-Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v0.10.0`。
+Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v0.11.0`。
 
-**2. 打开**：重启 DSH，点侧栏的「一」（古代风格是「三」）。插件会自己找本机的 DSH、Claude Code、Codex 并排好岗位，什么都不用设。
+**2. 打开**：重启 DSH，点侧栏的「三」。插件会自己找本机的 DSH、Claude Code、Codex 并排好岗位，什么都不用设。
 
-**3. 派第一个任务**：在「工作台」写下要办的事，按 **Enter**。不知道写什么，点下面的**快速开始**（写产品介绍、竞品调研、写推广文案、修 bug……）。
+**3. 下第一道旨**：在「朝堂」写下要办的事，按 **Enter**。不知道写什么，点下面的**起手式**（修 bug、审查改动、写周报……）。
 
 只装了 DSH 也能用：DSH 本体能担任任何岗位。想要真正的交叉审查（不同家的模型互相审），在「你的团队」里点 **一键安装 / 一键登录**：走的是 Claude Code 与 Codex 的官方安装方式和官方登录，装好、登好会自动上岗。Claude Code 需要 Claude 订阅或 Anthropic API Key，Codex 需要 ChatGPT 订阅或 OpenAI API Key。
 
@@ -167,7 +164,6 @@ Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v0.10.0`。
 | 📜 | **史馆 · 实录** | 教训自动带进下一次；每个文件夹一本带出处的记事本 |
 | 🧭 | **DSH 本体任职** | 经 `dsh headless` 担任任何岗位，用桌面端登录、按岗位选模型 |
 | 📂 | **产出直接打开** | 一键打开产出文件夹，用默认程序打开文档与媒体 |
-| 🏢 | **两种风格** | 现代 · 一人公司 / 古代 · 三省六部（古罗马），各有中英文；界面与给模型的提示词一起换 |
 | 📥 | **待你处理** | 只摆出要你出手的事：过目批准、补一句、被重启打断的一键「接着办」 |
 | 🧰 | **你的团队** | 自动找到本机工具并排岗；一键安装、一键登录、接上；可随时交回自动分配 |
 | 🌏 | **中英双语** | 六套主题，提示词也跟着换语言 |

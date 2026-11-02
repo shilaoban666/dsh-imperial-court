@@ -83,3 +83,18 @@ test('modern titles, and the ancient styles stay as they were', () => {
   api.set('en', 'ancient');
   assert.equal(api.roleName('menxia'), 'Tribune');
 });
+
+test('the court is the default; office names carry a plain-language gloss, the modern skin needs none', () => {
+  const api = loadClient();
+  assert.equal(api.style(), 'ancient', 'a fresh browser opens the court');
+  const ids = ['emperor', 'zhongshu', 'menxia', 'shangshu', 'personnel', 'revenue', 'rites', 'war', 'justice', 'works', 'jinyiwei', 'yushi', 'historian'];
+  for (const lang of ['zh', 'en']) {
+    api.set(lang, 'ancient');
+    for (const id of ids) assert.ok(api.roleGloss(id), `${lang} ${id}`);
+    api.set(lang, 'modern');
+    for (const id of ids) assert.equal(api.roleGloss(id), '', `${lang}-modern ${id}`);
+  }
+  api.set('zh', 'ancient');
+  assert.equal(api.roleGloss('menxia'), '审方案');
+  assert.equal(api.roleGloss('门下省'), '审方案', 'old memorials store the Chinese title');
+});

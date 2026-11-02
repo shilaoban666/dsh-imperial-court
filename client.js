@@ -15,14 +15,14 @@
     }
   })();
 
-  // 风格：modern = 一人公司（现代职位），ancient = 三省六部 / 古罗马。与语言各自独立，新用户默认现代
+  // 风格：ancient = 三省六部 / 古罗马（默认），modern = 一人公司（「殿宇」页里的一套皮肤）。与语言各自独立
   const STYLE_KEY = 'sansheng-liubu.style';
   let currentStyle = (() => {
     try {
       const saved = localStorage.getItem(STYLE_KEY);
-      return saved === 'ancient' ? 'ancient' : 'modern';
+      return saved === 'modern' ? 'modern' : 'ancient';
     } catch {
-      return 'modern';
+      return 'ancient';
     }
   })();
   // 发给宿主的 locale 带上风格：'zh' | 'en' | 'zh-m' | 'en-m'
@@ -235,6 +235,7 @@ select.ssl-input { cursor: pointer; }
 }
 .ssl-role.is-live .ssl-glyph { color: var(--ssl-warn); background: color-mix(in srgb, var(--ssl-warn) 10%, transparent); border-color: color-mix(in srgb, var(--ssl-warn) 30%, transparent); }
 .ssl-role-title { font-size: 14px; font-weight: 600; color: var(--ssl-fg); }
+.ssl-role-gloss { margin-left: 4px; font-size: 11px; font-weight: 400; color: var(--ssl-mut); white-space: nowrap; }
 .ssl-inline {
   display: block; width: 100%; margin: 1px 0 0 -5px; padding: 1px 5px; border: 1px solid transparent; border-radius: 5px;
   background: transparent; color: var(--ssl-mut); font: inherit; font-size: 12px; text-overflow: ellipsis; outline: none;
@@ -2071,6 +2072,25 @@ select.ssl-input { cursor: pointer; }
         if (!own || defaults.includes(own)) return (roleTable()[id] || {}).duty || own;
         return own;
       };
+      // 白话注解：古代官名后面跟一个小字说明干什么，不用先学官制也看得懂（一人公司的职位本来就是白话，不加）
+      const ROLE_GLOSS = {
+        zh: {
+          emperor: '你', zhongshu: '出方案', menxia: '审方案', shangshu: '派活', personnel: '账号配置', revenue: '数据报表',
+          rites: '文案汇报', war: '写代码', justice: '测试审查', works: '界面设计', jinyiwei: '盯进度', yushi: '查产出', historian: '记教训',
+        },
+        en: {
+          emperor: 'you', zhongshu: 'plans', menxia: 'reviews', shangshu: 'assigns', personnel: 'config', revenue: 'data',
+          rites: 'writing', war: 'code', justice: 'testing', works: 'design', jinyiwei: 'watchdog', yushi: 'audit', historian: 'notes',
+        },
+      };
+      const roleGloss = key => (isModernStyle() ? '' : (ROLE_GLOSS[currentLocale] || ROLE_GLOSS.zh)[partyId(key)] || '');
+      /** 官名 + 白话小字；悬停看职掌 */
+      function RoleName({ id, as = 'b', className, prefix }) {
+        const gloss = roleGloss(id);
+        const duty = (roleTable()[partyId(id)] || {}).duty;
+        return h(as, { className, title: duty || gloss || undefined }, prefix || null, roleName(id),
+          gloss ? h('span', { className: 'ssl-role-gloss' }, gloss) : null);
+      }
       const latinClass = text => (/^[\x20-\x7e]{2,}$/.test(String(text || '')) ? 'is-latin' : '');
 
       /** 按风格取一行 [中文, English, …]：现代风格有专门写的用专门写的，否则把古代那行换说法 */
@@ -2795,7 +2815,7 @@ select.ssl-input { cursor: pointer; }
             [1, 2, 3].map(n => h('div', { key: n }, h('b', null, t(`guide${n}T`)), t(`guide${n}`)))),
           h('div', { className: 'ssl-ready' }, items.map(item => h('div', { key: item.roleId, className: cx('ssl-ready-item', item.tone) },
             h('span', { className: 'ssl-dot' }),
-            h('b', null, roleName(item.roleId)),
+            h(RoleName, { id: item.roleId }),
             h('span', { className: 'ssl-caption ssl-ellipsis', title: item.text }, item.text)))));
       }
 
@@ -3191,8 +3211,8 @@ select.ssl-input { cursor: pointer; }
           h(Avatar, { party: item.from }),
           h('div', { className: 'ssl-msg-main' },
             h('div', { className: 'ssl-msg-meta' },
-              h('b', null, roleName(item.from)),
-              h('span', null, `→ ${roleName(item.to)}`),
+              h(RoleName, { id: item.from }),
+              h(RoleName, { id: item.to, as: 'span', prefix: '→ ' }),
               h(KindPill, { item }),
               h('span', null, timeText(item.at))),
             h('div', { className: cx('ssl-bubble', item.ok === false && 'is-err') },
@@ -3209,7 +3229,7 @@ select.ssl-input { cursor: pointer; }
           h(Avatar, { party: item.roleId }),
           h('div', { className: 'ssl-msg-main' },
             h('div', { className: 'ssl-msg-meta' },
-              h('b', null, roleName(item.roleId)),
+              h(RoleName, { id: item.roleId }),
               h('span', null, `${kindLabel(item.kind)}${item.title ? ` · ${item.title}` : ''} · ${t('workingFor', { t: fmtElapsed(item.elapsedMs) })}`),
               item.agent ? h('span', { className: 'ssl-mono' }, `${item.agent}${item.model ? ` · ${item.model}` : ''}`) : null),
             h('div', { className: 'ssl-bubble is-live' },
@@ -3247,7 +3267,7 @@ select.ssl-input { cursor: pointer; }
           h('div', { className: 'ssl-msg is-mine' },
             h(Avatar, { party: 'emperor' }),
             h('div', { className: 'ssl-msg-main' },
-              h('div', { className: 'ssl-msg-meta' }, h('b', null, roleName('emperor')), h('span', null, dateTimeText(detail.createdAt))),
+              h('div', { className: 'ssl-msg-meta' }, h(RoleName, { id: 'emperor' }), h('span', null, dateTimeText(detail.createdAt))),
               h('div', { className: 'ssl-bubble' }, detail.brief),
               h('div', { className: 'ssl-meta ssl-thread-pills' },
                 h(ModePill, { detail }),
@@ -3259,18 +3279,18 @@ select.ssl-input { cursor: pointer; }
           power.see >= 2 && plan && detail.mode !== 'express' && (plan.summary || (plan.steps || []).length) ? h('div', { className: 'ssl-msg' },
             h(Avatar, { party: 'zhongshu' }),
             h('div', { className: 'ssl-msg-main' },
-              h('div', { className: 'ssl-msg-meta' }, h('b', null, roleName('zhongshu')), h('span', null, zhEn('拟定方案', 'drafted the plan')),
+              h('div', { className: 'ssl-msg-meta' }, h(RoleName, { id: 'zhongshu' }), h('span', null, zhEn('拟定方案', 'drafted the plan')),
                 detail.rounds > 1 ? h('span', null, t('draftRounds', { n: detail.rounds })) : null),
               h('div', { className: 'ssl-bubble' },
                 plan.summary ? h('div', null, plan.summary) : null,
                 detail.steps.length ? h('ol', { className: 'ssl-thread-plan' }, detail.steps.map(step => h('li', { key: step.seq },
-                  h('b', null, roleName(step.ministry)), ` · ${step.title}`))) : null))) : null,
+                  h(RoleName, { id: step.ministry }), ` · ${step.title}`))) : null))) : null,
           // 各部回奏：全文，不再截断
           answered.map(step => h('div', { key: step.seq, className: 'ssl-msg ssl-msg--result' },
             h(Avatar, { party: step.ministry }),
             h('div', { className: 'ssl-msg-main' },
               h('div', { className: 'ssl-msg-meta' },
-                h('b', null, roleName(step.ministry)),
+                h(RoleName, { id: step.ministry }),
                 h('span', null, `#${step.seq} ${step.title}`),
                 h(StatusPill, { status: step.status, text: step.status === 'done' ? t('stepDone') : undefined }),
                 step.agent ? h('span', { className: 'ssl-mono' }, step.agent) : null),
@@ -3432,7 +3452,7 @@ select.ssl-input { cursor: pointer; }
               h('div', { className: 'ssl-role-head' },
                 h('span', { className: cx('ssl-glyph', latinClass(glyph)) }, glyph),
                 h('div', { className: 'ssl-grow' },
-                  h('div', { className: 'ssl-role-title' }, roleName(roleId)),
+                  h(RoleName, { id: roleId, as: 'div', className: 'ssl-role-title' }),
                   h('div', { className: 'ssl-caption ssl-ellipsis' }, `${agent.name || t('vacant')}${role.model ? ` · ${role.model}` : ''}`)),
                 item ? h(StatusPill, { status: 'running', text: count > 1 ? `×${count} · ${fmtElapsed(item.elapsedMs)}` : fmtElapsed(item.elapsedMs) }) : h(StatusPill, { status: 'idle' })),
               item ? h('div', { style: { marginTop: '12px' } },
@@ -3530,7 +3550,7 @@ select.ssl-input { cursor: pointer; }
           option('en', 'English · Roman Senate', 'The Consul drafts, the Tribune vetoes, the Proconsul dispatches to six magistrates. Papyrus scroll and SPQR seal.', 'SPQR'));
       }
 
-      /** 风格：现代（一人公司）/ 古代（三省六部 · 古罗马）。两种风格都有中英文 */
+      /** 皮肤：三省六部 · 古罗马（默认）/ 一人公司（现代职位）。功能一样，只换说法；两种都有中英文 */
       function StyleCard() {
         const option = (value, seal, title, desc) => h('button', {
           key: value, className: cx('ssl-card ssl-pick', currentStyle === value && 'is-active'), onClick: () => chooseStyle(value),
@@ -3542,11 +3562,11 @@ select.ssl-input { cursor: pointer; }
               h('span', { className: 'ssl-role-title' }, title),
               currentStyle === value ? h('span', { className: 'ssl-pill ssl-pill--seal' }, t('inUse')) : null),
             h('div', { className: 'ssl-caption', style: { marginTop: '2px' } }, desc))));
-        return h('div', { className: 'ssl-grid', style: { marginBottom: '10px' } },
-          option('modern', '一', isEn() ? 'Modern · One-Person Company' : '现代 · 一人公司',
-            isEn() ? 'CEO, CSO, CRO, COO and departments: titles everyone already knows. Plain task card.' : 'CEO、首席战略官、首席风控官、首席运营官和各部门：人人都懂的职位，简洁的任务卡。'),
-          option('ancient', '三', isEn() ? 'Ancient · Roman Senate' : '古代 · 三省六部',
-            isEn() ? 'Consul, Tribune, Proconsul and magistrates. Papyrus scroll and SPQR seal.' : '中书拟旨、门下封驳、尚书派单、六部办差；奏折竖排、朱印下旨。'));
+        return h('div', { className: 'ssl-grid' },
+          option('ancient', '三', isEn() ? 'Roman Senate (default)' : '三省六部（默认）',
+            isEn() ? 'Consul, Tribune, Proconsul and magistrates. Papyrus scroll and SPQR seal.' : '中书拟旨、门下封驳、尚书派单、六部办差；奏折竖排、朱印下旨。'),
+          option('modern', '一', isEn() ? 'One-Person Company' : '一人公司',
+            isEn() ? 'Same features, modern titles: CEO, CSO, CRO, COO and departments. Plain task card.' : '功能一样，换成现代职位：CEO、首席战略官、首席风控官、首席运营官和各部门，简洁的任务卡。'));
       }
 
       function HallTab({ state, onRefresh, notify }) {
@@ -3675,8 +3695,9 @@ select.ssl-input { cursor: pointer; }
 
         return h('div', null,
           h(Section, { title: t('langTitle'), note: t('langNote') }),
-          h(StyleCard),
           h(LanguageCard, { ui, onChoose: chooseLocale }),
+          h(Section, { title: zhEn('皮肤', 'Skin'), note: zhEn('功能完全一样，只换一套说法。', 'Same features; only the names change.') }),
+          h(StyleCard),
           h(Section, { title: t('themesTitle'), note: t('themesNote') }),
           h('div', { className: 'ssl-grid' }, themeCards),
           h(Section, { title: t('bgTitle'), note: t('bgSectionNote') }),
@@ -4252,11 +4273,6 @@ select.ssl-input { cursor: pointer; }
       }
       const ANCIENT_THEMES = ['gong', 'mo', 'zijin', 'marble', 'nox', 'roma'];
 
-      function StyleSwitch() {
-        return h('div', { className: 'ssl-lang', role: 'group', 'aria-label': 'Style' },
-          h('button', { className: cx(currentStyle === 'modern' && 'is-active'), title: isEn() ? 'Modern: One-Person Company' : '现代：一人公司', onClick: () => chooseStyle('modern') }, isEn() ? 'Modern' : '现代'),
-          h('button', { className: cx(currentStyle === 'ancient' && 'is-active'), title: isEn() ? 'Ancient: Roman Senate' : '古代：三省六部', onClick: () => chooseStyle('ancient') }, isEn() ? 'Ancient' : '古代'));
-      }
 
       // ================= 朝局与帝王传记 =================
       // 现代风格下同样换成现代说法
@@ -5105,7 +5121,6 @@ select.ssl-input { cursor: pointer; }
             h('div', { className: 'ssl-head-text' },
               h('h2', { className: 'ssl-h1' }, t('appName')),
               h('p', { className: 'ssl-sub' }, t('appSub'))),
-            h(StyleSwitch),
             h(LanguageSwitch),
             state ? h(RegimeChip, { regime: state.regime, onClick: () => setTab('biography') }) : null,
             state ? h('div', { className: 'ssl-stats' },
@@ -6636,9 +6651,10 @@ select.ssl-input { cursor: pointer; }
 
       // __test：只给 test/client.test.mjs 用（在 Node 里加载本文件，核对每条文案在各种语言 × 风格下的样子）
       const __test = {
-        t, statusLabel, kindLabel, kindGloss, eventLabel, flowLabel, roleName, roleDuty, regimeInfo, puppetInfo, abilityInfo, catchInfo, sealText, zhEn,
+        t, statusLabel, kindLabel, kindGloss, eventLabel, flowLabel, roleName, roleDuty, regimeInfo, puppetInfo, abilityInfo, catchInfo, sealText, zhEn, roleGloss,
         keys: () => Object.keys(TEXT.zh),
         set: (locale, style) => { currentLocale = locale; currentStyle = style; },
+        style: () => currentStyle,
         glossary: { ZH, EN },
       };
       return { name: 'dsh-sansheng-liubu', inject: ['slots'], apply, __test };
