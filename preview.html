@@ -116,6 +116,7 @@
   const LANG = params.get('lang') === 'en' ? 'en' : params.get('lang') === 'zh' ? 'zh' : (/^zh/i.test(navigator.language) ? 'zh' : 'en');
   const L = (zh, en) => (db.ui.locale === 'en' ? en : zh);
   try { localStorage.setItem('sansheng-liubu.locale', LANG); } catch { /* ignore */ }
+  try { localStorage.setItem('sansheng-liubu.style', params.get('style') === 'modern' ? 'modern' : 'ancient'); } catch { /* ignore */ }
 
   // ======================= 假宿主：/sansheng-liubu/* =======================
   const AGENTS = [
@@ -135,7 +136,8 @@
     rites: { agentId: 'qwen', model: '', duty: '' },
     war: { agentId: 'cc', model: 'sonnet', duty: '' },
     justice: { agentId: 'codex', model: '', duty: '' },
-    works: { agentId: 'coser', model: '', duty: '' },
+    // 演示一个没配好的岗位；截新旨页（?shot=new，模拟新用户）时自动编制已经补齐
+    works: { agentId: params.get('shot') === 'new' ? 'cc' : 'coser', model: '', duty: '' },
     jinyiwei: { agentId: '', model: '', duty: '' },
     yushi: { agentId: 'cc', model: 'haiku', duty: '' },
   };
@@ -151,8 +153,8 @@
   const db = {
     agents: AGENTS, roles: ROLES,
     rules: { separationOfPowers: true, maxReviewRounds: 3, maxSteps: 8, autonomous: params.get('auto') === '1', maxFixRounds: 2, fallbackAgentId: 'cc', isolation: 'worktree', autoMerge: false, execWrites: true, parallel: 2, maxConcurrent: 2, useMemory: true, maxRetries: 1, pressure: 'standard', stallSeconds: 300, mode: 'auto', historian: true, historianAgentId: 'cc', historianModel: 'haiku', treasury: { currency: LANG === 'en' ? 'USD' : 'CNY', rate: 7.1, budgetPerEdictUsd: 2, monthlyBudgetUsd: 60 }, prices: {} },
-    // ?style=ancient 看古代风格；默认现代（一人公司），新用户就是这样
-    ui: { skin: 'default', theme: params.get('theme') || (params.get('style') === 'ancient' ? (LANG === 'en' ? 'roma' : 'zijin') : 'default'), background: 'palace', backgroundDim: 0.45, locale: LANG, style: params.get('style') === 'ancient' ? 'ancient' : 'modern' },
+    // 默认三省六部，新用户就是这样；?style=modern 看「一人公司」皮肤
+    ui: { skin: 'default', theme: params.get('theme') || 'default', background: 'palace', backgroundDim: 0.45, locale: LANG, style: params.get('style') === 'modern' ? 'modern' : 'ancient' },
     edicts: [],
     workflow: [],
     staffing: params.get('staffing') === 'manual' ? 'manual' : 'auto',
@@ -766,6 +768,8 @@
     const tab = Number(params.get('tab'));
     if (tab) setTimeout(() => { const el = document.querySelectorAll('.ssl-nav [role=tab]')[tab - 1]; if (el) el.click(); }, 600);
     if (params.get('modal') === '1') setTimeout(() => { const el = document.querySelector('.ssl-header-btn'); if (el) el.click(); }, 600);
+    // ?shot=new：演示的那份被 DSH 重启打断，再点「新旨」——截新旨页（待你处理、你的团队）用
+    if (params.get('shot') === 'new') setTimeout(() => { window.__preview.interrupt(); setTimeout(() => { const el = document.querySelector('.ssl-bench-new'); if (el) el.click(); }, 400); }, 600);
   };
 })();
 </script>
