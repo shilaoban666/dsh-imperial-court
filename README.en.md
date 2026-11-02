@@ -131,10 +131,10 @@ Small jobs go **express** (straight to one magistrate); long ones go to the **Co
 **1. Install** (DSH, Node 20+ and git)
 
 ```bash
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v0.11.0
+dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.0.0
 ```
 
-Use `--profile web` for the web build; drop `#v0.11.0` to follow the latest code.
+Use `--profile web` for the web build; drop `#v1.0.0` to follow the latest code.
 
 **2. Open**: restart DSH, click the seal in the sidebar and switch to **EN**. The plugin finds DSH, Claude Code and Codex on your machine and fills the roles by itself; there is nothing to set up.
 
