@@ -257,6 +257,7 @@
     }
   },
   "rules": {
+    "regimePowers": false,
     "separationOfPowers": true,
     "maxReviewRounds": 3,
     "maxSteps": 8,

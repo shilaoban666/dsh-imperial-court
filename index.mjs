@@ -9,10 +9,12 @@ import path from 'node:path';
 import { createStore } from './lib/store.mjs';
 import { spawn } from 'node:child_process';
 import os from 'node:os';
-import { runAgent, probeAgent } from './lib/adapters.mjs';
+import { runAgent, probeAgent, findDshCli } from './lib/adapters.mjs';
+import { TOOLS, toolStatus, startInstall, installJob, openSignIn, locateTool } from './lib/setup.mjs';
+import { autoStaff, staffingChanged } from './lib/staffing.mjs';
 import { runEdict, normalizeVerdict, deliverablePath } from './lib/court.mjs';
 import { ministriesOf, splitHandoff, extractJson } from './lib/prompts.mjs';
-import { tr, fail, errorText, normalizeLocale, roleTitle, MINISTRY_IDS, ROLE_IDS } from './lib/i18n.mjs';
+import { tr, fail, errorText, normalizeLocale, langOf, voiceOf, voiced, STYLES, roleTitle, MINISTRY_IDS, ROLE_IDS } from './lib/i18n.mjs';
 import { createAnnals, tokens } from './lib/annals.mjs';
 import { impactOf } from './lib/impact.mjs';
 import * as git from './lib/git.mjs';
@@ -380,6 +382,10 @@ function summarizeEdict(edict) {
     stage: edict.stage,
     haltedAt: edict.haltedAt || '',
     note: edict.note || '',
+    // 被 DSH 重启打断的（不是办砸了）、再办一次时的前后关系
+    interrupted: edict.interrupted === true,
+    redoneAs: edict.redoneAs || '',
+    redoOf: edict.redoOf || '',
     createdAt: edict.createdAt,
     updatedAt: edict.updatedAt,
     rounds: edict.rounds,
@@ -493,6 +499,16 @@ export function createCourt(config = {}, { log = console } = {}) {
   store.load(preset);
   migrateDshAgent(store, preset);
   if (!store.state.ui || typeof store.state.ui !== 'object') store.state.ui = { skin: 'default', theme: 'default' };
+  // 风格：新用户默认现代（一人公司），零学习成本；已经在用古代朝堂的老用户保持原样
+  if (!STYLES.includes(store.state.ui.style)) {
+    store.state.ui.style = store.listEdicts().length ? 'ancient' : 'modern';
+    store.save();
+  }
+  // 编制：新用户「自动」（按本机能用的工具排岗位）；老用户「手动」，他排好的不动
+  if (store.state.staffing !== 'auto' && store.state.staffing !== 'manual') {
+    store.state.staffing = store.listEdicts().length ? 'manual' : 'auto';
+    store.save();
+  }
   const annals = createAnnals(store.root);
   const treasury = createTreasury(store.root);
   const wiki = createWiki(store.root);
@@ -506,13 +522,52 @@ export function createCourt(config = {}, { log = console } = {}) {
   // 皇帝亲手驳回 / 叫停的奏折（还在跑的由流程收尾，收尾后在 afterRun 里记上「亲裁」）
   const ruledByEmperor = new Set();
   let callSeq = 0;
-  const uiLocale = () => normalizeLocale(store.state.ui && store.state.ui.locale);
+  // 界面的语言 + 风格（古代 / 现代）合成一个 locale：'zh' | 'en' | 'zh-m' | 'en-m'
+  const uiLocale = () => voiceOf((store.state.ui && store.state.ui.locale) || 'zh', store.state.ui && store.state.ui.style);
   const findBackground = () => Object.keys(BACKGROUND_TYPES)
     .map(ext => path.join(store.root, `background.${ext}`))
     .find(file => fs.existsSync(file)) || '';
   const removeBackground = () => {
     for (const ext of Object.keys(BACKGROUND_TYPES)) fs.rmSync(path.join(store.root, `background.${ext}`), { force: true });
   };
+
+  // ---------- 开箱即用：本机有哪些工具能用，自动排岗位 ----------
+  // 查一次要起几个小进程（where、claude auth status……），所以缓存起来；界面轮询 /state 只读缓存
+  let readiness = null;
+  function checkReadiness() {
+    const tools = {};
+    for (const id of Object.keys(TOOLS)) tools[id] = toolStatus(id);
+    const dsh = !!findDshCli();
+    const ready = new Set();
+    if (dsh) ready.add('dsh');
+    for (const tool of Object.values(tools)) if (tool.found && tool.signedIn !== false) ready.add(tool.agentId);
+    const buddy = (store.state.agents || []).find(agent => agent.id === 'workbuddy');
+    if (buddy && probeAgent(buddy).ok) ready.add('workbuddy');
+    readiness = { tools, dsh, ready: [...ready], checkedAt: Date.now() };
+    return readiness;
+  }
+  /** 自动编制下按本机能用的工具重排岗位；手动编制不动 */
+  function applyAutoStaff() {
+    if (store.state.staffing !== 'auto') return false;
+    const info = readiness || checkReadiness();
+    const next = autoStaff(store.state, new Set(info.ready));
+    if (!next || !next.changed) return false;
+    store.state.roles = next.roles;
+    store.state.rules = next.rules;
+    store.state.agents = next.agents;
+    store.save();
+    return true;
+  }
+  // 启动后在后台查一遍、排一遍：不拖慢 DSH 启动
+  setImmediate(() => {
+    if (store.state.staffing !== 'auto') return;
+    try {
+      checkReadiness();
+      applyAutoStaff();
+    } catch (error) {
+      log.error?.(`[sansheng-liubu] auto staffing failed: ${error && error.message ? error.message : error}`);
+    }
+  });
 
   /** 记录一份「公文往来」：from / to 是岗位 id（emperor、zhongshu、war、ministries…），界面按语言显示名字 */
   function pushMessage(edict, message) {
@@ -633,6 +688,8 @@ export function createCourt(config = {}, { log = console } = {}) {
     edict.haltedAt = edict.stage;
     edict.status = 'failed';
     edict.stage = 'failed';
+    // 记下是被重启打断的，不是办砸了：界面上给「接着办」一键重开（同一份需求、同一个文件夹）
+    edict.interrupted = true;
     edict.error = tr(edict.locale, edict.git ? 'noteRestart' : 'noteRestartPlain');
     store.appendEvent(edict, 'fail', { error: edict.error });
     store.saveEdict(edict);
@@ -1031,6 +1088,16 @@ export function createCourt(config = {}, { log = console } = {}) {
         outputRoot: outputRoot(),
         annals: { count: annals.list().length, rubberStamp: annals.stats().rubberStamp },
         regime: regimeWithPuppet(),
+        // 开箱即用：编制是自动还是手动；本机工具的情况（缓存，GET /setup 才会重新查）
+        staffing: store.state.staffing,
+        setup: readiness ? {
+          dsh: readiness.dsh,
+          checkedAt: readiness.checkedAt,
+          tools: Object.fromEntries(Object.entries(readiness.tools).map(([id, tool]) => [id, {
+            name: tool.name, agentId: tool.agentId, found: tool.found, source: tool.source, signedIn: tool.signedIn,
+            job: installJob(id),
+          }])),
+        } : null,
         // 没命令行的岗位可以交给谁代办（界面上的「交给 DSH 代办」按钮）
         deputy: (() => { const agent = runtime.deputy(); return agent ? { id: agent.id, name: agent.name } : null; })(),
       };
@@ -1111,10 +1178,15 @@ export function createCourt(config = {}, { log = console } = {}) {
       const dim = Number(input.backgroundDim ?? prev.backgroundDim ?? 0.45);
       const wantsCustom = (input.background ?? prev.background) === 'custom';
       const locale = input.locale ?? prev.locale;
+      const style = STYLES.includes(input.style) ? input.style : (STYLES.includes(prev.style) ? prev.style : 'modern');
+      // 换成现代风格时，古风整套主题（宫殿、罗马广场……）一并换回 DSH 自己的样子；用户之后仍可再选
+      const ancientTheme = ['gong', 'mo', 'zijin', 'marble', 'nox', 'roma'].includes(theme);
+      const nextTheme = style === 'modern' && prev.style !== 'modern' && input.style === 'modern' && ancientTheme && input.theme === undefined ? 'default' : theme;
       store.state.ui = {
         ...prev,
+        style,
         skin: skins.has(skin) ? skin : 'default',
-        theme: themes.has(theme) ? theme : 'default',
+        theme: themes.has(nextTheme) ? nextTheme : 'default',
         // 背景压暗程度：图越亮越要压，否则界面文字看不清
         backgroundDim: Number.isFinite(dim) ? Math.max(0.1, Math.min(0.85, dim)) : 0.45,
         background: wantsCustom && findBackground() ? 'custom' : 'palace',
@@ -1148,9 +1220,54 @@ export function createCourt(config = {}, { log = console } = {}) {
     },
     savePreset(input) {
       const next = sanitizePreset(input || {}, store.state);
+      // 用户亲手换了谁在哪个岗位：转为手动编制，以后不再自动替他排
+      if (staffingChanged(store.state.roles, next.roles)) store.state.staffing = 'manual';
       store.state.agents = next.agents;
       store.state.roles = next.roles;
       store.state.rules = next.rules;
+      store.save();
+      return api.getState();
+    },
+    // ---------- 开箱即用：查本机工具、一键安装、一键登录、接入 ----------
+    setup({ fresh = true } = {}) {
+      const info = fresh || !readiness ? checkReadiness() : readiness;
+      const jobs = {};
+      for (const id of Object.keys(TOOLS)) jobs[id] = installJob(id);
+      return { ...info, staffing: store.state.staffing, jobs };
+    },
+    installTool(id) {
+      if (!TOOLS[id]) fail('errNoAgent');
+      const result = startInstall(id, {
+        onDone: () => {
+          checkReadiness();
+          applyAutoStaff();
+        },
+      });
+      return { ...result, ...api.setup({ fresh: false }) };
+    },
+    signInTool(id) {
+      if (!TOOLS[id]) fail('errNoAgent');
+      return openSignIn(id);
+    },
+    /** 工具装好、登录了：启用它；自动编制下重排岗位，手动编制下让它当审方案的（别家来审） */
+    connectTool(id) {
+      if (!TOOLS[id]) fail('errNoAgent');
+      const info = checkReadiness();
+      const tool = info.tools[id];
+      if (!tool.found) return { ok: false, reason: 'missing', ...api.setup({ fresh: false }) };
+      if (tool.signedIn === false) return { ok: false, reason: 'signin', ...api.setup({ fresh: false }) };
+      const agentId = TOOLS[id].agentId;
+      store.state.agents = (store.state.agents || []).map(agent => (agent.id === agentId ? { ...agent, enabled: true } : agent));
+      if (store.state.staffing === 'auto') applyAutoStaff();
+      else store.state.roles = { ...store.state.roles, menxia: { ...(store.state.roles.menxia || {}), agentId, model: '' } };
+      store.save();
+      return { ok: true, ...api.setup({ fresh: false }) };
+    },
+    /** 回到自动编制：按本机现在能用的工具重新排一遍 */
+    autoStaffNow() {
+      store.state.staffing = 'auto';
+      checkReadiness();
+      applyAutoStaff();
       store.save();
       return api.getState();
     },
@@ -1168,6 +1285,23 @@ export function createCourt(config = {}, { log = console } = {}) {
       const out = {};
       for (const agent of store.state.agents || []) out[agent.id] = probeAgent(agent);
       return out;
+    },
+    /** 再办一次：同一份需求、同一个文件夹、同样的验收标准、权限与指定流程，开一道新的（重启打断、办砸了都能用） */
+    redo(edictId) {
+      const old = store.getEdict(edictId);
+      if (!old) fail('errNoEdict');
+      if (ACTIVE_STATUSES.has(old.status)) fail('errStillRunning');
+      const workspace = old.workspace && fs.existsSync(old.workspace) ? old.workspace : undefined;
+      const result = api.createEdict({
+        brief: old.brief, workspace, criteria: old.criteria, permission: old.permission,
+        workflow: Array.isArray(old.workflow) && old.workflow.length ? old.workflow : 'none',
+        locale: old.locale,
+      });
+      old.redoneAs = result.id;
+      store.saveEdict(old);
+      const fresh = store.getEdict(result.id);
+      if (fresh) { fresh.redoOf = old.id; store.saveEdict(fresh); }
+      return result;
     },
     createEdict(input = {}) {
       const locale = normalizeLocale(input.locale || uiLocale());
@@ -1516,8 +1650,8 @@ export function createCourt(config = {}, { log = console } = {}) {
       return { ...summarizeEdict(edict), status: reason.status, stage: reason.status, note: reason.note };
     }
     if (!extraStatuses.includes(edict.status)) {
-      const en = normalizeLocale(edict.locale) === 'en';
-      const action = reason.event === 'reject' ? (en ? 'reject' : '驳回') : (en ? 'halt' : '叫停');
+      const en = langOf(edict.locale) === 'en';
+      const action = voiced(edict.locale, reason.event === 'reject' ? (en ? 'reject' : '驳回') : (en ? 'halt' : '叫停'));
       fail('errCannotStop', { action, status: edict.status });
     }
     edict.status = reason.status;
@@ -1602,6 +1736,11 @@ export async function handleRequest(api, req, res, uiLocale = () => 'zh') {
     if (route === '/workflow' && method === 'PUT') return sendJson(res, 200, { workflow: api.saveWorkflow((await body()).workflow) });
     if (route === '/probe' && method === 'POST') return sendJson(res, 200, api.probe((await body()).agentId));
     if (route === '/probe-all' && method === 'POST') return sendJson(res, 200, api.probeAll());
+    if (route === '/setup' && method === 'GET') return sendJson(res, 200, api.setup());
+    if (route === '/setup/install' && method === 'POST') return sendJson(res, 200, api.installTool((await body()).tool));
+    if (route === '/setup/signin' && method === 'POST') return sendJson(res, 200, api.signInTool((await body()).tool));
+    if (route === '/setup/connect' && method === 'POST') return sendJson(res, 200, api.connectTool((await body()).tool));
+    if (route === '/setup/auto' && method === 'POST') return sendJson(res, 200, api.autoStaffNow());
     // 下旨可带附件（base64），放宽到 25 MB
     if (route === '/edicts' && method === 'POST') return sendJson(res, 200, api.createEdict({ locale, ...(await body(25 * 1024 * 1024)) }));
     if (route === '/annals' && method === 'GET') return sendJson(res, 200, api.annals());
@@ -1631,6 +1770,7 @@ export async function handleRequest(api, req, res, uiLocale = () => 'zh') {
       }
       if (method === 'GET' && action === '/file') return sendJson(res, 200, api.file(edictId, url.searchParams.get('path'), url.searchParams.get('diff') === '1'));
       if (method === 'POST' && action === '/cancel') return sendJson(res, 200, api.cancel(edictId));
+      if (method === 'POST' && action === '/redo') return sendJson(res, 200, api.redo(edictId));
       if (method === 'POST' && action === '/merge') return sendJson(res, 200, api.merge(edictId));
       if (method === 'POST' && action === '/discard') return sendJson(res, 200, api.discard(edictId));
       if (method === 'POST' && action === '/reject') return sendJson(res, 200, api.reject(edictId, (await body()).note));
@@ -1658,7 +1798,7 @@ function registerTools(ctx, court) {
     return;
   }
   const L = () => court.uiLocale();
-  const say = (zh, en) => (L() === 'en' ? en : zh);
+  const say = (zh, en) => voiced(L(), langOf(L()) === 'en' ? en : zh);
   const run = fn => async (args = {}) => {
     try {
       return await fn(args);

@@ -54,7 +54,8 @@ function makeCourt({ flags = '', rules = {}, manualRites = false, locale = '', e
   if (manualRites) roles.rites.agentId = 'man';
   // 老用例按常朝跑；急递 / 大朝会 / 自动另有用例。史官默认关，免得多一次调用干扰计数
   court.api.savePreset({ agents, roles, rules: { ...court.store.state.rules, fallbackAgentId: '', mode: 'standard', historian: false, ...rules } });
-  if (locale) court.api.setUi({ locale });
+  // 这些用例断言的是古代说法（三省六部 / 古罗马）；新用户默认的现代风格另见 modern.test.mjs
+  court.api.setUi({ style: 'ancient', ...(locale ? { locale } : {}) });
   const entries = () => (fs.existsSync(log) ? fs.readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line)) : []);
   return { court, api: court.api, entries, dataDir };
 }
@@ -691,7 +692,8 @@ test('impact: parallel work is faster than one tool doing it alone, and caught p
 });
 
 test('regime sets power: a figurehead cannot reject, pick the procedure or open two decrees; the rule can turn it off', async () => {
-  const { api, court } = makeCourt();
+  // v0.10 起新用户默认不受朝局限权（新手不碰壁）；这里专门打开来测
+  const { api, court } = makeCourt({ rules: { regimePowers: true } });
   // 两家工具 = 两党争霸：各部之间的往来全看得见，也能驳回
   assert.equal(api.getState().regime.level, 'liangdang');
   assert.equal(api.getState().regime.power.see, 4);
@@ -741,4 +743,95 @@ test('no folder chosen: each decree gets its own output folder whose files can b
   assert.deepEqual(recentFiles(dir, Date.now() - 60000).map(item => item.file), ['song.md']);
   assert.equal(canOpenFile('index.html'), true);
   assert.equal(canOpenFile('run.bat'), false, 'scripts are revealed, never run');
+});
+
+// ---------------- v0.10：一人公司（现代风格）、开箱即用的自动编制、一键接入 ----------------
+
+test('modern style: a whole session speaks One-Person Company, in Chinese and English', async () => {
+  for (const [locale, title, note, heading] of [['zh', '研发部', /等待你批准/, /^# 任务汇报/], ['en', 'Engineering', /Awaiting your approval/, /^# Report/]]) {
+    const { api } = makeCourt({ locale });
+    api.setUi({ style: 'modern' });
+    assert.equal(api.getState().ui.style, 'modern');
+    const { id } = api.createEdict({ brief: 'write hello', workspace: tmp('court-modern-') });
+    const detail = await waitFor(api, id, ['awaiting-approval', 'failed']);
+    assert.equal(detail.locale, `${locale}-m`);
+    assert.match(detail.note, note);
+    assert.match(api.getArtifact(id, '06-memorial.md'), heading);
+    assert.equal(api.getState().ministries.find(item => item.id === 'war').title, title);
+    const leftover = locale === 'zh' ? /皇帝|中书|门下|尚书|奏折|批红/ : /\b(Caesar|Consul|Tribune|Senate|[Dd]ecree)\b/;
+    for (const message of detail.messages) assert.doesNotMatch(`${message.title} ${message.summary}`, leftover, JSON.stringify(message));
+  }
+});
+
+test('new users start modern and auto-staffed; old users keep the court and their own staffing', () => {
+  const fresh = createCourt({ dataDir: tmp('court-new-') }, { log: { info() {}, error() {} } });
+  assert.equal(fresh.api.getState().ui.style, 'modern');
+  assert.equal(fresh.api.getState().staffing, 'auto');
+  // 用户亲手换人：转为手动
+  const state = fresh.api.getState();
+  fresh.api.savePreset({ agents: state.agents, roles: { ...state.roles, war: { ...state.roles.war, agentId: 'codex' } }, rules: state.rules });
+  assert.equal(fresh.api.getState().staffing, 'manual');
+
+  const dir = tmp('court-old-users-');
+  fs.mkdirSync(path.join(dir, 'edicts'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'state.json'), JSON.stringify({ edicts: { 'edict-1': { id: 'edict-1', brief: 'old', status: 'done', createdAt: 1 } } }));
+  const old = createCourt({ dataDir: dir }, { log: { info() {}, error() {} } });
+  assert.equal(old.api.getState().ui.style, 'ancient');
+  assert.equal(old.api.getState().staffing, 'manual');
+});
+
+test('auto staffing: DSH alone fills every post; added tools take the posts they suit, reviewer from another house', async () => {
+  const { autoStaff } = await import('../lib/staffing.mjs');
+  const base = createCourt({ dataDir: tmp('court-staff-') }, { log: { info() {}, error() {} } }).store.state;
+  const only = autoStaff(base, new Set(['dsh']));
+  for (const id of ROLE_IDS.filter(role => role !== 'jinyiwei')) assert.equal(only.roles[id].agentId, 'dsh', id);
+  // 同一家既出方案又审方案：换模型审
+  assert.notEqual(only.roles.zhongshu.model, only.roles.menxia.model);
+  assert.equal(only.rules.fallbackAgentId, 'dsh');
+
+  const two = autoStaff(base, new Set(['dsh', 'cc']));
+  assert.equal(two.roles.zhongshu.agentId, 'cc');
+  assert.equal(two.roles.menxia.agentId, 'dsh', 'the reviewer is not the drafter');
+  assert.equal(two.roles.war.agentId, 'cc');
+  assert.equal(two.roles.justice.agentId, 'dsh', 'tests are not written by the coder');
+
+  const three = autoStaff(base, new Set(['dsh', 'cc', 'codex']));
+  assert.equal(three.roles.menxia.agentId, 'codex');
+  assert.equal(three.roles.justice.agentId, 'codex');
+  assert.equal(autoStaff(base, new Set()), null, 'nothing usable: leave the staffing alone');
+});
+
+test('one-click install runs the plan in the background and reports the result', async () => {
+  const { startInstall, installJob } = await import('../lib/setup.mjs');
+  const done = new Promise(resolve => {
+    const result = startInstall('codex', { plan: { file: process.execPath, args: ['-e', 'console.log("installing"); process.exit(3)'] }, onDone: resolve });
+    assert.equal(result.started, true);
+  });
+  const job = await done;
+  assert.equal(job.state, 'failed');
+  assert.match(installJob('codex').log, /installing/);
+  assert.equal(startInstall('codex', { plan: { needNode: true } }).needNode, true);
+});
+
+test('an edict cut short by a restart is marked interrupted and can be redone in one click', async () => {
+  const { court, api, dataDir } = makeCourt({ flags: 'slow' });
+  const workspace = tmp('court-redo-');
+  const { id } = api.createEdict({ brief: 'write hello', workspace, criteria: 'hello exists' });
+  // 模拟 DSH 在办差中途退出：把奏折留在「办差中」，重开一个朝堂读同一个数据目录
+  const edict = court.store.getEdict(id);
+  edict.status = 'running';
+  court.store.saveEdict(edict);
+  const again = createCourt({ dataDir }, { log: { info() {}, error() {} } });
+  const after = again.api.getEdict(id);
+  assert.equal(after.status, 'failed');
+  assert.equal(after.interrupted, true);
+  const redo = again.api.redo(id);
+  assert.ok(redo.id && redo.id !== id);
+  assert.equal(again.api.getEdict(id).redoneAs, redo.id);
+  const fresh = again.api.getEdict(redo.id);
+  assert.equal(fresh.redoOf, id);
+  assert.equal(fresh.brief, 'write hello');
+  assert.equal(fresh.workspace, workspace);
+  await waitFor(again.api, redo.id, ['awaiting-approval', 'failed']);
+  await waitFor(api, id, ['awaiting-approval', 'failed']).catch(() => {});
 });
