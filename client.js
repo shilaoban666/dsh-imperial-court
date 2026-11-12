@@ -542,7 +542,7 @@ select.ssl-input { cursor: pointer; }
 .ssl-chain-node { padding: 3px 9px; border-radius: 11px; font-size: 12px; color: var(--ssl-fg); background: var(--ssl-panel); border: 1px solid var(--ssl-line2); }
 .ssl-chain-node.is-fixed { color: var(--ssl-mut); border-style: dashed; }
 .ssl-chain-arrow { color: var(--ssl-cap); font-size: 12px; }
-.ssl-wf-row { display: grid; grid-template-columns: 22px 120px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid var(--ssl-line); }
+.ssl-wf-row { display: grid; grid-template-columns: 22px 120px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid var(--ssl-line); }
 
 /* 各部门沟通 */
 .ssl.ssl-chat { position: relative; height: 100%; display: flex; flex-direction: column; padding: 0; max-width: none; }
@@ -859,7 +859,7 @@ select.ssl-input { cursor: pointer; }
 @container (max-width: 560px) {
   .ssl { padding: 12px 12px 64px; }
   .ssl-role-fields, .ssl-agent-fields, .ssl-rules, .ssl-rules2 { grid-template-columns: minmax(0, 1fr); }
-  .ssl-wf-row { grid-template-columns: 22px 84px minmax(0, 1fr) auto; gap: 6px; }
+  .ssl-wf-row { grid-template-columns: 22px 84px minmax(0, 1fr) auto auto; gap: 6px; }
   .ssl-head-text { min-width: 0; }
   .ssl-sub { display: none; }
   .ssl-nav { gap: 4px 18px; margin: 12px 0 14px; }
@@ -1089,6 +1089,10 @@ select.ssl-input { cursor: pointer; }
   border: 1px solid var(--ssl-line2); background: var(--ssl-raised);
 }
 .ssl-inbox { border-color: color-mix(in srgb, var(--ssl-seal) 45%, var(--ssl-line)); background: color-mix(in srgb, var(--ssl-seal) 7%, var(--ssl-raised)); }
+.ssl-inbox--queue { border-color: var(--ssl-line); background: var(--ssl-raised); margin-top: 10px; }
+.ssl-inbox-h .ssl-caption { margin-left: auto; text-align: right; }
+.ssl-wf-par { flex: none; white-space: nowrap; }
+.ssl-wf-par.is-on { color: var(--ssl-seal); border-color: var(--ssl-seal); }
 .ssl-inbox-h { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .ssl-inbox-h b, .ssl-team b { color: var(--ssl-fg); }
 .ssl-inbox-row, .ssl-team-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--ssl-line); }
@@ -2764,9 +2768,23 @@ select.ssl-input { cursor: pointer; }
         const submit = (input, clear) => {
           if (sending) return;
           setSending(true);
-          apiJson('/edicts', { method: 'POST', body: JSON.stringify({ ...input, locale: currentLocale, ...(workflow !== undefined ? { workflow } : {}) }) })
-            .then(result => {
-              notify(t('opened', { id: result.id }), 'ok', result.isolation);
+          const { split: wantSplit, ...rest } = input;
+          const split = !!wantSplit && listCount(rest.brief) > 0;
+          const payload = JSON.stringify({ ...rest, locale: currentLocale, ...(workflow !== undefined ? { workflow } : {}), ...(split ? { split: true } : {}) });
+          // 勾了「分开办」的清单交给丞相府拆成几道；其余照常递一道（满员时排队，不再拒收）
+          (split ? apiJson('/dispatch', { method: 'POST', body: payload }).then(batch => ({ batch })) : apiJson('/edicts', { method: 'POST', body: payload }))
+            .then(answer => {
+              let result = answer;
+              if (answer.batch) {
+                const batch = answer.batch;
+                const first = batch.accepted.find(item => item.state === 'started');
+                result = first ? first.result : { id: '' };
+                notify(zhEn(
+                  `已拆成 ${batch.accepted.length} 件分开办：${batch.started} 件已开工，${batch.queued} 件排队`,
+                  `Split into ${batch.accepted.length}: ${batch.started} started, ${batch.queued} queued`), 'ok');
+              } else if (answer.queued) {
+                notify(zhEn(`现在满员，已排队（第 ${answer.position} 位），有空位自动开工`, `Full right now; queued at position ${answer.position} and it starts by itself`), 'ok');
+              } else notify(t('opened', { id: result.id }), 'ok', result.isolation);
               // 新建的产出文件夹都在同一个根目录下：把这个根目录登记成 DSH 侧栏的工作区，产出在侧栏里就找得到
               if (result.newFolder && courtStore.state && courtStore.state.outputRoot) registerWorkspace(courtStore.state.outputRoot, zhEn('三省六部产出', 'Senate output'));
               setStamp(Date.now());
@@ -2845,7 +2863,18 @@ select.ssl-input { cursor: pointer; }
       };
       const MODE_KEYS = ['', 'express', 'standard', 'grand'];
       const defaultPermission = state => (state && state.rules && state.rules.execWrites === false ? 'read' : 'workspace');
-      const emptyDecree = () => ({ workspace: '', permission: '', attachments: [], criteria: '', mode: '' });
+      const emptyDecree = () => ({ workspace: '', permission: '', attachments: [], criteria: '', mode: '', split: false });
+      // 需求里列了几条清单（1. / - / • / ①）：与宿主 lib/chancellor.mjs 的 splitRequests 同一套认法，只用来数条数
+      const LIST_ITEM = /^\s{0,3}(?:(?:\d{1,2}|[一二三四五六七八九十]{1,3})\s*[.、)）:：](?!\d)|[（(]\s*(?:\d{1,2}|[一二三四五六七八九十]{1,3})\s*[)）]|[①②③④⑤⑥⑦⑧⑨⑩⑪⑫]|[-*•·]\s|\[[ xX]?\]\s?)\s*\S/;
+      const listCount = text => {
+        let fenced = false;
+        let count = 0;
+        for (const line of String(text || '').split(/\r?\n/)) {
+          if (/^\s*```/.test(line)) fenced = !fenced;
+          else if (!fenced && LIST_ITEM.test(line)) count += 1;
+        }
+        return count >= 2 ? Math.min(count, 12) : 0;
+      };
       const fmtSize = bytes => (bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
 
       /** 工作目录候选：DSH 侧栏的工作区 + 朝堂最近用过的（宿主读 DSH 自己的 workspace.json） */
@@ -2889,6 +2918,7 @@ select.ssl-input { cursor: pointer; }
         const permission = value.permission || defaultPermission(state);
         const estimate = useEstimate(withMode ? brief : '', value.mode);
         const tell = (text, tone) => (notify ? notify(text, tone) : null);
+        const pieces = listCount(brief);
 
         const addFiles = files => {
           if (!files || !files.length) return;
@@ -2941,6 +2971,14 @@ select.ssl-input { cursor: pointer; }
               type: 'button', className: cx('ssl-tool', (showCriteria || value.criteria) && 'is-on'), title: zhEn('写明怎样算办成（可选）', 'Say what “done” means (optional)'),
               onClick: () => setShowCriteria(!showCriteria),
             }, h('span', { className: 'ssl-tool-ic', 'aria-hidden': true }, '✓'), h('span', { className: 'ssl-tool-text' }, t('fieldCriteria').replace(/（.*|\(.*/, ''))),
+            pieces ? h('button', {
+              type: 'button', className: cx('ssl-tool', value.split && 'is-on'), 'aria-pressed': !!value.split,
+              title: zhEn(
+                '开着：清单里的每一条各办各的（各自一个隔离分支，同时办，满员的排队）。关着：整段当一件事，由中书省排步骤。几条互不相干的事才分开办。',
+                'On: each list item is handled on its own (its own isolated branch, in parallel; extra ones queue). Off: the whole text is one task and the Consul plans its steps. Split only when the items are unrelated.'),
+              onClick: () => set({ split: !value.split }),
+            }, h('span', { className: 'ssl-tool-ic', 'aria-hidden': true }, '⑂'),
+            h('span', { className: 'ssl-tool-text' }, value.split ? zhEn(`分开办 · ${pieces} 件`, `Split · ${pieces} tasks`) : zhEn(`${pieces} 条清单 · 分开办？`, `${pieces} items · split?`))) : null,
             h('span', { className: 'ssl-grow' }),
             // 傀儡皇帝选不了朝制：由权臣按「自动」定
             withMode && !powerOfState(state).mode ? h('span', {
@@ -2974,6 +3012,7 @@ select.ssl-input { cursor: pointer; }
         permission: value.permission || undefined,
         criteria: value.criteria || undefined,
         mode: value.mode || undefined,
+        split: value.split || undefined,
         attachments: value.attachments.length ? value.attachments.map(file => ({ name: file.name, data: file.data })) : undefined,
       });
 
@@ -3004,7 +3043,7 @@ select.ssl-input { cursor: pointer; }
           onDone: result => { onRefresh(); stick.current = true; if (result && result.id) onSelect(result.id); },
         });
         const send = () => {
-          if (!brief.trim() || full) return;
+          if (!brief.trim()) return;
           // 附件、验收标准只跟这一道旨；工作目录、权限、朝制留着给下一道
           submit({ brief, ...decreePayload(decree) }, () => { clearAfterStamp(setBrief, brief); setDecree(prev => ({ ...prev, attachments: [], criteria: '' })); });
         };
@@ -3035,7 +3074,7 @@ select.ssl-input { cursor: pointer; }
           value: brief,
           onChange: setBrief,
           onSubmit: send,
-          canSubmit: !full && !sending && !!brief.trim(),
+          canSubmit: !sending && !!brief.trim(),
           sending,
           stamp,
           extra: h(DecreeBar, { state, value: decree, onChange: setDecree, brief, notify }),
@@ -3103,7 +3142,6 @@ select.ssl-input { cursor: pointer; }
           selected ? h('div', { className: 'ssl-bench-compose' }, h(Composer, {
             ...composerProps,
             compact: true,
-            disabled: full,
             placeholder: full ? t('fullShort') : zhEn('再下一道旨……（Enter 下旨，Shift + Enter 换行）', 'Another decree… (Enter to issue, Shift + Enter for a new line)'),
           })) : null,
           doc ? h('div', { className: 'ssl-chat-doc' },
@@ -3776,7 +3814,7 @@ select.ssl-input { cursor: pointer; }
             value: brief,
             onChange: setBrief,
             onSubmit: send,
-            canSubmit: !sending && !!brief.trim() && !(state && state.full),
+            canSubmit: !sending && !!brief.trim(),
             sending,
             stamp,
             autoFocus: true,
@@ -4407,13 +4445,45 @@ select.ssl-input { cursor: pointer; }
           else if (item.status === 'awaiting-input') items.push({ item, kind: 'input' });
           else if (item.interrupted && !item.redoneAs && !isLive(item.status)) items.push({ item, kind: 'interrupted' });
         }
-        if (!edicts.length) return null;
+        // 排队的任务（满员时照收，轮到了自动开工）：可以插队、撤回；开不了工的（预算用尽等）也摆在这里
+        const queue = state.queue || [];
+        if (!edicts.length && !queue.length) return null;
         const running = (state.busy || []).length;
+        const queueAct = (entry, how) => {
+          setBusy(entry.id);
+          apiJson(`/queue/${encodeURIComponent(entry.id)}${how === 'bump' ? '/bump' : ''}`, { method: how === 'bump' ? 'POST' : 'DELETE', body: '{}' })
+            .then(() => { notify(how === 'bump' ? zhEn('已提到最前', 'Moved to the front') : zhEn('已撤回', 'Withdrawn')); onRefresh(); })
+            .catch(error => notify(String(error.message || error), 'err'))
+            .finally(() => setBusy(''));
+        };
+        const queueNode = queue.length ? h('div', { className: 'ssl-inbox ssl-inbox--queue' },
+          h('div', { className: 'ssl-inbox-h' },
+            h('b', null, zhEn('排队中', 'Queued')),
+            h('span', { className: 'ssl-count' }, queue.length),
+            h('span', { className: 'ssl-caption' }, zhEn(`同时办 ${state.capacity || 2} 件，有空位自动开工：紧急的先，短活先`, `${state.capacity || 2} run at a time; the rest start by themselves: urgent first, short work first`))),
+          queue.slice(0, 6).map(entry => h('div', { key: entry.id, className: 'ssl-inbox-row' },
+            h('span', { className: 'ssl-step-no' }, entry.state === 'refused' ? '!' : entry.position),
+            h('div', { className: 'ssl-grow', style: { minWidth: 0 } },
+              h('div', { className: 'ssl-ellipsis ssl-inbox-t', title: entry.brief }, entry.brief),
+              h('div', { className: 'ssl-caption' },
+                entry.state === 'refused' ? `${zhEn('开不了工：', 'Could not start: ')}${entry.error || ''}` : [
+                  t(`mode_${entry.mode || 'auto'}`),
+                  entry.ministry ? roleName(entry.ministry) : '',
+                  entry.priority > 1 ? zhEn('紧急', 'urgent') : entry.priority < 1 ? zhEn('不急', 'low priority') : '',
+                  entry.batchSize > 1 ? zhEn(`同批 ${entry.batchSize} 件`, `batch of ${entry.batchSize}`) : '',
+                ].filter(Boolean).join(' · '))),
+            entry.state !== 'refused' && entry.position > 1
+              ? h('button', { className: 'ssl-btn ssl-btn--sm', disabled: !!busy, title: zhEn('提成紧急，排到最前', 'Mark urgent and move to the front'), onClick: () => queueAct(entry, 'bump') }, zhEn('插队', 'Bump'))
+              : entry.state === 'refused' ? h('button', { className: 'ssl-btn ssl-btn--sm', disabled: !!busy, onClick: () => queueAct(entry, 'bump') }, zhEn('再试', 'Retry')) : null,
+            h('button', { className: 'ssl-btn ssl-btn--ghost ssl-btn--sm', disabled: !!busy, onClick: () => queueAct(entry, 'remove') }, zhEn('撤回', 'Withdraw')))),
+          queue.length > 6 ? h('div', { className: 'ssl-caption' }, zhEn(`还有 ${queue.length - 6} 件在后面`, `${queue.length - 6} more behind`)) : null) : null;
         if (!items.length) {
-          return h('div', { className: 'ssl-inbox-ok' },
-            h('span', { className: 'ssl-dot', style: { background: 'var(--ssl-ok)' } }),
-            running ? zhEn(`${running} 个任务在办，办完要你过目的会出现在这里`, `${running} running; anything that needs you lands here`)
-              : zhEn('没有待你处理的任务', 'No tasks need you'));
+          return h(React.Fragment, null,
+            edicts.length ? h('div', { className: 'ssl-inbox-ok' },
+              h('span', { className: 'ssl-dot', style: { background: 'var(--ssl-ok)' } }),
+              running ? zhEn(`${running} 个任务在办，办完要你过目的会出现在这里`, `${running} running; anything that needs you lands here`)
+                : zhEn('没有待你处理的任务', 'No tasks need you')) : null,
+            queueNode);
         }
         const redo = item => {
           setBusy(item.id);
@@ -4428,7 +4498,7 @@ select.ssl-input { cursor: pointer; }
           interrupted: ['DSH 重启时被打断了', 'Cut short by a DSH restart'],
         };
         const shown = items.slice(0, 5);
-        return h('div', { className: 'ssl-inbox' },
+        return h(React.Fragment, null, h('div', { className: 'ssl-inbox' },
           h('div', { className: 'ssl-inbox-h' },
             h('b', null, zhEn('待你处理', 'Needs you')),
             h('span', { className: 'ssl-count ssl-count--seal' }, items.length)),
@@ -4441,7 +4511,7 @@ select.ssl-input { cursor: pointer; }
               : null,
             h('button', { className: cx('ssl-btn ssl-btn--sm', kind !== 'interrupted' && 'ssl-btn--seal'), onClick: () => onSelect(item.id) },
               kind === 'approve' ? zhEn('去看并批准', 'Review') : kind === 'input' ? zhEn('去补一句', 'Answer') : zhEn('去看', 'Open')))),
-          items.length > shown.length ? h('div', { className: 'ssl-caption' }, zhEn(`还有 ${items.length - shown.length} 件，在左边列表里`, `${items.length - shown.length} more in the list on the left`)) : null);
+          items.length > shown.length ? h('div', { className: 'ssl-caption' }, zhEn(`还有 ${items.length - shown.length} 件，在左边列表里`, `${items.length - shown.length} more in the list on the left`)) : null), queueNode);
       }
 
       // ---------- 你的团队：DSH 一个人就能顶上所有岗位；本机的 Claude Code / Codex 一键装好、登录、接上 ----------
@@ -5283,7 +5353,7 @@ select.ssl-input { cursor: pointer; }
           setSteps(next);
         };
         const send = () => {
-          if (!brief.trim() || full) return;
+          if (!brief.trim()) return;
           clearTimeout(saveTimer.current);
           submit({ brief, ...decreePayload({ ...decree, mode: '' }), workflow: steps }, () => { clearAfterStamp(setBrief, brief); setDecree(prev => ({ ...prev, attachments: [], criteria: '' })); });
         };
@@ -5292,7 +5362,7 @@ select.ssl-input { cursor: pointer; }
 
         const chain = [
           flowLabel(FLOW[0]), flowLabel(FLOW[1]),
-          ...(steps.length ? steps.map(item => `${titleOf(item.ministry)} · ${item.title || dutyOf(item.ministry).split(/[，、：,;]/)[0]}`) : [t('chainFree')]),
+          ...(steps.length ? steps.map((item, index) => `${index && item.parallel ? '∥ ' : ''}${titleOf(item.ministry)} · ${item.title || dutyOf(item.ministry).split(/[，、：,;]/)[0]}`) : [t('chainFree')]),
           flowLabel(FLOW[4]), autonomous ? t('chainAuto') : flowLabel(FLOW[5]),
         ];
 
@@ -5303,7 +5373,7 @@ select.ssl-input { cursor: pointer; }
               h('div', { className: 'ssl-actions' },
                 h('span', { className: 'ssl-caption' }, t('templates')),
                 Object.entries(templates).map(([key, template]) => h('button', {
-                  key, className: 'ssl-chip', onClick: () => setSteps(template.steps.map(item => ({ ministry: item.ministry, title: item.title[lang] || item.title.zh }))),
+                  key, className: 'ssl-chip', onClick: () => setSteps(template.steps.map(item => ({ ministry: item.ministry, title: item.title[lang] || item.title.zh, ...(item.parallel ? { parallel: true } : {}) }))),
                 }, template.name[lang] || template.name.zh)),
                 h('button', { className: 'ssl-chip', onClick: () => setSteps([]) }, t('clearFlow'))),
               h('span', { className: 'ssl-caption' }, t('flowMax'))),
@@ -5320,6 +5390,11 @@ select.ssl-input { cursor: pointer; }
                 className: 'ssl-input', value: item.title, placeholder: dutyOf(item.ministry), 'aria-label': t('stepTitleAria', { n: index + 1 }),
                 onChange: event => update(index, { title: event.target.value }),
               }),
+              index ? h('button', {
+                type: 'button', className: cx('ssl-btn ssl-btn--ghost ssl-btn--sm ssl-wf-par', item.parallel && 'is-on'), 'aria-pressed': !!item.parallel,
+                title: zhEn('与上一步同时办：两步互不依赖（比如配图和配乐）就点亮，一起开工，后面的步骤等它们都办完', 'Run alongside the previous step: light it up when the two do not depend on each other; later steps wait for both'),
+                onClick: () => update(index, { parallel: !item.parallel }),
+              }, item.parallel ? zhEn('∥ 同时办', '∥ parallel') : zhEn('→ 接着办', '→ after')) : h('span', null),
               h('div', { className: 'ssl-actions', style: { flexWrap: 'nowrap', gap: '2px' } },
                 h('button', { className: 'ssl-btn ssl-btn--ghost ssl-btn--sm', title: t('moveUp'), disabled: index === 0, onClick: () => move(index, -1) }, '↑'),
                 h('button', { className: 'ssl-btn ssl-btn--ghost ssl-btn--sm', title: t('moveDown'), disabled: index === steps.length - 1, onClick: () => move(index, 1) }, '↓'),
@@ -5329,13 +5404,19 @@ select.ssl-input { cursor: pointer; }
               h('button', {
                 className: 'ssl-btn ssl-btn--sm', disabled: steps.length >= 12,
                 onClick: () => setSteps([...steps, { ministry: 'war', title: '' }]),
-              }, t('addStep')))),
+              }, t('addStep')),
+              steps.length ? h('label', {
+                className: 'ssl-check', style: { marginLeft: '14px' },
+                title: zhEn('流程已经定了，就不再让中书省照抄一遍方案、门下省再审一遍：每道旨省两次以上调用，各步直接开工，办完仍由门下省复核。步骤需要因题而异时关掉。', 'With the procedure fixed there is no need for the Consul to restate it and the Tribune to review it: saves two or more calls per decree; steps start at once and the Tribune still audits the result. Turn it off when the steps should vary with the task.'),
+              },
+              h('input', { type: 'checkbox', checked: !!(state.rules && state.rules.workflowDirect), onChange: event => savePresetPatch(state, { rules: { ...state.rules, workflowDirect: event.target.checked } }, refresh, notify, t('rulesSaved')) }),
+              zhEn('直办：跳过拟旨与封驳，按流程直接开工', 'Straight to work: skip the draft and veto rounds')) : null)),
           h(Section, { title: t('issueTitle'), note: t('issueByFlow') }),
           h('div', { className: 'ssl-card' }, h(Composer, {
             value: brief,
             onChange: setBrief,
             onSubmit: send,
-            canSubmit: !full && !sending && !!brief.trim(),
+            canSubmit: !sending && !!brief.trim(),
             sending,
             stamp,
             placeholder: t('briefPhVideo'),
@@ -5446,7 +5527,7 @@ select.ssl-input { cursor: pointer; }
 
         const full = state && state.full === true;
         const send = () => {
-          if (!draft.trim() || full) return;
+          if (!draft.trim()) return;
           submit({ brief: draft }, () => clearAfterStamp(setDraft, draft));
         };
         const openDoc = name => apiJson(`/artifact?id=${encodeURIComponent(edictId)}&name=${encodeURIComponent(name)}`)
@@ -5486,8 +5567,7 @@ select.ssl-input { cursor: pointer; }
             value: draft,
             onChange: setDraft,
             onSubmit: send,
-            canSubmit: !full && !sending && !!draft.trim(),
-            disabled: full,
+            canSubmit: !sending && !!draft.trim(),
             sending,
             stamp,
             placeholder: full ? t('fullShort') : t('chatPh'),
@@ -6073,7 +6153,7 @@ select.ssl-input { cursor: pointer; }
           fieldWorkspace: '工作目录', workspacePh: '留空 = 在「文档/SanshengLiubu」下新建文件夹；git 仓库会自动隔离到分支',
           fieldCriteria: '验收标准（可选）', criteriaPh: '如：测试全部通过、时长 22-28 秒',
           opened: '已开朝：{id}',
-          fullCaption: '朝堂同时最多办 {n} 份奏折，请等一份办完',
+          fullCaption: '朝堂同时办 {n} 份奏折，现已坐满：照常下旨，先候旨，有空位自动开朝',
           autoCaption: '丞相模式：拟旨 → 封驳 → 六部并行执行 → 复核 → 自我修复 → 自动归档，全程不问你',
           normalCaption: '中书拟旨 → 门下封驳 → 尚书派单 → 六部执行 → 门下复核 → 上奏批红',
           inSessionN: '在办 {n}/{cap}',
@@ -6175,7 +6255,7 @@ select.ssl-input { cursor: pointer; }
           paneExecEmpty: '朝堂清静。到头部「确定工作流」下旨，这里会显示执行进度。', openChat: '看各部门沟通',
           pickEdictAria: '选择奏折', noEdictsShort: '还没有奏折', chatEmpty: '在下面写圣意下旨，三省六部的往来会像群聊一样出现在这里。',
           waitingReports: '等待各部回文…', workingFor: '办差中 {t}', typing: '正在输出',
-          fullShort: '朝堂满额，办完一份后可再下旨', chatPh: '写下圣意，Enter 下旨，Shift + Enter 换行',
+          fullShort: '朝堂满额：照常下旨，先候旨，有空位自动开朝', chatPh: '写下圣意，Enter 下旨，Shift + Enter 换行',
           chatFlowN: '按钦定流程 {n} 步', chatFlowFree: '由中书省自拟流程',
         },
         en: {
@@ -6196,7 +6276,7 @@ select.ssl-input { cursor: pointer; }
           fieldWorkspace: 'Working folder', workspacePh: 'Empty = a new folder under Documents/SanshengLiubu; a git repo is isolated on its own branch',
           fieldCriteria: 'Acceptance criteria (optional)', criteriaPh: 'e.g. all tests pass, 22-28 seconds long',
           opened: 'The Senate convenes: {id}',
-          fullCaption: 'The Senate handles at most {n} decrees at a time. Wait for one to finish',
+          fullCaption: 'The Senate handles {n} decrees at a time and is full: issue anyway; it waits and starts when a seat frees up',
           autoCaption: 'Autonomy: draft → veto → parallel work → audit → self-repair → archive, without asking you',
           normalCaption: 'Consul drafts → Tribune reviews → Proconsul dispatches → magistrates work → Tribune audits → your seal',
           inSessionN: 'In session {n}/{cap}',
@@ -6298,7 +6378,7 @@ select.ssl-input { cursor: pointer; }
           paneExecEmpty: 'The Senate is quiet. Issue a decree from the "Procedure" header view and progress appears here.', openChat: 'Senate floor',
           pickEdictAria: 'Pick a decree', noEdictsShort: 'No decrees yet', chatEmpty: 'Write Caesar\'s will below. The offices\' dispatches appear here like a group chat.',
           waitingReports: 'Waiting for reports…', workingFor: 'at work {t}', typing: 'writing',
-          fullShort: 'The Senate is full; issue again once one finishes', chatPh: 'Write Caesar\'s will; Enter to issue, Shift + Enter for a new line',
+          fullShort: 'The Senate is full: issue anyway; it waits its turn', chatPh: 'Write Caesar\'s will; Enter to issue, Shift + Enter for a new line',
           chatFlowN: 'Fixed procedure: {n} steps', chatFlowFree: 'The Consul plans the procedure',
         },
       };
@@ -6309,7 +6389,7 @@ select.ssl-input { cursor: pointer; }
           appSub: '把本机的 AI 工具组成你的一人公司：首席战略官出方案、首席风控官把关、首席运营官派活、各部门并行干活，全程在隔离分支里进行，你批准才合并。',
           tabCourt: '工作台', tabWorkroom: '实时', workroomTitle: '实时进展', hudTitle: '一人公司 · 实时', hudPill: '{n} 个任务在办',
           courtNoteFirst: '头一回用：先去「AI 员工」点一下一键探测，确认每个岗位都有人能干活。',
-          fullCaption: '同时最多办 {n} 个任务，请等一个办完', fullShort: '已满额，办完一个后可再派任务',
+          fullCaption: '同时办 {n} 个任务，现已满员：照常派，先排队，有空位自动开工', fullShort: '已满员：照常派，先排队，有空位自动开工',
           autoCaption: '全权交办：出方案 → 风控把关 → 各部门并行执行 → 复核 → 自我修复 → 自动归档，全程不问你',
           normalCaption: '战略出方案 → 风控把关 → 运营派活 → 各部门执行 → 风控复核 → 你来批准',
           noEdicts: '还没有任务。写下需求，派出第一个任务。',
@@ -6338,7 +6418,7 @@ select.ssl-input { cursor: pointer; }
           tabCourt: 'Workbench', tabWorkroom: 'Live', workroomTitle: 'Live', hudTitle: 'One-Person Company · Live', hudPill: '{n} at work',
           courtNoteFirst: 'First time: open Team and press Probe all to check every role has someone who can do the work.',
           issue: 'New task', issueTitle: 'New task', sealTitle: 'Send the task (Enter)', opened: 'Started: {id}',
-          fullCaption: 'At most {n} tasks run at a time. Wait for one to finish', fullShort: 'Full right now; start another once one finishes',
+          fullCaption: '{n} tasks run at a time and all seats are taken: send it anyway; it queues and starts by itself', fullShort: 'Full right now: send it anyway; it queues',
           noEdicts: 'No tasks yet. Write a brief and send your first task.',
           noEdictsYet: 'No tasks yet. Start one from the Workbench tab, or let the model call sansheng_edict.',
           groupDepartments: 'Executives', groupMinistries: 'Departments',
