@@ -6,12 +6,13 @@
 
 [![Release](https://img.shields.io/github/v/release/shilaoban666/dsh-imperial-court?color=b4362b&label=release)](https://github.com/shilaoban666/dsh-imperial-court/releases)
 [![DSH plugin](https://img.shields.io/badge/DSH-plugin-e9c46a)](https://dshbase.com/zh/plugins/)
-[![Tests](https://img.shields.io/badge/tests-65%20passing-1f8a70)](test/court.test.mjs)
+[![CI](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml/badge.svg)](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-79%20passing-1f8a70)](test)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-3c873a)](package.json)
 [![Languages](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-English-2e6f9e)](README.en.md)
 [![License](https://img.shields.io/badge/license-MIT-5d5348)](LICENSE)
 
-**中文** · [English](README.en.md) · [快速开始](#快速开始) · [截图](#截图) · [使用指南](docs/GUIDE.md) · [更新日志](CHANGELOG.md)
+**中文** · [English](README.en.md) · [快速开始](#快速开始) · [丞相府](#丞相府一次交办一摞事) · [截图](#截图) · [使用指南](docs/GUIDE.md) · [更新日志](CHANGELOG.md)
 
 </div>
 
@@ -76,6 +77,42 @@
 </tr>
 </table>
 
+## 丞相府：一次交办一摞事
+
+人同时盯得住的 AI 会话只有三五个，再多就成了你在给工具当调度员。DeepSeek Harness 团队的 [super-agent 设计](https://github.com/deepseek-ai/dsh-superagent-prototype)给的解法是 **Router–Worker**：一个常驻的 Router 只管接活和派发，每件事交给一个互相隔离的 Worker，人只在要拍板时出现。**丞相府**把同一个想法落在你的本机上，而且不用再搭任何服务：
+
+<img src="docs/screenshots/18-chancellor.png" alt="丞相府：待你处理与候旨队列" width="100%">
+
+| super-agent 的设计 | 三省六部里的对应 | 怎么用 |
+|---|---|---|
+| 常驻 Router：接活、分拣、派发 | **丞相府**：拆清单、定朝制、排队、放行，全是确定式逻辑，不耗 token | DSH 主会话调 `sansheng_dispatch`，或下旨时点「分开办」 |
+| 隔离的 Worker 会话 | **一道旨**：自己的 `git worktree` + 分支，三省六部照常审 | 自动 |
+| 满了就排队，不靠人盯 | **候旨队列**：朝堂满员照样收；急件优先、短活优先、先来先办；重启不丢 | 「排队中」可插队、撤回 |
+| 只在要人拍板时打扰 | **待你处理** / `sansheng_inbox`：只列要你出手的事 | 自动 |
+| Watchdog 盯进度 | **锦衣卫**：卡死拿下、推脱督办、超支停朝 | 自动 |
+| 结果以 PR 交回 | **隔离分支 + 批红合并**（本机版的 PR） | 批红 / 驳回 |
+
+```text
+你：帮我把这几件事办了
+    1. 线上登录接口 500，紧急修一下
+    2. 给 README 补安装说明
+    3. 把设置页的表单校验抽成 hook
+
+丞相府：已接 3 道旨：2 道已开朝，1 道候旨
+    - [standard !] 线上登录接口 500…   → edict-…-a1b2   （急件，先办）
+    - [express/rites] 给 README 补安装说明 → edict-…-c3d4
+    - [standard] 把设置页的表单校验…   → q-…  #1          （有空位自动开朝）
+```
+
+想全程不管，就给这一批加上 `autonomous: true`（或在朝规里开丞相模式）：复核不过自己补救，通过了自动归档，办不成的才来找你。
+
+**定了流程还能更快。** 「确定工作流」里的钦定流程现在有两个提速开关：
+
+- **直办**：部门和次序你已经定了，就不再让中书照抄一遍方案、门下再审一遍。每道旨少两次以上模型调用，各步直接开工，办完仍由门下复核。
+- **同时办**：互不依赖的两步（比如配图和配乐）点亮「∥ 同时办」，一起开工，后面的步骤等它们都办完。
+
+两者都有端到端测试钉住：直办的调用里没有拟旨和封驳，标了并行的两步在时间上确实重叠（见 [`test/chancellor.test.mjs`](test/chancellor.test.mjs)）。
+
 ## 截图
 
 > 截图来自 [`preview.html`](preview.html)：真实的 `client.js` 跑在按 DSH 桌面版搭的模拟宿主里，数据是演示用的。
@@ -136,10 +173,10 @@ flowchart LR
 **1. 安装**（需要 DSH，以及 Node 20+ 与 git）
 
 ```bash
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.0.0
+dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.1.0
 ```
 
-Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.0.0`。
+Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.1.0`。
 
 **2. 打开**：重启 DSH，点侧栏的「三」。插件会自己找本机的 DSH、Claude Code、Codex 并排好岗位，什么都不用设。
 
@@ -165,6 +202,8 @@ Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.0.0`。
 | 🧭 | **DSH 本体任职** | 经 `dsh headless` 担任任何岗位，用桌面端登录、按岗位选模型 |
 | 📂 | **产出直接打开** | 一键打开产出文件夹，用默认程序打开文档与媒体 |
 | 📥 | **待你处理** | 只摆出要你出手的事：过目批准、补一句、被重启打断的一键「接着办」 |
+| 🎩 | **丞相府** | 一次交办一摞事：拆清单、分拣、排队、派发；满员照收，急件与短活优先，可插队、撤回，重启不丢 |
+| ⏩ | **钦定流程提速** | 直办（跳过拟旨与封驳）、同时办（互不依赖的步骤并行） |
 | 🧰 | **你的团队** | 自动找到本机工具并排岗；一键安装、一键登录、接上；可随时交回自动分配 |
 | 🌏 | **中英双语** | 六套主题，提示词也跟着换语言 |
 
@@ -215,7 +254,7 @@ Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.0.0`。
 <details>
 <summary><b>数据存在哪？会上传吗？</b></summary>
 
-都在本机：`~/.dsh/sansheng-liubu/`（状态、奏折、史馆、实录）。插件只在本机起一个 HTTP 端点给自己的界面用，改状态的请求只收同源的 JSON，挡住跨站表单。调用模型走的是你自己装的 CLI。
+都在本机：`~/.dsh/sansheng-liubu/`（状态、奏折、史馆、实录）。插件只在本机起一个 HTTP 端点给自己的界面用：只认本机地址（或 IP、你在配置里放行的域名）发来的请求，挡住 DNS 重绑定；改状态的请求只收同源的 JSON，挡住跨站表单。调用模型走的是你自己装的 CLI。
 
 </details>
 
@@ -223,6 +262,8 @@ Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.0.0`。
 
 - 真机验证到急递为止：真的 `dsh headless` 跑通过一整份急递；多家真 CLI 协作的常朝还没在真机跑完过。
 - 并行的差事共用同一个 worktree，靠「不同步骤写不同文件」避免冲突。
+- 丞相府是本机版的 Router–Worker：活的来源是你和 DSH 主会话，不会自己去盯群聊、邮件或 CI；结果以隔离分支交回，不会替你开 GitHub PR。
+- 同批的几道旨各自从下旨那一刻的提交拉分支，互相看不到对方的改动；改同一处的两件事批红合并时可能冲突（冲突时拒绝合并、原样保留）。
 - 等回填时重启 DSH，奏折会标为中断（分支照常保留快照）。
 - DSH 侧栏的会话列表插件进不去，奏折目录在朝堂左栏。
 
@@ -230,7 +271,7 @@ Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.0.0`。
 
 ## 参与
 
-欢迎提 [Issue](https://github.com/shilaoban666/dsh-imperial-court/issues) 和 PR。改之前跑一遍 `npm test`（48 个端到端测试，真 git 仓库 + 假 CLI）；界面改动可以在 `preview.html` 里直接看。
+欢迎提 [Issue](https://github.com/shilaoban666/dsh-imperial-court/issues) 和 PR。改之前跑一遍 `npm test`（79 个测试，真 git 仓库 + 假 CLI；CI 在 Windows / macOS / Linux 上各跑一遍）；界面改动可以在 `preview.html` 里直接看。
 
 ## License
 
