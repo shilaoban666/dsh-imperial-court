@@ -6,7 +6,8 @@
 
 [![Release](https://img.shields.io/github/v/release/shilaoban666/dsh-imperial-court?color=b4362b&label=release)](https://github.com/shilaoban666/dsh-imperial-court/releases)
 [![DSH plugin](https://img.shields.io/badge/DSH-plugin-e9c46a)](https://dshbase.com/zh/plugins/)
-[![Tests](https://img.shields.io/badge/tests-65%20passing-1f8a70)](test/court.test.mjs)
+[![CI](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml/badge.svg)](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-79%20passing-1f8a70)](test)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-3c873a)](package.json)
 [![Languages](https://img.shields.io/badge/English-%E4%B8%AD%E6%96%87-2e6f9e)](README.md)
 [![License](https://img.shields.io/badge/license-MIT-5d5348)](LICENSE)
@@ -76,6 +77,30 @@ Five regimes: the more tools, the safer your throne; one tool alone makes you *D
 </tr>
 </table>
 
+## The Chancellor: hand over a pile of work at once
+
+A person can watch three to five AI sessions at a time; beyond that you become the scheduler for your own tools. The DeepSeek Harness team's [super-agent design](https://github.com/deepseek-ai/dsh-superagent-prototype) answers with **Router–Worker**: one resident router takes requests and dispatches them, each task runs in its own isolated worker, and the human appears only when a decision is needed. **The Chancellor** brings the same idea to your own machine, with no extra service to run:
+
+<img src="docs/screenshots/en-12-chancellor.png" alt="The Chancellor: what needs you, and the queue" width="100%">
+
+| In the super-agent design | Here | How you use it |
+|---|---|---|
+| A resident router: intake, triage, dispatch | **The Chancellor**: splits lists, picks the procedure, queues and releases. Deterministic, costs no tokens | The DSH main session calls `sansheng_dispatch`, or you tick *Split* when issuing |
+| Isolated worker sessions | **A decree**: its own `git worktree` and branch, reviewed by the Senate as usual | Automatic |
+| Queue instead of human scheduling | **The queue**: a full Senate still accepts work; urgent first, short work first, then first come; survives restarts | Bump or withdraw under *Queued* |
+| Interrupt the human only for decisions | **Needs you** / `sansheng_inbox`: only what needs your hand | Automatic |
+| A watchdog on progress | **The Praetorian Guard**: stops stalls, chases excuses, halts overspending | Automatic |
+| Results come back as a PR | **Isolated branch + your seal** (the local equivalent of a PR) | Seal or reject |
+
+To stay out of it entirely, pass `autonomous: true` for the batch (or turn on Autonomy in the rules): a failed audit is repaired without you, a passed one is archived, and only what cannot be finished comes back to you.
+
+**A fixed workflow can go faster.** The fixed procedure now has two speed switches:
+
+- **Straight to work**: you already set the offices and their order, so the Consul no longer restates the plan and the Tribune no longer reviews it. Two or more model calls saved per decree; the Tribune still audits the result.
+- **In parallel**: mark two steps that do not depend on each other (visuals and music, say) and they start together; later steps wait for both.
+
+Both are pinned by end-to-end tests: no draft or veto call in a straight-to-work decree, and the two marked steps really overlap in time (see [`test/chancellor.test.mjs`](test/chancellor.test.mjs)).
+
 ## Screenshots
 
 > From [`preview.html`](preview.html): the real `client.js` on a mock host laid out like the DSH desktop app. Demo data.
@@ -131,10 +156,10 @@ Small jobs go **express** (straight to one magistrate); long ones go to the **Co
 **1. Install** (DSH, Node 20+ and git)
 
 ```bash
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.0.0
+dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.1.0
 ```
 
-Use `--profile web` for the web build; drop `#v1.0.0` to follow the latest code.
+Use `--profile web` for the web build; drop `#v1.1.0` to follow the latest code.
 
 **2. Open**: restart DSH, click the seal in the sidebar and switch to **EN**. The plugin finds DSH, Claude Code and Codex on your machine and fills the roles by itself; there is nothing to set up.
 
@@ -160,6 +185,8 @@ DSH alone works: DSH itself can hold any role. For a real cross-check (models fr
 | 🧭 | **DSH in office** | Any office via `dsh headless`, with your desktop sign-in and a model per office |
 | 📂 | **Open the output** | Open the output folder, open documents and media, reveal files |
 | 📥 | **Needs you** | Only what needs you: approvals, questions, and one-click *Pick up* for tasks cut short by a restart |
+| 🎩 | **The Chancellor** | Hand over a pile at once: split, triage, queue, dispatch; a full Senate still accepts work, urgent and short work go first, bump or withdraw, survives restarts |
+| ⏩ | **Faster fixed workflows** | Straight to work (no draft or veto round) and parallel steps |
 | 🧰 | **Your team** | Finds the tools on your machine and fills the roles; one-click install, sign-in and add; hand back to automatic any time |
 | 🌏 | **Two languages** | Six themes, prompts in either language |
 
@@ -218,6 +245,8 @@ Everything stays on your machine in `~/.dsh/sansheng-liubu/`. The plugin serves 
 
 - Verified on a real machine up to express decrees; a multi-tool Senate procedure has not yet run end to end on a real machine.
 - Parallel orders share one worktree and rely on writing different files.
+- The Chancellor is a local Router–Worker: work comes from you and the DSH main session; it does not watch chats, mail or CI by itself, and results come back as isolated branches, not GitHub PRs.
+- Decrees of one batch each branch from the commit at issue time and do not see each other's changes; two that touch the same place may conflict at merge (the merge is refused and everything is kept).
 - Restarting DSH while waiting for input ends the decree (the snapshot branch is kept).
 - DSH's sidebar session list is closed to plugins, so decrees are listed in the Senate tab.
 
@@ -225,7 +254,7 @@ Full list and roadmap: [guide · known limits](docs/GUIDE.en.md#15-known-limits-
 
 ## Contributing
 
-Issues and PRs are welcome. Run `npm test` first (48 end-to-end tests against real git repositories and a fake CLI); check UI changes in `preview.html`.
+Issues and PRs are welcome. Run `npm test` first (79 tests against real git repositories and a fake CLI; CI runs them on Windows, macOS and Linux); check UI changes in `preview.html`.
 
 ## License
 

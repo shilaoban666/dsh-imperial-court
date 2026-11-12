@@ -1,0 +1,43 @@
+name: 问题反馈 / Bug report
+description: 办砸了、卡住了、界面不对 / Something failed, stalled or looks wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 发生了什么 / What happened
+      description: 你下的旨、期望的结果、实际的结果。奏折页里的失败原因请原样贴上。 / The decree you issued, what you expected, what you got. Paste the error shown on the decree.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 怎么复现 / Steps to reproduce
+      placeholder: |
+        1. 工作目录是 git 仓库 / 不是
+        2. 朝制：急递 / 常朝 / 大朝会
+        3. …
+  - type: input
+    id: version
+    attributes:
+      label: 插件版本 / Plugin version
+      placeholder: v1.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: 系统 / OS
+      options: [Windows, macOS, Linux]
+    validations:
+      required: true
+  - type: input
+    id: tools
+    attributes:
+      label: 在岗的工具 / Tools in office
+      description: DSH、Claude Code、Codex、WorkBuddy 各是什么版本 / Versions of the tools you use
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志或截图 / Logs or screenshots
+      description: 请先去掉 API Key 与私有路径 / Remove API keys and private paths first

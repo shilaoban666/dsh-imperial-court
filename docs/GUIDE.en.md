@@ -171,9 +171,30 @@ The plugin runs DSH's one-shot mode, `dsh headless`, so DSH does real work like 
 
 > ⚠️ Autonomy arguments let CLIs write files, run commands and use the network without confirmation. The branch protects your repository, not the rest of your machine. Only attach CLIs you trust, and keep API keys in environment variables.
 
+### The Chancellor: intake, triage, queue, dispatch
+
+Autonomy answers "nobody is there to decide inside one decree"; the Chancellor answers "a pile of work should not need a human scheduler". Use either alone; together they are a local Router–Worker (the idea behind DeepSeek Harness's super-agent).
+
+| Stage | What happens | Notes |
+|---|---|---|
+| Intake | A message that contains a list (`1.`, `-`, `•`, `①`) becomes several decrees; text before the list is shared context | Needs at least two items; a coherent paragraph or a list inside a code block is not split; 12 per batch |
+| Triage | Each decree gets a procedure (express / standard / grand), an office for express work, and an urgency | Deterministic, no model call. "urgent / hotfix / P0 / outage" is urgent; "no rush / whenever" is low |
+| Queue | A full Senate still accepts work; so does a folder occupied by an unisolated decree | Persisted (`queue.json`) and resumed after a restart; at most 50 waiting |
+| Dispatch | Free seats are filled: urgent first, then short (express) work, then first come | A blocked entry does not hold up the rest; one that cannot start (budget spent…) is shown as refused |
+| Digest | *Needs you* and `sansheng_inbox` list only what needs your hand | Awaiting seal, awaiting input, cut short, failed today, refused |
+
+In the interface, a list in the decree box shows "N items · split?"; it splits only when you turn it on (split unrelated tasks; leave the steps of one task to the Consul). Under *Queued* you can **bump** (mark urgent) or **withdraw**.
+
+HTTP: `POST /dispatch` (`{ brief | items, workspace, criteria, autonomous, priority, workflow }`), `GET /queue`, `GET /inbox`, `DELETE /queue/:id`, `POST /queue/:id/bump`; `POST /edicts` answers `{ queued: true, position }` when the Senate is full.
+
+### Faster fixed workflows
+
+- **Straight to work** (rule `workflowDirect`, or the checkbox on the workflow page): a decree with a fixed procedure skips the draft and veto rounds; the Proconsul dispatches the steps as set, each step receives the full decree plus "yours is step N", and the Tribune still audits the result. Turn it off when the steps should vary with the task.
+- **In parallel**: mark a step "∥ parallel" and it joins the previous step's group; the group starts together and the next group waits for all of it. Parallel steps must write different files.
+
 ## 12. Model tools
 
-`sansheng_edict` (issue; optional `workflow`: `default`, `none`, `video`, `dev`, `report`, or `war,justice`), `sansheng_status`, `sansheng_approve` (seal and merge), `sansheng_reject`, `sansheng_fill`, `sansheng_assign`.
+`sansheng_edict` (issue; optional `workflow`: `default`, `none`, `video`, `dev`, `report`, or `war,justice`), `sansheng_dispatch` (hand over several tasks at once: the Chancellor splits, triages, queues and dispatches; optional `autonomous`, `priority`), `sansheng_inbox` (the digest: only what needs the human), `sansheng_status`, `sansheng_approve` (seal and merge), `sansheng_reject`, `sansheng_fill`, `sansheng_assign`.
 
 ## 13. Install and configure
 

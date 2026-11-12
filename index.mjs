@@ -21,6 +21,7 @@ import * as git from './lib/git.mjs';
 import { WORKFLOW_TEMPLATES, resolveWorkflow, cleanWorkflow } from './lib/workflows.mjs';
 import { createTreasury, costOf, savedOf, DEFAULT_PRICES } from './lib/treasury.mjs';
 import { createWiki } from './lib/wiki.mjs';
+import { splitRequests, triage, pickNext, orderQueue, digest, MAX_BATCH } from './lib/chancellor.mjs';
 import { historianPrompt } from './lib/prompts.mjs';
 import { regimeOf, actualRegimeOf, puppetIndex, puppetVerdict, powerOf, POWERS, REGIMES, REGIME_TEXT } from './lib/regime.mjs';
 
@@ -232,15 +233,29 @@ function sendJson(res, status, body) {
 
 const isLoopback = host => /^(localhost|127\.\d+\.\d+\.\d+|\[::1\])$/i.test(String(host || '').replace(/:\d+$/, ''));
 
+/** Host 头可不可信：没带 Host 的（测试、非浏览器客户端）放行；域名只认 localhost 一族与显式放行的 */
+export function hostAllowed(host, allowedHosts = []) {
+  const raw = String(host || '').trim().toLowerCase();
+  if (!raw) return true;
+  const name = raw.startsWith('[') ? raw.replace(/\]:\d+$/, ']') : raw.replace(/:\d+$/, '');
+  if (isLoopback(name) || name.endsWith('.localhost')) return true;
+  // IP 字面量不可能是重绑定出来的（重绑定必须经过一个域名）：局域网里用 IP 访问 DSH 照常可用
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(name) || /^\[[0-9a-f:.]+\]$/.test(name)) return true;
+  return (Array.isArray(allowedHosts) ? allowedHosts : []).some(item => String(item || '').trim().toLowerCase() === name);
+}
+
 /**
  * 跨站请求防护：改状态的请求会让本机 CLI 执行任务，不能让任意网页用一个表单就触发。
  * 1) 只收 application/json（表单发不出这个类型，跨站 fetch 发它又要过 CORS 预检，本端点不放行）；
  * 2) 浏览器标明跨站的直接拒；Origin 与 Host 对不上的拒（两边都是本机回环地址时放行，兼容开发代理）。
  * @returns {string | null} 拒绝原因的文案 key
  */
-export function checkRequest(req, method) {
-  if (method === 'GET' || method === 'HEAD') return null;
+export function checkRequest(req, method, allowedHosts = []) {
   const headers = req.headers || {};
+  // DNS 重绑定：攻击者的域名解析到 127.0.0.1 后，浏览器发来的 Origin 与 Host 都是那个域名，下面的同源比较拦不住，
+  // 而 GET（读文件、读奏折）本来就不比。所以先认 Host：只收回环地址、IP 字面量、*.localhost，或配置里放行的域名。
+  if (!hostAllowed(headers.host, allowedHosts)) return 'errOrigin';
+  if (method === 'GET' || method === 'HEAD') return null;
   if (String(headers['sec-fetch-site'] || '') === 'cross-site') return 'errOrigin';
   const origin = headers.origin;
   if (origin && origin !== 'null') {
@@ -340,6 +355,8 @@ function sanitizePreset(input, current) {
   rules.maxFixRounds = clampInt(rules.maxFixRounds, 0, 3, 2);
   rules.isolation = rules.isolation === 'off' ? 'off' : 'worktree';
   rules.autoMerge = rules.autoMerge === true;
+  // 钦定流程直办：定了流程就不再拟旨、封驳，直接按流程开工（办完仍复核）
+  rules.workflowDirect = rules.workflowDirect === true;
   rules.execWrites = rules.execWrites !== false;
   rules.parallel = clampInt(rules.parallel, 1, 4, 2);
   rules.maxConcurrent = clampInt(rules.maxConcurrent, 1, 4, 2);
@@ -391,6 +408,9 @@ function summarizeEdict(edict) {
     rounds: edict.rounds,
     autonomous: edict.autonomous === true,
     fixRounds: edict.fixRounds || 0,
+    direct: edict.direct === true,
+    batch: edict.batch || '',
+    waitedMs: edict.waitedMs || 0,
     isolationNote: edict.isolationNote || '',
     recalled: Array.isArray(edict.recalled) ? edict.recalled.length : 0,
     mode: edict.mode || 'standard',
@@ -519,6 +539,8 @@ export function createCourt(config = {}, { log = console } = {}) {
   const recent = []; // 刚办完的差事，值房里留一会儿
   const pendingFills = new Map(); // `${edictId}:${seq}` → { resolve }
   const rejectNotes = new Map();
+  const allowedHosts = Array.isArray(config.allowedHosts) ? config.allowedHosts.map(String) : [];
+  let disposed = false;
   // 皇帝亲手驳回 / 叫停的奏折（还在跑的由流程收尾，收尾后在 afterRun 里记上「亲裁」）
   const ruledByEmperor = new Set();
   let callSeq = 0;
@@ -1051,8 +1073,85 @@ export function createCourt(config = {}, { log = console } = {}) {
     treasury.settle(edict.id, outcomes);
   }
 
+  // ---------- 丞相府：候旨队列 ----------
+  // 队列的摘要在 queue.json，每道旨的完整入参（可能带附件）单独一个文件；DSH 重启后还在，启动时接着放行。
+  const QUEUE_MAX = 50;
+  const queueFile = path.join(store.root, 'queue.json');
+  const queueDir = path.join(store.root, 'queue');
+  let queue = [];
+  try {
+    const saved = JSON.parse(fs.readFileSync(queueFile, 'utf8'));
+    if (Array.isArray(saved)) queue = saved.filter(entry => entry && /^q-[a-z0-9-]{1,40}$/.test(String(entry.id)) && fs.existsSync(path.join(queueDir, `${entry.id}.json`)));
+  } catch {
+    queue = [];
+  }
+  function saveQueue() {
+    const tmp = `${queueFile}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(queue, null, 2), 'utf8');
+    fs.renameSync(tmp, queueFile);
+  }
+  function removeQueued(id) {
+    queue = queue.filter(entry => entry.id !== id);
+    fs.rmSync(path.join(queueDir, `${id}.json`), { force: true });
+    saveQueue();
+  }
+  function queueView() {
+    const waiting = orderQueue(queue.filter(entry => entry.state === 'waiting'));
+    return [...waiting.map((entry, index) => ({ ...entry, position: index + 1 })), ...queue.filter(entry => entry.state !== 'waiting').map(entry => ({ ...entry, position: 0 }))];
+  }
+  /**
+   * 放行：有空位就按「急件优先、短活优先、先来先办」开朝，直到坐满或没有放得了的。
+   * 被没隔离的同目录奏折挡住的先跳过（不让一道堵住整队）；其它原因开不了的记为「被拒」留给皇帝看。
+   * @returns {Map<string, object>} 这一轮放行的：候旨编号 → createEdict 的结果
+   */
+  function pump() {
+    const started = new Map();
+    if (disposed) return started;
+    const skipped = new Set();
+    for (;;) {
+      if (active.size >= capacityOf(store.state.rules || {})) break;
+      const entry = pickNext(queue, item => skipped.has(item.id));
+      if (!entry) break;
+      let payload = null;
+      try {
+        payload = JSON.parse(fs.readFileSync(path.join(queueDir, `${entry.id}.json`), 'utf8'));
+      } catch {
+        removeQueued(entry.id);
+        continue;
+      }
+      try {
+        const result = api.createEdict({ ...payload, queue: { at: entry.at, batch: entry.batch, batchSize: entry.batchSize, priority: entry.priority } });
+        started.set(entry.id, result);
+        removeQueued(entry.id);
+      } catch (error) {
+        if (error && error.key === 'errFull') break;
+        if (error && error.key === 'errSameWorkspace') {
+          skipped.add(entry.id);
+          continue;
+        }
+        entry.state = 'refused';
+        entry.error = errorText(error, entry.locale || uiLocale());
+        entry.errorKey = (error && error.key) || '';
+        entry.errorVars = (error && error.vars) || {};
+        saveQueue();
+      }
+    }
+    return started;
+  }
+  // 上次没来得及放行的，启动后接着办
+  if (queue.length) {
+    setImmediate(() => {
+      try {
+        pump();
+      } catch (error) {
+        log.error?.(`[sansheng-liubu] queue: ${error && error.message ? error.message : error}`);
+      }
+    });
+  }
+
   const api = {
     root: store.root,
+    allowedHosts,
     getState() {
       const locale = uiLocale();
       const edicts = store.listEdicts();
@@ -1074,6 +1173,9 @@ export function createCourt(config = {}, { log = console } = {}) {
         busy: [...active],
         capacity,
         full: active.size >= capacity,
+        // 丞相府：候旨的奏折（满了不拒收，排队等空位）与只列要你出手的事的汇总
+        queue: queueView(),
+        digest: digest(edicts, queue, { activeIds: [...active] }),
         live: runtime.liveState(),
         recent: recent.filter(item => now - item.endedAt < 10 * 60 * 1000).map(item => ({
           edictId: item.edictId, roleId: item.roleId, role: item.role, agent: item.agent, kind: item.kind, title: item.title,
@@ -1352,11 +1454,21 @@ export function createCourt(config = {}, { log = console } = {}) {
       // 附件：存在奏折自己的目录里（不进隔离分支，免得被合并进仓库），路径写进每一道公文
       edict.attachments = saveAttachments(store, edict, input.attachments);
       // 开朝那一刻的朝规定死这份奏折走不走自治，中途改设置不影响已经在办的
-      edict.autonomous = rules.autonomous === true;
+      // 丞相府派下来的可以逐道指定（这一批全权交办，别的照旧）
+      edict.autonomous = typeof input.autonomous === 'boolean' ? input.autonomous : rules.autonomous === true;
       // 开朝时的朝局（按任命算），办完再按实际调用算一次
       edict.regime = { appointed: regimeOf(store.state).level };
       // 钦定流程：皇帝在「确定工作流」里排好的部门顺序，中书只能照此拟旨
       edict.workflow = resolveWorkflow(input.workflow, store.state.workflow, locale);
+      // 钦定流程直办：流程已定，不再拟旨、封驳
+      edict.direct = edict.workflow.length > 0 && (typeof input.direct === 'boolean' ? input.direct : rules.workflowDirect === true);
+      if (input.queue && typeof input.queue === 'object') {
+        edict.queuedAt = Number(input.queue.at) || 0;
+        edict.waitedMs = edict.queuedAt ? Math.max(0, Date.now() - edict.queuedAt) : 0;
+        edict.batch = String(input.queue.batch || '');
+        edict.batchSize = Number(input.queue.batchSize) || 0;
+        edict.priority = Number(input.queue.priority) || 1;
+      }
       prepareIsolation(edict, info);
       edict.recalled = rules.useMemory !== false ? annals.recall(brief, workspace) : [];
       // 朝制：急递 / 常朝 / 大朝会（自动时按圣意长短与流程步数挑）
@@ -1377,6 +1489,12 @@ export function createCourt(config = {}, { log = console } = {}) {
       if (edict.isolationNote) {
         pushMessage(edict, { from: 'shangshu', to: 'emperor', kind: 'notice', title: edict.git ? edict.git.branch : '', summary: edict.isolationNote });
       }
+      if (edict.batchSize > 1) pushMessage(edict, { from: 'shangshu', to: 'emperor', kind: 'notice', title: edict.batch, summary: tr(locale, 'queueBatchNote', { n: edict.batchSize }) });
+      // 排过队的（等了一秒以上）记一笔：等了多久、凭什么轮到它
+      if (edict.waitedMs >= 1000) {
+        const reason = edict.priority > 1 ? 'queueReasonUrgent' : edict.mode === 'express' ? 'queueReasonShort' : 'queueReasonFifo';
+        pushMessage(edict, { from: 'shangshu', to: 'emperor', kind: 'notice', title: tr(locale, modeKey), summary: tr(locale, 'queueReleased', { wait: `${Math.round(edict.waitedMs / 1000)}s`, reason: tr(locale, reason) }) });
+      }
       if (edict.chronicleUsed && edict.chronicleUsed.length) {
         pushMessage(edict, { from: 'historian', to: 'zhongshu', kind: 'notice', title: tr(locale, 'wikiUsed', { n: edict.chronicleUsed.length }), summary: edict.chronicle.slice(0, 800) });
       }
@@ -1395,9 +1513,126 @@ export function createCourt(config = {}, { log = console } = {}) {
             } catch (error) {
               log.error?.(`[sansheng-liubu] after-run: ${error && error.message ? error.message : error}`);
             }
+            // 空出一个位子：丞相府放行下一道候旨的
+            try {
+              pump();
+            } catch (error) {
+              log.error?.(`[sansheng-liubu] queue: ${error && error.message ? error.message : error}`);
+            }
           });
       });
-      return { id: edict.id, status: 'running', isolation: edict.isolationNote || '', mode: edict.mode, modeReason: tr(locale, edict.modeReason), workspace: edict.workspace, newFolder: !raw };
+      return { id: edict.id, status: 'running', isolation: edict.isolationNote || '', mode: edict.mode, modeReason: tr(locale, edict.modeReason), workspace: edict.workspace, newFolder: !raw, direct: edict.direct };
+    },
+    /**
+     * 递一道旨给丞相府：有空位就开朝，满了（或它要改的目录正被一道没隔离的旨占着）就候旨，轮到了自动放行。
+     * 界面的「下旨」走这里，所以朝堂满了也照样收。
+     */
+    submit(input = {}) {
+      const result = api.dispatch({ ...input, split: false });
+      const first = result.accepted[0];
+      if (first.state === 'refused') throw Object.assign(new Error(first.error), { key: first.errorKey, vars: first.errorVars });
+      if (first.state === 'started') return { ...first.result, queued: false };
+      return { id: '', queued: true, queueId: first.queueId, position: first.position, mode: first.mode, status: 'waiting' };
+    },
+    /**
+     * 丞相府接活：一段话里列了几件互不相干的事就拆成几道旨（split !== false），也可以直接给 items。
+     * 每道旨分拣（朝制 / 归哪个部 / 急不急）后进候旨队列，有空位立刻放行；各自一个隔离分支，互不相扰。
+     */
+    dispatch(input = {}) {
+      const locale = normalizeLocale(input.locale || uiLocale());
+      const rules = store.state.rules || {};
+      const { items: rawItems, brief: rawBrief, text, split, attachments, ...shared } = input;
+      let list;
+      if (Array.isArray(rawItems) && rawItems.length) {
+        list = rawItems.map(item => (item && typeof item === 'object' ? item : { brief: item }));
+      } else {
+        const source = String(rawBrief || text || '');
+        list = (split === false ? [source] : splitRequests(source)).map(brief => ({ brief }));
+      }
+      list = list.map(item => ({ ...item, brief: String(item.brief || '').trim() }));
+      if (!list.length || list.some(item => !item.brief)) fail('errEmptyBrief');
+      if (list.some(item => item.brief.length > 8000)) fail('errBriefTooLong');
+      if (list.length > MAX_BATCH) list = list.slice(0, MAX_BATCH);
+      const waiting = queue.filter(entry => entry.state === 'waiting').length;
+      if (waiting + list.length > QUEUE_MAX) fail('errQueueFull', { n: waiting });
+      const batch = list.length > 1 ? `batch-${Date.now().toString(36)}` : '';
+      const now = Date.now();
+      const entries = list.map((item, index) => {
+        const payload = { ...shared, ...item, locale, ...(attachments ? { attachments } : {}) };
+        const workspace = payload.workspace && String(payload.workspace).trim();
+        if (workspace) {
+          let isDir = false;
+          try {
+            isDir = fs.statSync(workspace).isDirectory();
+          } catch {
+            isDir = false;
+          }
+          if (!isDir) fail('errWorkspace', { path: workspace });
+        }
+        const workflow = resolveWorkflow(payload.workflow, store.state.workflow, locale);
+        const sorted = triage(payload.brief, { chooseMode, routeMinistry, requested: powerNow().mode ? (payload.mode || rules.mode) : 'auto', workflow, priority: payload.priority });
+        return {
+          id: `q-${now.toString(36)}-${index}-${Math.random().toString(36).slice(2, 6)}`,
+          brief: payload.brief, at: now + index, state: 'waiting', error: '',
+          priority: sorted.priority, mode: sorted.mode, ministry: sorted.ministry,
+          workspace: workspace ? path.resolve(workspace) : '', locale, batch, batchSize: list.length,
+          payload,
+        };
+      });
+      for (const entry of entries) {
+        const { payload, ...summary } = entry;
+        fs.mkdirSync(queueDir, { recursive: true });
+        fs.writeFileSync(path.join(queueDir, `${entry.id}.json`), JSON.stringify(payload), 'utf8');
+        queue.push(summary);
+      }
+      saveQueue();
+      const started = pump();
+      const order = orderQueue(queue.filter(entry => entry.state === 'waiting')).map(entry => entry.id);
+      const accepted = entries.map(entry => {
+        const result = started.get(entry.id);
+        const current = queue.find(item => item.id === entry.id);
+        const base = { queueId: entry.id, brief: entry.brief, mode: entry.mode, ministry: entry.ministry, priority: entry.priority };
+        if (result) return { ...base, state: 'started', edictId: result.id, result };
+        if (current && current.state === 'refused') {
+          // 当场就被拒的（预算用尽、附件太大……）不留在队列里，直接告诉递旨的人
+          const refused = { ...base, state: 'refused', error: current.error, errorKey: current.errorKey, errorVars: current.errorVars };
+          removeQueued(entry.id);
+          return refused;
+        }
+        return { ...base, state: 'queued', position: order.indexOf(entry.id) + 1 };
+      });
+      return {
+        batch,
+        accepted,
+        started: accepted.filter(item => item.state === 'started').length,
+        queued: accepted.filter(item => item.state === 'queued').length,
+        refused: accepted.filter(item => item.state === 'refused').length,
+      };
+    },
+    /** 候旨队列（按放行次序） */
+    queue() {
+      return { queue: queueView(), capacity: capacityOf(store.state.rules || {}), busy: [...active] };
+    },
+    /** 撤回一道还没放行的旨 */
+    unqueue(queueId) {
+      if (!queue.some(entry => entry.id === queueId)) fail('errNoQueued');
+      removeQueued(queueId);
+      return api.queue();
+    },
+    /** 插队：把一道候旨的提成急件 */
+    bump(queueId) {
+      const entry = queue.find(item => item.id === queueId);
+      if (!entry) fail('errNoQueued');
+      entry.priority = 2;
+      entry.state = 'waiting';
+      entry.error = '';
+      saveQueue();
+      pump();
+      return api.queue();
+    },
+    /** 丞相的汇总：要你出手的几件事 + 在办、候旨、今天办成的数 */
+    inbox() {
+      return digest(store.listEdicts(), queue, { activeIds: [...active] });
     },
     getEdict(edictId) {
       const edict = store.getEdict(edictId);
@@ -1504,8 +1739,11 @@ export function createCourt(config = {}, { log = console } = {}) {
       const retries = clampInt(rules.maxRetries, 0, 3, 1);
       const steps = workflow.length || (chosen.mode === 'express' ? 1 : 3);
       const historian = rules.historian !== false ? 1 : 0;
+      // 钦定流程直办：没有拟旨与封驳，只剩各步 + 复核
+      const direct = workflow.length > 0 && chosen.mode !== 'express' && (typeof input.direct === 'boolean' ? input.direct : rules.workflowDirect === true);
       const calls = chosen.mode === 'express'
         ? [1 + historian, 1 + retries + historian]
+        : direct ? [steps + 1 + historian, steps * (1 + retries) * (chosen.mode === 'grand' ? 2 : 1) + 2 + historian]
         : [2 + steps + 1 + historian, 2 * clampInt(rules.maxReviewRounds, 1, 5, 3) + steps * (1 + retries) * (chosen.mode === 'grand' ? 2 : 1) + 2 + historian];
       const history = treasury.averageCost('order') || treasury.averageCost('draft');
       const avg = history || 0.05;
@@ -1672,6 +1910,7 @@ export function createCourt(config = {}, { log = console } = {}) {
   }
 
   function dispose() {
+    disposed = true;
     for (const controller of controllers.values()) controller.abort();
     controllers.clear();
     active.clear();
@@ -1680,13 +1919,13 @@ export function createCourt(config = {}, { log = console } = {}) {
   /** 测试用：等到没有奏折在办 */
   async function idle(timeoutMs = 30000) {
     const until = Date.now() + timeoutMs;
-    while (active.size) {
+    while (active.size || queue.some(entry => entry.state === 'waiting')) {
       if (Date.now() > until) throw new Error('court still busy');
       await new Promise(resolve => setTimeout(resolve, 20));
     }
   }
 
-  return { api, runtime, store, annals, dispose, idle, uiLocale };
+  return { api, runtime, store, annals, dispose, idle, uiLocale, pump };
 }
 
 export function apply(ctx, config = {}) {
@@ -1720,7 +1959,7 @@ export async function handleRequest(api, req, res, uiLocale = () => 'zh') {
   const locale = normalizeLocale((req.headers && req.headers['x-court-locale']) || uiLocale());
   const body = async limit => JSON.parse(await readBody(req, limit) || '{}');
   try {
-    const refused = checkRequest(req, method);
+    const refused = checkRequest(req, method, api.allowedHosts);
     if (refused) return sendJson(res, 403, { error: tr(locale, refused) });
     if (route === '/state' && method === 'GET') return sendJson(res, 200, api.getState());
     if (route === '/ui' && method === 'PUT') return sendJson(res, 200, api.setUi(await body()));
@@ -1742,7 +1981,15 @@ export async function handleRequest(api, req, res, uiLocale = () => 'zh') {
     if (route === '/setup/connect' && method === 'POST') return sendJson(res, 200, api.connectTool((await body()).tool));
     if (route === '/setup/auto' && method === 'POST') return sendJson(res, 200, api.autoStaffNow());
     // 下旨可带附件（base64），放宽到 25 MB
-    if (route === '/edicts' && method === 'POST') return sendJson(res, 200, api.createEdict({ locale, ...(await body(25 * 1024 * 1024)) }));
+    // 朝堂满了也收：进候旨队列，轮到了自动放行（返回 queued: true）
+    if (route === '/edicts' && method === 'POST') return sendJson(res, 200, api.submit({ locale, ...(await body(25 * 1024 * 1024)) }));
+    // 丞相府：一次递几件事，拆成几道旨分拣、排队、派发
+    if (route === '/dispatch' && method === 'POST') return sendJson(res, 200, api.dispatch({ locale, ...(await body(25 * 1024 * 1024)) }));
+    if (route === '/queue' && method === 'GET') return sendJson(res, 200, api.queue());
+    if (route === '/inbox' && method === 'GET') return sendJson(res, 200, api.inbox());
+    const queued = route.match(/^\/queue\/(q-[a-z0-9-]+)(\/bump)?$/);
+    if (queued && method === 'DELETE' && !queued[2]) return sendJson(res, 200, api.unqueue(queued[1]));
+    if (queued && method === 'POST' && queued[2]) return sendJson(res, 200, api.bump(queued[1]));
     if (route === '/annals' && method === 'GET') return sendJson(res, 200, api.annals());
     if (route === '/biography' && method === 'GET') return sendJson(res, 200, api.biography());
     if (route === '/impact' && method === 'GET') return sendJson(res, 200, api.impact());
@@ -1832,11 +2079,73 @@ function registerTools(ctx, court) {
       workflow: { type: 'string', description: 'Optional fixed procedure: "default" (the saved one), "none", a template (video / dev / report), or ministry ids like "war,justice"' },
     },
     async execute(args) {
-      const result = api.createEdict({ ...args, locale: L() });
+      const result = api.submit({ ...args, locale: L() });
+      if (result.queued) {
+        return say(
+          `朝堂已满，这道旨已候旨（第 ${result.position} 位，编号 ${result.queueId}），有空位自动开朝。用 sansheng_inbox 查看。`,
+          `The Senate is full; this decree is waiting (position ${result.position}, ${result.queueId}) and starts by itself when a seat frees up. Check with sansheng_inbox.`,
+        );
+      }
       return say(
         `已开朝，奏折编号 ${result.id}。${result.isolation ? `\n${result.isolation}` : ''}\n用 sansheng_status 传入该编号查看进度。`,
         `The Senate is in session. Decree ${result.id}.${result.isolation ? `\n${result.isolation}` : ''}\nFollow it with sansheng_status.`,
       );
+    },
+  });
+
+  // 丞相府（Router–Worker）：DSH 的主会话就是那个常驻的「丞相」。它只管把活派出去、回头看汇总，
+  // 每件事在各自隔离的分支里由一道旨（Worker）去办；人只在 sansheng_inbox 报「要你出手」时才需要出现。
+  safeRegister({
+    name: 'sansheng_dispatch',
+    description: 'Imperial Court / 三省六部 · Chancellor (router): hand over SEVERAL independent tasks at once. Each becomes its own decree on its own isolated git branch; the chancellor triages each one (express / standard / grand, which ministry, urgency), starts as many as there are free seats and queues the rest, releasing them automatically (urgent first, short work first). Returns at once. Use sansheng_inbox afterwards to see only what needs the human. Prefer this over calling sansheng_edict in a loop.',
+    parameters: {
+      tasks: { type: 'string', required: true, description: 'The tasks, one per line as a list ("1. …", "- …"). A single task is fine too. Text before the list is shared context for every task.' },
+      workspace: { type: 'string', description: 'Absolute path of the working folder shared by all tasks' },
+      criteria: { type: 'string', description: 'Optional acceptance criteria applied to every task' },
+      autonomous: { type: 'boolean', description: 'true = unattended for this batch: self-repair after a failed audit and archive automatically when the audit passes; omit to follow the saved rule' },
+      priority: { type: 'string', description: 'Optional: "high" | "normal" | "low" for the whole batch; omit to infer from the wording' },
+      workflow: { type: 'string', description: 'Optional fixed procedure for every task (same values as sansheng_edict)' },
+    },
+    async execute(args) {
+      const { tasks, ...rest } = args;
+      const result = api.dispatch({ ...rest, brief: String(tasks || ''), locale: L() });
+      const lines = [say(
+        `丞相府已接 ${result.accepted.length} 道旨：${result.started} 道已开朝，${result.queued} 道候旨${result.refused ? `，${result.refused} 道被拒` : ''}。`,
+        `The chancellor took ${result.accepted.length} decree(s): ${result.started} started, ${result.queued} waiting${result.refused ? `, ${result.refused} refused` : ''}.`,
+      )];
+      for (const item of result.accepted) {
+        const where = item.state === 'started' ? item.edictId : item.state === 'queued' ? `${item.queueId} #${item.position}` : `refused: ${item.error}`;
+        lines.push(`- [${item.mode}${item.ministry ? `/${item.ministry}` : ''}${item.priority > 1 ? ' !' : ''}] ${String(item.brief).replace(/\s+/g, ' ').slice(0, 70)} → ${where}`);
+      }
+      lines.push(say('各自在隔离分支里办，办完要你过目的会出现在 sansheng_inbox。', 'Each works on its own isolated branch. Whatever needs you shows up in sansheng_inbox.'));
+      return lines.join('\n');
+    },
+  });
+
+  safeRegister({
+    name: 'sansheng_inbox',
+    description: 'Imperial Court / 三省六部 · Chancellor digest: list ONLY what needs the human right now (reports awaiting approval, steps awaiting input, decrees that failed or were cut short), plus counts of running / waiting / done today. Call this instead of polling every decree with sansheng_status.',
+    parameters: {},
+    async execute() {
+      const box = api.inbox();
+      const KIND = {
+        approve: ['待批红', 'awaiting your seal'], input: ['待回填', 'awaiting your input'], interrupted: ['被重启打断', 'cut short by a restart'],
+        failed: ['办砸了', 'failed'], refused: ['开不了朝', 'could not start'],
+      };
+      const lines = [say(
+        `在办 ${box.running} · 候旨 ${box.queued} · 今日办成 ${box.doneToday}${box.failedToday ? ` · 今日办砸 ${box.failedToday}` : ''}`,
+        `running ${box.running} · waiting ${box.queued} · done today ${box.doneToday}${box.failedToday ? ` · failed today ${box.failedToday}` : ''}`,
+      )];
+      if (!box.needsYou.length) lines.push(say('没有要你出手的事。', 'Nothing needs you.'));
+      for (const item of box.needsYou.slice(0, 20)) {
+        lines.push(`- ${item.id} [${say(...(KIND[item.kind] || [item.kind, item.kind]))}] ${String(item.brief || '').replace(/\s+/g, ' ').slice(0, 70)}${item.note ? ` — ${String(item.note).slice(0, 100)}` : ''}`);
+      }
+      const waiting = api.queue().queue.filter(entry => entry.state === 'waiting').slice(0, 10);
+      if (waiting.length) {
+        lines.push(say('候旨（按放行次序）：', 'Waiting (in release order):'));
+        waiting.forEach(entry => lines.push(`  ${entry.position}. ${entry.id} [${entry.mode}${entry.priority > 1 ? ' !' : ''}] ${String(entry.brief).replace(/\s+/g, ' ').slice(0, 60)}`));
+      }
+      return lines.join('\n');
     },
   });
 

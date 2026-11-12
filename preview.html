@@ -484,7 +484,8 @@
       edicts: db.edicts.map(e => ({ id: e.id, brief: e.brief, workspace: e.workspace, status: e.status, stage: e.stage, note: e.note, createdAt: e.createdAt, updatedAt: e.updatedAt, haltedAt: e.haltedAt, interrupted: !!e.interrupted, redoneAs: e.redoneAs || '', redoOf: e.redoOf || '' })),
       staffing: db.staffing,
       setup: { dsh: setupDb.dsh, tools: setupDb.tools },
-      busy: sim ? [sim.edict.id] : [], capacity: regimeNow().power.concurrent, full: false, live,
+      busy: sim ? [sim.edict.id] : [], capacity: regimeNow().power.concurrent, full: !!sim, live,
+      queue: queueNow(),
       recent: db.edicts[0] && db.edicts[0].messages.filter(m => m.kind === 'report' && m.durationMs).slice(-3).map(m => ({ edictId: db.edicts[0].id, roleId: m.from, agent: 'Claude Code', kind: 'order', title: m.title, ok: true, endedAt: m.at, durationMs: m.durationMs })) || [],
       ministries: ['personnel', 'revenue', 'rites', 'war', 'justice', 'works'].map(id => ({ id, title: TITLES[db.ui.locale][id], duty: db.roles[id].duty })),
       workflow: db.workflow, workflowTemplates: TEMPLATES,
@@ -520,6 +521,17 @@
         regent: annals.filter(e => e.ruledBy === 'regent').length, costUsd: 3.36, regimes,
       },
     };
+  }
+
+  // 丞相府的候旨队列（演示数据）：急件优先、短活优先、先来先办
+  const queueDb = params.get('queue') === '0' ? [] : [
+    { id: 'q-demo-1', brief: L('线上登录接口 500，紧急修复并补一条回归测试', 'Login API returns 500 in production: urgent fix plus a regression test'), mode: 'standard', ministry: '', priority: 2, at: 3, state: 'waiting', batchSize: 0 },
+    { id: 'q-demo-2', brief: L('给 README 补一段安装说明', 'Add an install section to the README'), mode: 'express', ministry: 'rites', priority: 1, at: 1, state: 'waiting', batchSize: 3 },
+    { id: 'q-demo-3', brief: L('把设置页的表单校验抽成一个 hook，并补单元测试', 'Extract the settings form validation into a hook, with unit tests'), mode: 'standard', ministry: '', priority: 1, at: 2, state: 'waiting', batchSize: 3 },
+  ];
+  const WEIGHT = { express: 0, standard: 1, grand: 2 };
+  function queueNow() {
+    return queueDb.slice().sort((a, b) => (b.priority - a.priority) || (WEIGHT[a.mode] - WEIGHT[b.mode]) || (a.at - b.at)).map((entry, index) => ({ ...entry, position: index + 1 }));
   }
 
   function route(method, pathname, query, body) {
@@ -580,6 +592,25 @@
     if (pathname === '/annals' && method === 'DELETE') { annals.length = 0; return { entries: annals, stats: annalStats() }; }
     const annal = pathname.match(/^\/annals\/(.+)$/);
     if (annal && method === 'DELETE') { const i = annals.findIndex(e => e.id === annal[1]); if (i >= 0) annals.splice(i, 1); return { entries: annals, stats: annalStats() }; }
+    if (pathname === '/queue' && method === 'GET') return { queue: queueNow() };
+    const queued = pathname.match(/^\/queue\/([a-z0-9-]+)(\/bump)?$/);
+    if (queued) {
+      const index = queueDb.findIndex(entry => entry.id === queued[1]);
+      if (index < 0) throw new Error(L('候旨队列里没有这一道', 'No such decree is waiting'));
+      if (queued[2]) queueDb[index].priority = 2; else queueDb.splice(index, 1);
+      return { queue: queueNow() };
+    }
+    if (pathname === '/dispatch' && method === 'POST') {
+      const items = String(body.brief || '').split(/\r?\n/).map(line => line.replace(/^\s*(?:\d+[.、)]|[-*•])\s*/, '').trim()).filter(Boolean);
+      if (!items.length) throw new Error(L('圣意不能为空', 'The brief cannot be empty'));
+      const accepted = items.map((brief, index) => {
+        if (!sim && index === 0) { const e = startSim(brief, body.workspace); return { state: 'started', edictId: e.id, brief, result: { id: e.id, status: 'running', isolation: e.isolationNote } }; }
+        const entry = { id: `q-${Date.now().toString(36)}-${index}`, brief, mode: brief.length <= 80 ? 'express' : 'standard', ministry: '', priority: 1, at: Date.now() + index, state: 'waiting', batchSize: items.length };
+        queueDb.push(entry);
+        return { state: 'queued', queueId: entry.id, brief };
+      });
+      return { batch: 'batch-demo', accepted, started: accepted.filter(item => item.state === 'started').length, queued: accepted.filter(item => item.state === 'queued').length, refused: 0 };
+    }
     if (pathname === '/edicts' && method === 'POST') {
       if (!String(body.brief || '').trim()) throw new Error(L('圣意不能为空', 'Caesar\'s will cannot be empty'));
       if (sim) window.__preview.stop();
