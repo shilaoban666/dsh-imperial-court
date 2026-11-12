@@ -2,6 +2,32 @@
 
 > [← 首页 / Home](README.md) · 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.1.0] - 2026-11-12
+
+丞相府：把丞相模式做成真正的 Router–Worker，一次交办一摞事。The Chancellor: autonomy grows into a real Router–Worker, so a pile of work can be handed over at once.
+
+### 新增 Added
+
+- **丞相府**（`lib/chancellor.mjs`）：一段话里的清单拆成几道旨，逐道分拣（朝制、归哪个部、急不急），各自一个隔离分支。思路同 DeepSeek Harness 的 super-agent（常驻 Router + 隔离 Worker），落在本机、不需要额外服务，全是确定式逻辑、不耗 token。
+- **候旨队列**：朝堂满员不再拒收，排队等空位；急件优先、短活优先、先来先办；可插队、撤回；落盘，DSH 重启后接着放行。同目录被没隔离的旨占着时也改为排队。
+- **工具** `sansheng_dispatch`（一次交办几件，可逐批 `autonomous`）与 `sansheng_inbox`（只列要人出手的事）；HTTP `/dispatch`、`/queue`、`/inbox`。
+- **界面**：下旨框认出清单后给「分开办」开关；「待你处理」下面多一块「排队中」。
+- **钦定流程直办**（朝规 `workflowDirect`）：定了流程就跳过拟旨与封驳，每道旨少两次以上调用，办完仍复核。
+- **钦定流程并行**：步骤可标「与上一步同时办」；短视频模板里配乐与画面并行。
+- **CI**：GitHub Actions 在 Windows / macOS / Linux × Node 20 / 22 上跑 `npm test`。
+
+### 修复 Fixed
+
+- **隔离分支里所有 CLI 以 ENOENT 起不来**：工作目录以 8.3 短路径（`C:\Users\ABCDEF~1\…`）、符号链接（macOS 的 `/var`）或 junction 传入时，子目录算成一串 `..\..\`。现在由 `git rev-parse --show-prefix` 给出。受影响的机器上 `npm test` 曾有 9 项失败。
+- **「被重启打断 → 接着办」从不出现**：奏折索引没带 `interrupted` / `redoneAs`，「待你处理」读不到。
+- **DNS 重绑定**：请求的 Host 是外部域名时一律拒绝（读请求也拒）；本机地址、IP 字面量、`*.localhost` 照常，另可用配置 `allowedHosts` 放行自己的域名。
+
+### 验证 Verified
+
+- `npm test` 79 项通过（新增 14 项：拆分、分拣、排队次序、重启续队、无人值守批量、直办的调用数、并行步骤的时间重叠、别名路径、Host 校验）。
+- 界面在 `preview.html` 的模拟宿主里看过：排队卡片、分开办开关、流程页的并行与直办。
+- 尚未验证：真机上多家真 CLI 的批量派发；新加的 CI 还没有跑出第一份结果。
+
 ## [1.0.0] - 2026-11-02
 
 第一个稳定版本：把 0.9 到 0.11 的东西定下来，代码与 0.11.0 相同。The first stable release: it settles everything from 0.9 to 0.11; the code is the same as 0.11.0.

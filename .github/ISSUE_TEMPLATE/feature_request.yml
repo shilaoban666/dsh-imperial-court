@@ -1,0 +1,19 @@
+name: 功能建议 / Feature request
+description: 想让朝堂多办一件事 / Something the court should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你想解决什么问题 / The problem
+      description: 先说场景，再说方案 / The situation first, the solution second
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: 你设想的做法 / What you have in mind
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 现在怎么绕过去 / How you work around it today
