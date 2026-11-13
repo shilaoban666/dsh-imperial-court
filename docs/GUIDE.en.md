@@ -6,7 +6,7 @@ What each tab does, how a decree flows, what the settings mean, and how the plug
 
 ## Contents
 
-1. [The ten tabs](#1-the-ten-tabs)
+1. [The tabs](#1-the-tabs)
 2. [Regimes and your power](#2-regimes-and-your-power)
 3. [Gains: compared with one tool alone](#3-gains-compared-with-one-tool-alone)
 4. [The offices](#4-the-offices)
@@ -24,22 +24,25 @@ What each tab does, how a decree flows, what the settings mean, and how the plug
 
 ---
 
-## 1. The ten tabs
+## 1. The tabs
 
 Open it from the sidebar seal or *Settings → Imperial Senate*. The page lays itself out by the width it actually gets, so a smaller window or an open right pane never hides content.
 
 | Tab | What it shows |
 |---|---|
+The tabs come in four groups, each with a row of sub-pages, so every page is two clicks away: **Senate** (Senate · Forum · Officium), **Offices** (Offices · Cohort · Standing orders), **Records** (Gains · Aerarium · Annals · Res Gestae) and **Palace**.
+
 | **Senate** | Three columns like the Claude Code desktop app: decrees on the left; in the middle the decree, the Consul's plan, **each magistrate's full report** (Markdown), what each office is doing, awaiting input, seal / reject / halt, with the composer at the bottom; on the right your power, the flow, orders, the isolated branch and changes, the Tabularium and a mini panorama. Narrow windows fold the right column into a *Flow* drawer, then the list into a dropdown. A blank decree offers **starters**. **Enter issues, Shift + Enter adds a line** |
 | **Forum** | The full panorama (who worked in parallel, where vetoes, impeachments and redos happened) and **every dispatch between offices** as a group chat |
 | **Officium** | Decrees in progress and awaiting your seal; what each office is doing in plain words (editing which file, how many files, commands run) |
-| **Offices** | The regime ladder, the **power table**, who holds what, which idle tool to appoint to rise a rung; standing orders; holders and models per office; glossary |
-| **Annals** | The Chronicle (the Senate's notebook, per folder and per office, every note with its source and trust mark); veto rate, first-pass rate, each magistrate's record and lessons |
+| **Offices** | The regime ladder, the **power table**, who holds what, which idle tool to appoint to rise a rung (the power table is folded by default); holders and models per office; glossary |
+| **Standing orders** | Three **ways of working**, one click each: Hands-on (default), Regent (the super-agent way) and Full auto; below them every rule, grouped as who decides, how much review, how much at once, and safety and memory, each with a plain one-line note |
+| **Annals** | The Chronicle (the Senate's notebook, per folder and per office, every note with its source and trust mark); veto rate, first-pass rate and lessons (each magistrate's success rate is under Res Gestae) |
 | **Aerarium** | Spend in Roman coin and real money; tokens and cache; waste; daily spend; by office and tool; ledger; price table; allotments and budgets |
 | **Gains** | The same work compared with one tool alone: how much faster, how many points the pass rate rose, problems caught, a quality score, a time ledger, decree by decree (see [§3](#3-gains-compared-with-one-tool-alone)) |
 | **Res Gestae** | Your title, reign, **puppet index**, regime history, a radar of each magistrate's success rate, a radar of your six virtues, the annalist's verdict and **twelve honours** |
 | **Cohort** | Readiness check (probe each office's CLI); the agent registry (collapsed cards): command, args, model args, write args, autonomy args, candidate models |
-| **Palace** | Language and offices, themes (Marble · Tyrian purple, Nox Imperii · gold, Forum Romanum, and three Chinese palace themes), backdrop image, light skins |
+| **Palace** | Language and offices, themes (Marble · Tyrian purple, Nox Imperii · gold, Forum Romanum, and three Chinese palace themes), titles (classical offices or One-Person Company), backdrop image, accent-only colours |
 
 It also lives inside DSH: *Offices* and *Workflow* views and an *Issue* button in the session header, *Acta* and *Senate floor* in the right pane, and a floating Officium pill.
 
