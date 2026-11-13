@@ -1556,7 +1556,8 @@ export function createCourt(config = {}, { log = console } = {}) {
       const waiting = queue.filter(entry => entry.state === 'waiting').length;
       if (waiting + list.length > QUEUE_MAX) fail('errQueueFull', { n: waiting });
       const batch = list.length > 1 ? `batch-${Date.now().toString(36)}` : '';
-      const now = Date.now();
+      // 「先来先办」靠 at 排：同一毫秒递进来的两道也要分出先后，所以接着队里最晚的那道往后排
+      const now = Math.max(Date.now(), ...queue.map(entry => (Number(entry.at) || 0) + 1));
       const entries = list.map((item, index) => {
         const payload = { ...shared, ...item, locale, ...(attachments ? { attachments } : {}) };
         const workspace = payload.workspace && String(payload.workspace).trim();
