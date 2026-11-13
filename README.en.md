@@ -4,15 +4,20 @@
 
 ### Turn the AI tools on your machine into a Roman Senate: one drafts, another vetoes, magistrates work in parallel, and nothing merges until you seal it
 
+**The best local implementation of the DSH super-agent (Router–Worker) design · no server · works out of the box**
+
 [![Release](https://img.shields.io/github/v/release/shilaoban666/dsh-imperial-court?color=b4362b&label=release)](https://github.com/shilaoban666/dsh-imperial-court/releases)
 [![DSH plugin](https://img.shields.io/badge/DSH-plugin-e9c46a)](https://dshbase.com/zh/plugins/)
+[![super-agent](https://img.shields.io/badge/super--agent-Router%E2%80%93Worker-8e44ad)](#superagent)
 [![CI](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml/badge.svg)](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/tests-79%20passing-1f8a70)](test)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-3c873a)](package.json)
 [![Languages](https://img.shields.io/badge/English-%E4%B8%AD%E6%96%87-2e6f9e)](README.md)
 [![License](https://img.shields.io/badge/license-MIT-5d5348)](LICENSE)
 
-[中文](README.md) · **English** · [Quick start](#quick-start) · [Screenshots](#screenshots) · [Guide](docs/GUIDE.en.md) · [Changelog](CHANGELOG.md)
+[中文](README.md) · **English**
+
+[Quick start](#quick-start) · [Super-agent, done best](#superagent) · [Why](#why) · [Screenshots](#screenshots) · [Features](#features) · [FAQ](#faq) · [Guide](docs/GUIDE.en.md) · [Changelog](CHANGELOG.md)
 
 </div>
 
@@ -20,11 +25,119 @@
 
 An AI tool that writes and reviews its own work has not been reviewed. **Imperial Senate** is a native [DeepSeek Harness (DSH)](https://dshbase.com/zh/plugins/) plugin that seats the tools on your machine (**Claude Code, Codex, WorkBuddy and DSH itself**) in a Roman Senate. The **Consul** drafts a plan, the **Tribune** (a different tool) reviews it and may veto, the **Proconsul** dispatches orders, six **magistrates** work **in parallel** where they can, inspectors check the results, the Tribune audits, and only your **seal** merges it. Everything happens on an **isolated git branch**; your folder is untouched until you seal.
 
+### At a glance
+
+| You | The Senate | You get |
+|---|---|---|
+| ✍️ Write what you need and press **Enter** | One tool drafts → **a different tool reviews** → magistrates work in parallel → inspection and audit | A patch and a change list on an isolated branch; **nothing merges until you seal** |
+| 📚 Hand over a pile of work at once | **The Chancellor** splits, triages, queues and dispatches; a full Senate still accepts work | Things reach *Needs you* only when a decision is yours |
+| ☕ Stay out of it entirely | Autonomy: a failed audit is repaired without you, a passed one is archived | Only what cannot be finished comes back |
+
 **No Latin needed**: every title carries a plain gloss (*Tribune · reviews*, *Legate · code*); hover for the full duty. In Chinese it is the Tang court, **三省六部** (*Three Departments and Six Ministries*).
 
-> Not into Rome? Switch to the **One-Person Company** skin on the Palace tab. The features are the same; only the titles become CEO, Chief Risk Officer, Engineering and so on.
+> 🎨 **Not into Rome?** Switch to the **One-Person Company** skin on the Palace tab. The features are the same; only the titles become CEO, Chief Risk Officer, Engineering and so on.
 
 **Works out of the box**: install it and issue a decree. DSH alone covers every role; Claude Code and Codex on your machine (including the copies bundled with their desktop apps) are found and placed automatically, and the ones you lack install or sign in with one click. No command line needed. **Quiet**: things show up under *Needs you* only when you have to approve, answer a question, or pick up a task that a DSH restart cut short (one click).
+
+<a id="superagent"></a>
+
+## The Chancellor: super-agent, done best
+
+A person can watch three to five AI sessions at a time; beyond that you become the scheduler for your own tools. The DeepSeek Harness team's [super-agent design](https://github.com/deepseek-ai/dsh-superagent-prototype) answers with **Router–Worker**: one resident router takes requests and dispatches them, each task runs in its own isolated worker, and the human appears only when a decision is needed. In its own words: take as little human attention as possible, and give as much value as possible.
+
+**The Chancellor** lands the whole design on your own machine. There is no service to run, and each worker is not a single session working alone but a full Senate keeping watch for you.
+
+```mermaid
+flowchart LR
+  U([You: a pile of work at once]) --> R["The Chancellor · Router<br/>split · triage · queue<br/>deterministic, 0 tokens"]
+  R --> Q[("The queue<br/>urgent and short work first")]
+  Q --> W1["A decree · Worker<br/>own worktree + branch"]
+  Q --> W2["A decree · Worker"]
+  Q --> W3["A decree · Worker"]
+  W1 --> C{"The Senate<br/>cross-tool review · inspection · audit"}
+  W2 --> C
+  W3 --> C
+  C --> I["Needs you<br/>only what needs your hand"]
+  I --> S([You seal, it merges])
+  G["Praetorian Guard · Watchdog"] -. stops stalls and overspending .-> W2
+```
+
+<img src="docs/screenshots/en-12-chancellor.png" alt="The Chancellor: what needs you, and the queue" width="100%">
+
+### Every part of the design has its counterpart
+
+| In the super-agent design | Here | How you use it |
+|---|---|---|
+| A resident router: intake, triage, dispatch | **The Chancellor**: splits lists, picks the procedure, queues and releases. Deterministic, costs no tokens | The DSH main session calls `sansheng_dispatch`, or you tick *Split* when issuing |
+| Isolated worker sessions | **A decree**: its own `git worktree` and branch, reviewed by the Senate as usual | Automatic |
+| Queue instead of human scheduling | **The queue**: a full Senate still accepts work; urgent first, short work first, then first come; survives restarts | Bump or withdraw under *Queued* |
+| Interrupt the human only for decisions | **Needs you** / `sansheng_inbox`: only what needs your hand | Automatic |
+| A watchdog on progress | **The Praetorian Guard**: stops stalls, chases excuses, halts overspending | Automatic |
+| Results come back as a PR | **Isolated branch + your seal** (the local equivalent of a PR) | Seal or reject |
+
+### Why we call it the best
+
+After building the design as written, it goes five steps further:
+
+| | The extra step | Why it matters |
+|---|---|---|
+| 🏠 | **No server** | Nothing to deploy, no GitHub or Feishu bot to wire up; installing the plugin is the whole setup. One person with one computer can use it the same day |
+| 🪶 | **A router that costs no tokens** | Splitting, triage and queueing are deterministic: scheduling costs nothing, cannot hallucinate, and is pinned by tests |
+| 🔍 | **Every worker is reviewed by another tool** | A decree is not one session working alone: draft → cross-tool veto → per-order inspection → audit. Quality is still guarded when nobody is watching |
+| 🛡️ | **Fail-closed** | No parsable verdict, no pass; a conflicting merge is refused and everything is kept. The more you automate, the safer the defaults must be |
+| 💰 | **Every pile is on the books** | The Aerarium books tokens, cost and waste for every call and halts overspending. Let it run and still know what it cost |
+
+> 📌 **To be clear about scope**: the official prototype serves a team repository; it listens to GitHub and returns results as PRs. The Chancellor serves your own computer: work comes from you and the DSH main session, and results come back as isolated branches. "Best" here means the **local, single-person** case.
+
+### What handing over a pile looks like
+
+```text
+You: please take care of these
+    1. the login endpoint returns 500 in production, urgent fix
+    2. add install instructions to the README
+    3. extract the settings form validation into a hook
+
+Chancellor: 3 decrees accepted: 2 in session, 1 queued
+    - [standard !] the login endpoint returns 500…   → edict-…-a1b2   (urgent, goes first)
+    - [express/rites] add install instructions…      → edict-…-c3d4
+    - [standard] extract the settings form…          → q-…  #1          (starts when a seat frees up)
+```
+
+To stay out of it entirely, pass `autonomous: true` for the batch (or turn on Autonomy in the rules): a failed audit is repaired without you, a passed one is archived, and only what cannot be finished comes back to you.
+
+<details>
+<summary><b>⏩ A fixed workflow can go faster: straight to work, in parallel</b></summary>
+
+<br>
+
+The fixed procedure has two speed switches:
+
+- **Straight to work**: you already set the offices and their order, so the Consul no longer restates the plan and the Tribune no longer reviews it. Two or more model calls saved per decree; the Tribune still audits the result.
+- **In parallel**: mark two steps that do not depend on each other (visuals and music, say) and they start together; later steps wait for both.
+
+Both are pinned by end-to-end tests: no draft or veto call in a straight-to-work decree, and the two marked steps really overlap in time (see [`test/chancellor.test.mjs`](test/chancellor.test.mjs)).
+
+</details>
+
+## Quick start
+
+Three steps, and only one command.
+
+**1. Install** ([DSH](https://dshbase.com/zh/plugins/), Node 20+ and git)
+
+```bash
+dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.1.0
+```
+
+Use `--profile web` for the web build; drop `#v1.1.0` to follow the latest code.
+
+**2. Open**: restart DSH, click the seal in the sidebar and switch to **EN**. The plugin finds DSH, Claude Code and Codex on your machine and fills the roles by itself; there is nothing to set up.
+
+**3. Issue your first decree**: write what you need in the *Senate* tab and press **Enter**, or click a **starter** (fix a bug, review changes, weekly report…).
+
+DSH alone works: DSH itself can hold any role. For a real cross-check (models from different vendors reviewing each other), press **Install** / **Sign in** under *Your team*. It uses the official Claude Code and Codex installers and sign-in, and each tool joins the team once it is ready. Claude Code needs a Claude subscription or an Anthropic API key; Codex needs a ChatGPT plan or an OpenAI API key.
+
+> 👀 **Just want to look?** Run `python -m http.server` in the repo and open `http://localhost:8000/preview.html?lang=en` for a full replayed session.
 
 ## Why
 
@@ -77,30 +190,6 @@ Five regimes: the more tools, the safer your throne; one tool alone makes you *D
 </tr>
 </table>
 
-## The Chancellor: hand over a pile of work at once
-
-A person can watch three to five AI sessions at a time; beyond that you become the scheduler for your own tools. The DeepSeek Harness team's [super-agent design](https://github.com/deepseek-ai/dsh-superagent-prototype) answers with **Router–Worker**: one resident router takes requests and dispatches them, each task runs in its own isolated worker, and the human appears only when a decision is needed. **The Chancellor** brings the same idea to your own machine, with no extra service to run:
-
-<img src="docs/screenshots/en-12-chancellor.png" alt="The Chancellor: what needs you, and the queue" width="100%">
-
-| In the super-agent design | Here | How you use it |
-|---|---|---|
-| A resident router: intake, triage, dispatch | **The Chancellor**: splits lists, picks the procedure, queues and releases. Deterministic, costs no tokens | The DSH main session calls `sansheng_dispatch`, or you tick *Split* when issuing |
-| Isolated worker sessions | **A decree**: its own `git worktree` and branch, reviewed by the Senate as usual | Automatic |
-| Queue instead of human scheduling | **The queue**: a full Senate still accepts work; urgent first, short work first, then first come; survives restarts | Bump or withdraw under *Queued* |
-| Interrupt the human only for decisions | **Needs you** / `sansheng_inbox`: only what needs your hand | Automatic |
-| A watchdog on progress | **The Praetorian Guard**: stops stalls, chases excuses, halts overspending | Automatic |
-| Results come back as a PR | **Isolated branch + your seal** (the local equivalent of a PR) | Seal or reject |
-
-To stay out of it entirely, pass `autonomous: true` for the batch (or turn on Autonomy in the rules): a failed audit is repaired without you, a passed one is archived, and only what cannot be finished comes back to you.
-
-**A fixed workflow can go faster.** The fixed procedure now has two speed switches:
-
-- **Straight to work**: you already set the offices and their order, so the Consul no longer restates the plan and the Tribune no longer reviews it. Two or more model calls saved per decree; the Tribune still audits the result.
-- **In parallel**: mark two steps that do not depend on each other (visuals and music, say) and they start together; later steps wait for both.
-
-Both are pinned by end-to-end tests: no draft or veto call in a straight-to-work decree, and the two marked steps really overlap in time (see [`test/chancellor.test.mjs`](test/chancellor.test.mjs)).
-
 ## Screenshots
 
 > From [`preview.html`](preview.html): the real `client.js` on a mock host laid out like the DSH desktop app. Demo data.
@@ -149,25 +238,13 @@ flowchart LR
   A -- reject --> X([Snapshot])
 ```
 
-Small jobs go **express** (straight to one magistrate); long ones go to the **Comitia** (plus per-order inspection). *Auto* picks by brief size and estimates calls and cost before you issue.
+Three procedures. *Auto* picks by brief size and estimates calls and cost before you issue:
 
-## Quick start
-
-**1. Install** (DSH, Node 20+ and git)
-
-```bash
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.1.0
-```
-
-Use `--profile web` for the web build; drop `#v1.1.0` to follow the latest code.
-
-**2. Open**: restart DSH, click the seal in the sidebar and switch to **EN**. The plugin finds DSH, Claude Code and Codex on your machine and fills the roles by itself; there is nothing to set up.
-
-**3. Issue your first decree**: write what you need in the *Senate* tab and press **Enter**, or click a **starter** (fix a bug, review changes, weekly report…).
-
-DSH alone works: DSH itself can hold any role. For a real cross-check (models from different vendors reviewing each other), press **Install** / **Sign in** under *Your team*. It uses the official Claude Code and Codex installers and sign-in, and each tool joins the team once it is ready. Claude Code needs a Claude subscription or an Anthropic API key; Codex needs a ChatGPT plan or an OpenAI API key.
-
-> **Just want to look?** Run `python -m http.server` in the repo and open `http://localhost:8000/preview.html?lang=en` for a full replayed session.
+| Procedure | For | What runs |
+|---|---|---|
+| 🐎 **Express** (*Cursus publicus*) | Short, single tasks | No draft, review or audit; straight to one magistrate, from one call |
+| 🏛️ **Senate** | Most work | The full procedure: draft → review → parallel orders → deterministic inspection (no tokens) → audit |
+| 👑 **Comitia** | Long, complex work | The Senate procedure, plus a cheap model inspecting each order |
 
 ## Features
 
@@ -185,7 +262,7 @@ DSH alone works: DSH itself can hold any role. For a real cross-check (models fr
 | 🧭 | **DSH in office** | Any office via `dsh headless`, with your desktop sign-in and a model per office |
 | 📂 | **Open the output** | Open the output folder, open documents and media, reveal files |
 | 📥 | **Needs you** | Only what needs you: approvals, questions, and one-click *Pick up* for tasks cut short by a restart |
-| 🎩 | **The Chancellor** | Hand over a pile at once: split, triage, queue, dispatch; a full Senate still accepts work, urgent and short work go first, bump or withdraw, survives restarts |
+| 🎩 | **The Chancellor** | The super-agent design on your machine: split, triage, queue, dispatch; a full Senate still accepts work, urgent and short work go first, bump or withdraw, survives restarts |
 | ⏩ | **Faster fixed workflows** | Straight to work (no draft or veto round) and parallel steps |
 | 🧰 | **Your team** | Finds the tools on your machine and fills the roles; one-click install, sign-in and add; hand back to automatic any time |
 | 🌏 | **Two languages** | Six themes, prompts in either language |
@@ -235,6 +312,13 @@ One tool hands you whatever it wrote. The Senate adds three gates (a second tool
 </details>
 
 <details>
+<summary><b>How does it relate to the official super-agent prototype?</b></summary>
+
+Same idea, different setting. The [official prototype](https://github.com/deepseek-ai/dsh-superagent-prototype) serves a team repository: it listens to GitHub and returns results as PRs. The Chancellor brings the same Router–Worker design to your own computer: no service to deploy, work handed over by you and the DSH main session, a cross-tool review added to every worker, and results on isolated branches that merge only when you seal. See [The Chancellor: super-agent, done best](#superagent).
+
+</details>
+
+<details>
 <summary><b>Where is my data? Is anything uploaded?</b></summary>
 
 Everything stays on your machine in `~/.dsh/sansheng-liubu/`. The plugin serves a local HTTP endpoint for its own page only, accepts state changes only as same-origin JSON, and calls models only through the CLIs you installed.
@@ -259,3 +343,13 @@ Issues and PRs are welcome. Run `npm test` first (79 tests against real git repo
 ## License
 
 [MIT](LICENSE). Make the Tribune harsher than the Consul, and let the Annals tell you whether it is rubber-stamping.
+
+---
+
+<div align="center">
+
+If it helps, a ⭐ keeps the Senate in session.
+
+[Back to top](#readme)
+
+</div>
