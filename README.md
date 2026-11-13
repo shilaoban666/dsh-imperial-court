@@ -4,15 +4,20 @@
 
 ### 把本机的 AI 工具排成朝堂：一家拟旨、另一家封驳，六部并行办差，复核过了你再批红合并
 
+**DSH super-agent（Router–Worker）设计在本机上的最佳实现 · 零服务器 · 装上即用**
+
 [![Release](https://img.shields.io/github/v/release/shilaoban666/dsh-imperial-court?color=b4362b&label=release)](https://github.com/shilaoban666/dsh-imperial-court/releases)
 [![DSH plugin](https://img.shields.io/badge/DSH-plugin-e9c46a)](https://dshbase.com/zh/plugins/)
+[![super-agent](https://img.shields.io/badge/super--agent-Router%E2%80%93Worker-8e44ad)](#superagent)
 [![CI](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml/badge.svg)](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/tests-79%20passing-1f8a70)](test)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-3c873a)](package.json)
 [![Languages](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-English-2e6f9e)](README.en.md)
 [![License](https://img.shields.io/badge/license-MIT-5d5348)](LICENSE)
 
-**中文** · [English](README.en.md) · [快速开始](#快速开始) · [丞相府](#丞相府一次交办一摞事) · [截图](#截图) · [使用指南](docs/GUIDE.md) · [更新日志](CHANGELOG.md)
+**中文** · [English](README.en.md)
+
+[快速开始](#快速开始) · [super-agent 最佳实现](#superagent) · [为什么用它](#为什么用它) · [截图](#截图) · [功能一览](#功能一览) · [常见问题](#常见问题) · [使用指南](docs/GUIDE.md) · [更新日志](CHANGELOG.md)
 
 </div>
 
@@ -20,11 +25,119 @@
 
 一个 AI 工具自己写、自己审，等于没审。**三省六部**是一个 [DeepSeek Harness（DSH）](https://dshbase.com/zh/plugins/) 原生插件：把你本机装着的 **Claude Code、Codex、WorkBuddy 和 DSH 本体**按唐朝官制排成一个朝堂。中书省拟方案，门下省换一家工具来审、不行就封驳，六部按依赖**并行**办差，御史巡查、门下复核，最后你批红才合并。全程在一个**隔离的 git 分支**里，批红之前你的目录一个字节都不动。
 
+### 一眼看懂
+
+| 你做的 | 朝堂替你做的 | 你拿到的 |
+|---|---|---|
+| ✍️ 写一句要办的事，按 **Enter** | 一家拟方案 → **换一家来审** → 六部并行办 → 巡查、复核 | 隔离分支上的补丁和改动清单，**批红才合并** |
+| 📚 一次丢过去一摞事 | **丞相府**拆单、分拣、排队、派发，满员也照收 | 只有要你拍板时才出现在「待你处理」 |
+| ☕ 什么都不想管 | 丞相模式：复核不过自己补救，通过了自动归档 | 办不成的才来找你 |
+
 **不懂官制也看得懂**：每个官名后面跟着白话小字，「门下省 · 审方案」「兵部 · 写代码」，鼠标移上去看职掌。英文版是一套完整的**古罗马元老院**，卷轴下旨，火漆盖印。
 
-> 不喜欢古风？「殿宇」页可以换成**一人公司**皮肤。功能完全一样，只是官名换成 CEO、首席风控官、研发部这些现代职位。
+> 🎨 **不喜欢古风？**「殿宇」页可以换成**一人公司**皮肤。功能完全一样，只是官名换成 CEO、首席风控官、研发部这些现代职位。
 
 **开箱即用**：装上就能下旨。DSH 一个人能把所有岗位顶上；本机有 Claude Code / Codex（包括桌面版自带的那份）会自动找到、自动排岗，没装的一键安装、没登录的一键登录，不用自己敲命令行。**不打扰**：只有要你过目批准、要你补一句、或 DSH 重启打断了任务时，才出现在「待你处理」里，一键「接着办」。
+
+<a id="superagent"></a>
+
+## 丞相府：super-agent 的最佳实现
+
+人同时盯得住的 AI 会话只有三五个，再多就成了你在给工具当调度员。DeepSeek Harness 团队的 [super-agent 设计](https://github.com/deepseek-ai/dsh-superagent-prototype)给的解法是 **Router–Worker**：一个常驻的 Router 只管接活和派发，每件事交给一个互相隔离的 Worker，人只在要拍板时出现，用它自己的话说，就是「尽量少占人的注意力，尽量多给价值」。
+
+**丞相府**把这套设计完整落在你的本机上：不用搭任何服务，而且每个 Worker 都不是一个会话单干，而是一整个三省六部在替你把关。
+
+```mermaid
+flowchart LR
+  U([你：一次交办一摞事]) --> R["丞相府 · Router<br/>拆单 · 分拣 · 排队<br/>确定式逻辑，0 token"]
+  R --> Q[("候旨队列<br/>急件、短活优先")]
+  Q --> W1["一道旨 · Worker<br/>独立 worktree + 分支"]
+  Q --> W2["一道旨 · Worker"]
+  Q --> W3["一道旨 · Worker"]
+  W1 --> C{"三省六部<br/>异家审方案 · 巡查 · 复核"}
+  W2 --> C
+  W3 --> C
+  C --> I["待你处理<br/>只列要你出手的事"]
+  I --> S([你批红，合并])
+  G["锦衣卫 · Watchdog"] -. 卡死、超支即停 .-> W2
+```
+
+<img src="docs/screenshots/18-chancellor.png" alt="丞相府：待你处理与候旨队列" width="100%">
+
+### 设计里的每一条，这里都有对应
+
+| super-agent 的设计 | 三省六部里的对应 | 怎么用 |
+|---|---|---|
+| 常驻 Router：接活、分拣、派发 | **丞相府**：拆清单、定朝制、排队、放行，全是确定式逻辑，不耗 token | DSH 主会话调 `sansheng_dispatch`，或下旨时点「分开办」 |
+| 隔离的 Worker 会话 | **一道旨**：自己的 `git worktree` + 分支，三省六部照常审 | 自动 |
+| 满了就排队，不靠人盯 | **候旨队列**：朝堂满员照样收；急件优先、短活优先、先来先办；重启不丢 | 「排队中」可插队、撤回 |
+| 只在要人拍板时打扰 | **待你处理** / `sansheng_inbox`：只列要你出手的事 | 自动 |
+| Watchdog 盯进度 | **锦衣卫**：卡死拿下、推脱督办、超支停朝 | 自动 |
+| 结果以 PR 交回 | **隔离分支 + 批红合并**（本机版的 PR） | 批红 / 驳回 |
+
+### 为什么敢说「最佳实现」
+
+照着设计做完之后，又往前多走了五步：
+
+| | 多做的一步 | 为什么要紧 |
+|---|---|---|
+| 🏠 | **零服务器** | 不用部署，不用接 GitHub 或飞书机器人，装上插件就是。一个人、一台电脑，当天就能用上 |
+| 🪶 | **Router 不耗 token** | 拆单、分拣、排队全是确定式逻辑：调度本身不花钱、不会幻觉，行为有测试钉住 |
+| 🔍 | **每个 Worker 都被别家审** | 一道旨不是一个会话单干，而是拟旨 → 异家封驳 → 逐件巡查 → 复核。没人盯着的时候，质量照样有人把关 |
+| 🛡️ | **失败即关闭** | 审不出结论就不放行，合并有冲突就拒绝合并、原样保留。自动化越多，越要默认安全 |
+| 💰 | **每一摞事都有账** | 国库逐次记 token、金额和废料，超预算当场停朝。放手让它跑，花了多少心里有数 |
+
+> 📌 **说清楚边界**：官方原型面向团队仓库，盯的是 GitHub，结果以 PR 交回；丞相府面向你自己的电脑，活的来源是你和 DSH 主会话，结果以隔离分支交回。这里说的「最佳」，指的是**本机、单人**这个场景。
+
+### 交办一摞事是什么样
+
+```text
+你：帮我把这几件事办了
+    1. 线上登录接口 500，紧急修一下
+    2. 给 README 补安装说明
+    3. 把设置页的表单校验抽成 hook
+
+丞相府：已接 3 道旨：2 道已开朝，1 道候旨
+    - [standard !] 线上登录接口 500…   → edict-…-a1b2   （急件，先办）
+    - [express/rites] 给 README 补安装说明 → edict-…-c3d4
+    - [standard] 把设置页的表单校验…   → q-…  #1          （有空位自动开朝）
+```
+
+想全程不管，就给这一批加上 `autonomous: true`（或在朝规里开丞相模式）：复核不过自己补救，通过了自动归档，办不成的才来找你。
+
+<details>
+<summary><b>⏩ 定了流程还能更快：直办、同时办</b></summary>
+
+<br>
+
+「确定工作流」里的钦定流程有两个提速开关：
+
+- **直办**：部门和次序你已经定了，就不再让中书照抄一遍方案、门下再审一遍。每道旨少两次以上模型调用，各步直接开工，办完仍由门下复核。
+- **同时办**：互不依赖的两步（比如配图和配乐）点亮「∥ 同时办」，一起开工，后面的步骤等它们都办完。
+
+两者都有端到端测试钉住：直办的调用里没有拟旨和封驳，标了并行的两步在时间上确实重叠（见 [`test/chancellor.test.mjs`](test/chancellor.test.mjs)）。
+
+</details>
+
+## 快速开始
+
+三步，不用敲第二条命令。
+
+**1. 安装**（需要 [DSH](https://dshbase.com/zh/plugins/)，以及 Node 20+ 与 git）
+
+```bash
+dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.1.0
+```
+
+Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.1.0`。
+
+**2. 打开**：重启 DSH，点侧栏的「三」。插件会自己找本机的 DSH、Claude Code、Codex 并排好岗位，什么都不用设。
+
+**3. 下第一道旨**：在「朝堂」写下要办的事，按 **Enter**。不知道写什么，点下面的**起手式**（修 bug、审查改动、写周报……）。
+
+只装了 DSH 也能用：DSH 本体能担任任何岗位。想要真正的交叉审查（不同家的模型互相审），在「你的团队」里点 **一键安装 / 一键登录**：走的是 Claude Code 与 Codex 的官方安装方式和官方登录，装好、登好会自动上岗。Claude Code 需要 Claude 订阅或 Anthropic API Key，Codex 需要 ChatGPT 订阅或 OpenAI API Key。
+
+> 👀 **还没装、想先看看？** 在仓库目录运行 `python -m http.server`，打开 `http://localhost:8000/preview.html`，会自动演示一次完整的朝会。加 `?lang=en` 看英文版。
 
 ## 为什么用它
 
@@ -76,42 +189,6 @@
 </td>
 </tr>
 </table>
-
-## 丞相府：一次交办一摞事
-
-人同时盯得住的 AI 会话只有三五个，再多就成了你在给工具当调度员。DeepSeek Harness 团队的 [super-agent 设计](https://github.com/deepseek-ai/dsh-superagent-prototype)给的解法是 **Router–Worker**：一个常驻的 Router 只管接活和派发，每件事交给一个互相隔离的 Worker，人只在要拍板时出现。**丞相府**把同一个想法落在你的本机上，而且不用再搭任何服务：
-
-<img src="docs/screenshots/18-chancellor.png" alt="丞相府：待你处理与候旨队列" width="100%">
-
-| super-agent 的设计 | 三省六部里的对应 | 怎么用 |
-|---|---|---|
-| 常驻 Router：接活、分拣、派发 | **丞相府**：拆清单、定朝制、排队、放行，全是确定式逻辑，不耗 token | DSH 主会话调 `sansheng_dispatch`，或下旨时点「分开办」 |
-| 隔离的 Worker 会话 | **一道旨**：自己的 `git worktree` + 分支，三省六部照常审 | 自动 |
-| 满了就排队，不靠人盯 | **候旨队列**：朝堂满员照样收；急件优先、短活优先、先来先办；重启不丢 | 「排队中」可插队、撤回 |
-| 只在要人拍板时打扰 | **待你处理** / `sansheng_inbox`：只列要你出手的事 | 自动 |
-| Watchdog 盯进度 | **锦衣卫**：卡死拿下、推脱督办、超支停朝 | 自动 |
-| 结果以 PR 交回 | **隔离分支 + 批红合并**（本机版的 PR） | 批红 / 驳回 |
-
-```text
-你：帮我把这几件事办了
-    1. 线上登录接口 500，紧急修一下
-    2. 给 README 补安装说明
-    3. 把设置页的表单校验抽成 hook
-
-丞相府：已接 3 道旨：2 道已开朝，1 道候旨
-    - [standard !] 线上登录接口 500…   → edict-…-a1b2   （急件，先办）
-    - [express/rites] 给 README 补安装说明 → edict-…-c3d4
-    - [standard] 把设置页的表单校验…   → q-…  #1          （有空位自动开朝）
-```
-
-想全程不管，就给这一批加上 `autonomous: true`（或在朝规里开丞相模式）：复核不过自己补救，通过了自动归档，办不成的才来找你。
-
-**定了流程还能更快。** 「确定工作流」里的钦定流程现在有两个提速开关：
-
-- **直办**：部门和次序你已经定了，就不再让中书照抄一遍方案、门下再审一遍。每道旨少两次以上模型调用，各步直接开工，办完仍由门下复核。
-- **同时办**：互不依赖的两步（比如配图和配乐）点亮「∥ 同时办」，一起开工，后面的步骤等它们都办完。
-
-两者都有端到端测试钉住：直办的调用里没有拟旨和封驳，标了并行的两步在时间上确实重叠（见 [`test/chancellor.test.mjs`](test/chancellor.test.mjs)）。
 
 ## 截图
 
@@ -166,25 +243,13 @@ flowchart LR
   A -- 驳 --> X([留快照])
 ```
 
-短小的活走**急递**（直接派给一个部），长而复杂的走**大朝会**（再加御史逐件细看），默认按圣意长短自动挑，下旨前就告诉你大约几次调用、多少钱。
+三种朝制，默认按圣意长短自动挑，下旨前就告诉你大约几次调用、多少钱：
 
-## 快速开始
-
-**1. 安装**（需要 DSH，以及 Node 20+ 与 git）
-
-```bash
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.1.0
-```
-
-Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.1.0`。
-
-**2. 打开**：重启 DSH，点侧栏的「三」。插件会自己找本机的 DSH、Claude Code、Codex 并排好岗位，什么都不用设。
-
-**3. 下第一道旨**：在「朝堂」写下要办的事，按 **Enter**。不知道写什么，点下面的**起手式**（修 bug、审查改动、写周报……）。
-
-只装了 DSH 也能用：DSH 本体能担任任何岗位。想要真正的交叉审查（不同家的模型互相审），在「你的团队」里点 **一键安装 / 一键登录**：走的是 Claude Code 与 Codex 的官方安装方式和官方登录，装好、登好会自动上岗。Claude Code 需要 Claude 订阅或 Anthropic API Key，Codex 需要 ChatGPT 订阅或 OpenAI API Key。
-
-> **还没装、想先看看？** 在仓库目录运行 `python -m http.server`，打开 `http://localhost:8000/preview.html`，会自动演示一次完整的朝会。加 `?lang=en` 看英文版。
+| 朝制 | 适合 | 怎么走 |
+|---|---|---|
+| 🐎 **急递** | 短而单一的活 | 不拟旨、不封驳、不复核，直接派给一个部，1 次调用起 |
+| 🏛️ **常朝** | 大多数活 | 完整流程：拟旨 → 封驳 → 并行办差 → 御史巡查（零 token）→ 复核 |
+| 👑 **大朝会** | 长而复杂的活 | 常朝之上，再加御史调便宜模型逐件细看 |
 
 ## 功能一览
 
@@ -202,7 +267,7 @@ Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.1.0`。
 | 🧭 | **DSH 本体任职** | 经 `dsh headless` 担任任何岗位，用桌面端登录、按岗位选模型 |
 | 📂 | **产出直接打开** | 一键打开产出文件夹，用默认程序打开文档与媒体 |
 | 📥 | **待你处理** | 只摆出要你出手的事：过目批准、补一句、被重启打断的一键「接着办」 |
-| 🎩 | **丞相府** | 一次交办一摞事：拆清单、分拣、排队、派发；满员照收，急件与短活优先，可插队、撤回，重启不丢 |
+| 🎩 | **丞相府** | super-agent 的本机实现：拆清单、分拣、排队、派发；满员照收，急件与短活优先，可插队、撤回，重启不丢 |
 | ⏩ | **钦定流程提速** | 直办（跳过拟旨与封驳）、同时办（互不依赖的步骤并行） |
 | 🧰 | **你的团队** | 自动找到本机工具并排岗；一键安装、一键登录、接上；可随时交回自动分配 |
 | 🌏 | **中英双语** | 六套主题，提示词也跟着换语言 |
@@ -252,6 +317,13 @@ Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.1.0`。
 </details>
 
 <details>
+<summary><b>和官方的 super-agent 原型是什么关系？</b></summary>
+
+思路同源，场景不同。[官方原型](https://github.com/deepseek-ai/dsh-superagent-prototype)是给团队仓库用的：盯 GitHub，结果以 PR 交回。丞相府把同一套 Router–Worker 落在你自己的电脑上：不用部署服务，活由你和 DSH 主会话交办，每个 Worker 再加一层异家审查，结果以隔离分支交回、你批红才合并。详见[丞相府：super-agent 的最佳实现](#superagent)。
+
+</details>
+
+<details>
 <summary><b>数据存在哪？会上传吗？</b></summary>
 
 都在本机：`~/.dsh/sansheng-liubu/`（状态、奏折、史馆、实录）。插件只在本机起一个 HTTP 端点给自己的界面用：只认本机地址（或 IP、你在配置里放行的域名）发来的请求，挡住 DNS 重绑定；改状态的请求只收同源的 JSON，挡住跨站表单。调用模型走的是你自己装的 CLI。
@@ -276,3 +348,13 @@ Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.1.0`。
 ## License
 
 [MIT](LICENSE)。欢迎拿去改，改完把门下省调得比中书省狠一点：史馆会告诉你它有没有在走过场。
+
+---
+
+<div align="center">
+
+觉得有用，点个 ⭐ 就是给朝堂添一炷香。
+
+[回到顶部](#readme)
+
+</div>
