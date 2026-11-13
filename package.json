@@ -22,7 +22,7 @@
   ],
   "author": "shilaoban666",
   "scripts": {
-    "test": "node --test \"test/*.test.mjs\""
+    "test": "node test/run.mjs"
   },
   "engines": {
     "node": ">=20"
