@@ -256,6 +256,12 @@ test('a full court queues instead of refusing; queued decrees can be bumped or w
 
   const third = api.submit({ brief: 'write three', workspace: repo });
   assert.equal(third.position, 2);
+  // 同一毫秒递进来的也分得出先后：后来的排在后面
+  const fourth = api.submit({ brief: 'write four', workspace: repo });
+  const fifth = api.submit({ brief: 'write five', workspace: repo });
+  assert.deepEqual([fourth.position, fifth.position], [3, 4]);
+  api.unqueue(fourth.queueId);
+  api.unqueue(fifth.queueId);
   assert.deepEqual(api.bump(third.queueId).queue.map(item => item.brief), ['write three', 'write two']);
   assert.deepEqual(api.unqueue(second.queueId).queue.map(item => item.brief), ['write three']);
   assert.throws(() => api.unqueue('q-nope'), /候旨队列里没有/);
