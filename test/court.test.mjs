@@ -205,12 +205,12 @@ test('independent orders run in parallel and the join waits for both', async () 
   const { id } = api.createEdict({ brief: 'parallel work', workspace: tmp('court-plain-') });
   const detail = await waitFor(api, id, ['awaiting-approval', 'failed']);
   assert.equal(detail.status, 'awaiting-approval', detail.error);
-  const tasks = entries().filter(entry => entry.kind === 'task');
-  const a = tasks.find(entry => entry.ministry === 'war');
-  const b = tasks.find(entry => entry.ministry === 'justice');
-  const c = tasks.find(entry => entry.ministry === 'works');
-  assert.ok(a.start < b.end && b.start < a.end, 'war and justice overlapped');
-  assert.ok(c.start >= Math.max(a.end, b.end), 'join started after both');
+  assert.deepEqual(entries().filter(entry => entry.kind === 'task').map(entry => entry.ministry).sort(), ['justice', 'war', 'works']);
+  // 用朝堂自己记的派出、收回时刻来比：子进程里记的时刻含启动耗时，机器忙时两个进程能差出半秒以上
+  const call = ministry => detail.calls.find(item => item.roleId === ministry);
+  const [a, b, c] = [call('war'), call('justice'), call('works')];
+  assert.ok(a.startedAt < b.endedAt && b.startedAt < a.endedAt, 'war and justice overlapped');
+  assert.ok(c.startedAt >= Math.max(a.endedAt, b.endedAt), 'join started after both');
 });
 
 test('referrals become orders, and the JSON never reaches the chat', async () => {
@@ -412,7 +412,8 @@ test('grand mode sends every order to the inspector', async () => {
 });
 
 test('a silent agent is seized by the Guard', async () => {
-  const { api } = makeCourt({ flags: 'hang,single', rules: { stallSeconds: 1, maxRetries: 1 } });
+  // 假 agent 卡 8 秒；阈值给 4 秒：机器忙时进程起得慢，1 秒会把正常的重办也误拿下
+  const { api } = makeCourt({ flags: 'hang,single', rules: { stallSeconds: 4, maxRetries: 1 } });
   const { id } = api.createEdict({ brief: 'two step job, then check it', workspace: tmp('court-plain-') });
   const detail = await waitFor(api, id, ['awaiting-approval', 'failed']);
   assert.ok(detail.messages.some(item => item.kind === 'guard' && item.from === 'jinyiwei'));
