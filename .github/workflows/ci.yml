@@ -23,8 +23,8 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         node: [20, 22]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
       # 零依赖：没有 npm install。测试用真的 git 仓库和假 CLI 跑完整朝会。

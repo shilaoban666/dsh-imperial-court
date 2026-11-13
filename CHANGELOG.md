@@ -2,6 +2,15 @@
 
 > [← 首页 / Home](README.md) · 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### 修复 Fixed
+
+- **CI 在 Node 20 上一个测试都没跑**：`node --test "test/*.test.mjs"` 的通配符要 Node 21+ 才认，Node 20 当成文件名直接报错。改由 `test/run.mjs` 列出测试文件，各版本 Node 都能跑。
+- **两条测试在忙碌的机器上偶发失败**：并行重叠改用朝堂自己记的派出、收回时刻来比，不再用子进程里记的时刻（含进程启动耗时）；锦衣卫用例的「无动静」阈值从 1 秒放到 4 秒，免得把正常的重办也误拿下。本机 5 份测试并发连跑 5 轮全部通过。
+- CI 里有用例失败时，直接以注解和任务摘要列出是哪一条、为什么，不用登录翻日志；actions 升到 v5，去掉 Node 20 弃用警告。
+- 使用指南里的测试数量更新为 79。
+
 ## [1.1.0] - 2026-11-12
 
 丞相府：把丞相模式做成真正的 Router–Worker，一次交办一摞事。The Chancellor: autonomy grows into a real Router–Worker, so a pile of work can be handed over at once.
