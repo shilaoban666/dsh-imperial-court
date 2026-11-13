@@ -364,7 +364,10 @@ test('parallel workflow steps really overlap in time', async () => {
   const detail = api.getEdict(id);
   assert.equal(detail.status, 'awaiting-approval', detail.error);
   assert.deepEqual(detail.steps.map(step => step.after), [[], [], [1, 2]]);
-  const tasks = Object.fromEntries(entries().filter(entry => entry.kind === 'task').map(entry => [entry.ministry, entry]));
-  assert.ok(tasks.war.start < tasks.works.end && tasks.works.start < tasks.war.end, 'the two marked steps ran at the same time');
-  assert.ok(tasks.justice.start >= Math.max(tasks.war.end, tasks.works.end) - 5, 'the next step waited for both');
+  assert.deepEqual(entries().filter(entry => entry.kind === 'task').map(entry => entry.ministry).sort(), ['justice', 'war', 'works']);
+  // 用朝堂自己记的派出、收回时刻来比：子进程里记的时刻含启动耗时，机器忙时两个进程能差出半秒以上
+  const call = ministry => detail.calls.find(item => item.roleId === ministry);
+  const [war, works, justice] = [call('war'), call('works'), call('justice')];
+  assert.ok(war.startedAt < works.endedAt && works.startedAt < war.endedAt, 'the two marked steps ran at the same time');
+  assert.ok(justice.startedAt >= Math.max(war.endedAt, works.endedAt), 'the next step waited for both');
 });
