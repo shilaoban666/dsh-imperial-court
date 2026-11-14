@@ -230,10 +230,10 @@ HTTP：`POST /dispatch`（`{ brief | items, workspace, criteria, autonomous, pri
 ## 13. 安装与配置
 
 ```powershell
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court
+dsh plugin --profile desktop add dsh-sansheng-liubu
 ```
 
-- 固定版本：`github:shilaoban666/dsh-imperial-court#v0.9.0`。Web 版把 `desktop` 换成 `web`。
+- 装的是 npm 上的发布版；固定版本写 `dsh-sansheng-liubu@1.2.0`。想跟 GitHub 上的最新代码：`github:shilaoban666/dsh-imperial-court`（固定版本加 `#v1.2.0`）。Web 版把 `desktop` 换成 `web`。
 - 本地目录（方便自己改）：`git clone` 后 `dsh plugin --profile desktop add "link:<clone 下来的绝对路径>"`。
 - 不改 profile 直接跑源码：把 `cordis.patch.yml` 里的 `name` 换成 `index.mjs` 的绝对路径，或 `dsh web --patch ./cordis.patch.yml`。
 - 岗位要真干活，本机得装好并登录对应 CLI：`npm i -g @anthropic-ai/claude-code`、`npm i -g @openai/codex`，各运行一次完成登录。DSH 本体不用另装。
