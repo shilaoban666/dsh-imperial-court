@@ -10,7 +10,7 @@
 [![DSH plugin](https://img.shields.io/badge/DSH-plugin-e9c46a)](https://dshbase.com/zh/plugins/)
 [![super-agent](https://img.shields.io/badge/super--agent-Router%E2%80%93Worker-8e44ad)](#superagent)
 [![CI](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml/badge.svg)](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-79%20passing-1f8a70)](test)
+[![Tests](https://img.shields.io/badge/tests-86%20passing-1f8a70)](test)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-3c873a)](package.json)
 [![Languages](https://img.shields.io/badge/English-%E4%B8%AD%E6%96%87-2e6f9e)](README.md)
 [![License](https://img.shields.io/badge/license-MIT-5d5348)](LICENSE)
@@ -126,10 +126,10 @@ Three steps, and only one command.
 **1. Install** ([DSH](https://dshbase.com/zh/plugins/), Node 20+ and git)
 
 ```bash
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.1.0
+dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.2.0
 ```
 
-Use `--profile web` for the web build; drop `#v1.1.0` to follow the latest code.
+Use `--profile web` for the web build; drop `#v1.2.0` to follow the latest code.
 
 **2. Open**: restart DSH, click the seal in the sidebar and switch to **EN**. The plugin finds DSH, Claude Code and Codex on your machine and fills the roles by itself; there is nothing to set up.
 
@@ -340,7 +340,7 @@ Full list and roadmap: [guide · known limits](docs/GUIDE.en.md#15-known-limits-
 
 ## Contributing
 
-Issues and PRs are welcome. Run `npm test` first (79 tests against real git repositories and a fake CLI; CI runs them on Windows, macOS and Linux); check UI changes in `preview.html`.
+Issues and PRs are welcome. Run `npm test` first (86 tests against real git repositories and a fake CLI; CI runs them on Windows, macOS and Linux); check UI changes in `preview.html`.
 
 ## License
 

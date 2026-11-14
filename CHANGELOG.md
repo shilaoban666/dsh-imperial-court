@@ -2,7 +2,9 @@
 
 > [← 首页 / Home](README.md) · 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased]
+## [1.2.0] - 2026-11-14
+
+群臣市场、一键推荐、思考深度，加上界面打磨与几处修复。A tool market, one-click recommend and effort levels, plus UI polish and fixes.
 
 ### 新增 Added
 

@@ -212,7 +212,7 @@ dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v0.9.0
 - **Standing orders** (`rules`): `isolation`, `autoMerge`, `execWrites`, `regimePowers`, `parallel`, `maxConcurrent`, `useMemory`, `maxReviewRounds`, `maxSteps`, `maxFixRounds`, `fallbackAgentId`, `mode`, `historian`, `treasury`.
 - Data lives in `$DSH_HOME/sansheng-liubu/` (`~/.dsh/` by default).
 - **Preview**: serve the repo (`python -m http.server`) and open `preview.html?lang=en`. Options: `&theme=roma|marble|nox`, `&at=25`, `&regime=jiuxi`, `&tab=7`.
-- **Develop**: `npm test` runs 79 tests against real git repositories and a fake CLI.
+- **Develop**: `npm test` runs 86 tests against real git repositories and a fake CLI.
 
 ## 14. Layout
 

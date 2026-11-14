@@ -10,7 +10,7 @@
 [![DSH plugin](https://img.shields.io/badge/DSH-plugin-e9c46a)](https://dshbase.com/zh/plugins/)
 [![super-agent](https://img.shields.io/badge/super--agent-Router%E2%80%93Worker-8e44ad)](#superagent)
 [![CI](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml/badge.svg)](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-79%20passing-1f8a70)](test)
+[![Tests](https://img.shields.io/badge/tests-86%20passing-1f8a70)](test)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-3c873a)](package.json)
 [![Languages](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-English-2e6f9e)](README.en.md)
 [![License](https://img.shields.io/badge/license-MIT-5d5348)](LICENSE)
@@ -126,10 +126,10 @@ flowchart LR
 **1. 安装**（需要 [DSH](https://dshbase.com/zh/plugins/)，以及 Node 20+ 与 git）
 
 ```bash
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.1.0
+dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.2.0
 ```
 
-Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.1.0`。
+Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.2.0`。
 
 **2. 打开**：重启 DSH，点侧栏的「三」。插件会自己找本机的 DSH、Claude Code、Codex 并排好岗位，什么都不用设。
 
@@ -346,7 +346,7 @@ flowchart LR
 
 ## 参与
 
-欢迎提 [Issue](https://github.com/shilaoban666/dsh-imperial-court/issues) 和 PR。改之前跑一遍 `npm test`（79 个测试，真 git 仓库 + 假 CLI；CI 在 Windows / macOS / Linux 上各跑一遍）；界面改动可以在 `preview.html` 里直接看。
+欢迎提 [Issue](https://github.com/shilaoban666/dsh-imperial-court/issues) 和 PR。改之前跑一遍 `npm test`（86 个测试，真 git 仓库 + 假 CLI；CI 在 Windows / macOS / Linux 上各跑一遍）；界面改动可以在 `preview.html` 里直接看。
 
 ## License
 
