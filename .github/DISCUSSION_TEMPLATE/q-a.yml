@@ -1,0 +1,28 @@
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        先翻一下 [Wiki 的故障排查](https://github.com/shilaoban666/dsh-imperial-court/wiki/故障排查)，很多问题那里有答案。
+        Check the [troubleshooting page](https://github.com/shilaoban666/dsh-imperial-court/wiki/故障排查) first.
+  - type: textarea
+    id: question
+    attributes:
+      label: 你想做什么，卡在哪 / What you are trying to do, and where it stops
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 插件版本 / Plugin version
+      placeholder: v1.2.0
+  - type: input
+    id: tools
+    attributes:
+      label: 在岗的工具 / Tools in office
+      placeholder: DSH + Claude Code + Codex
+  - type: dropdown
+    id: os
+    attributes:
+      label: 系统 / OS
+      options: [Windows, macOS, Linux]
