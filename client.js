@@ -248,6 +248,53 @@ select.ssl-input { cursor: pointer; }
 .ssl-card.is-auto { border-color: color-mix(in srgb, var(--ssl-ok) 45%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ssl-ok) 8%, transparent); }
 .ssl-role-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
 .ssl-live { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--ssl-line2); }
+/* 官职卡 v2：朱红细边 + 印章字 + 三格（任职 / 模型 / 思考深度） */
+.ssl-role { position: relative; overflow: hidden; transition: border-color .15s, box-shadow .15s; }
+.ssl-role::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: linear-gradient(90deg, var(--ssl-seal), transparent 75%); opacity: .55; }
+.ssl-role:hover { border-color: var(--ssl-line2); box-shadow: 0 8px 22px rgba(0,0,0,.14); }
+.ssl-role .ssl-role-head { align-items: flex-start; }
+.ssl-role .ssl-glyph { color: var(--ssl-seal); background: color-mix(in srgb, var(--ssl-seal) 8%, var(--ssl-sunken)); border-color: color-mix(in srgb, var(--ssl-seal) 38%, var(--ssl-line)); }
+.ssl-role.is-vacant::before { background: linear-gradient(90deg, var(--ssl-err), transparent 75%); }
+.ssl-duty { resize: none; min-height: 34px; line-height: 1.45; white-space: normal; overflow: hidden; }
+.ssl-role-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2px 10px; margin-top: 10px; }
+.ssl-role-grid .is-wide { grid-column: 1 / -1; }
+.ssl-role-grid .ssl-field { margin-top: 6px; }
+.ssl-role-grid select:disabled { opacity: .55; }
+.ssl-holder { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--ssl-mut); }
+.ssl-holder b { color: var(--ssl-fg); font-weight: 600; }
+.ssl-holder .ssl-dot { width: 7px; height: 7px; }
+.ssl-holder .ssl-dot.is-ok { background: var(--ssl-ok); }
+.ssl-holder .ssl-dot.is-off { background: var(--ssl-line3); }
+.ssl-section > .ssl-section-right { order: 3; flex: none; }
+.ssl-section::after { order: 2; }
+/* 群臣市场 */
+.ssl-modal.ssl-modal--wide { width: 980px; max-height: calc(100vh - 48px); overflow: auto; }
+.ssl-market { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(290px, 100%), 1fr)); gap: 12px; margin-top: 14px; }
+.ssl-market-card { display: flex; flex-direction: column; gap: 8px; padding: 14px 15px; border-radius: 12px; border: 1px solid var(--ssl-line); background: var(--ssl-raised); }
+.ssl-market-card.is-added { border-color: color-mix(in srgb, var(--ssl-ok) 45%, var(--ssl-line)); }
+.ssl-market-top { display: flex; align-items: flex-start; gap: 10px; }
+.ssl-market-name { font-size: 14px; font-weight: 700; color: var(--ssl-fg); }
+.ssl-market-vendor { font-size: 11.5px; color: var(--ssl-mut); }
+.ssl-market-desc { font-size: 12.5px; line-height: 1.55; color: var(--ssl-fg2); }
+.ssl-market-pc { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ssl-market-pc ul { margin: 0; padding: 0; list-style: none; font-size: 12px; line-height: 1.5; color: var(--ssl-fg2); }
+.ssl-market-pc li { position: relative; padding-left: 15px; }
+.ssl-market-pc li::before { position: absolute; left: 0; font-weight: 700; }
+.ssl-market-pc .is-pro li::before { content: "+"; color: var(--ssl-ok); }
+.ssl-market-pc .is-con li::before { content: "−"; color: var(--ssl-err); }
+.ssl-market-cmd { padding: 6px 8px; border-radius: 7px; background: var(--ssl-sunken); font: 11.5px/1.4 var(--ssl-mono, ui-monospace, monospace); color: var(--ssl-fg2); word-break: break-all; }
+.ssl-market-foot { display: flex; align-items: center; gap: 6px; margin-top: auto; padding-top: 4px; flex-wrap: wrap; }
+.ssl-market-foot a { font-size: 12px; color: var(--ssl-mut); text-decoration: none; }
+.ssl-market-foot a:hover { color: var(--ssl-fg); }
+.ssl-agent-add {
+  display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 64px; border-radius: 14px; cursor: pointer;
+  border: 1px dashed var(--ssl-line2); background: transparent; color: var(--ssl-mut); font: inherit; font-size: 13px;
+}
+.ssl-agent-add:hover { border-color: var(--ssl-seal); color: var(--ssl-seal); }
+.ssl-agent-add b { font-size: 20px; line-height: 1; }
+.ssl-custom { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--ssl-line); }
+.ssl-custom-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: 0 12px; }
+@media (max-width: 640px) { .ssl-market-pc { grid-template-columns: 1fr; } }
 
 /* 终端输出 */
 .ssl-term {
@@ -2572,19 +2619,28 @@ select.ssl-input { cursor: pointer; }
       }
 
       // ---------- 官职卡：换人 + 换模型 + 实时状态 ----------
-      function RoleCard({ roleId, role, agents, live, onAssign, fallbackName }) {
+      // 思考深度的说法（各家 CLI 的档位名原样传过去，这里只管显示）
+      const EFFORT_LABEL = {
+        minimal: ['极低', 'Minimal'], low: ['低', 'Low'], medium: ['中', 'Medium'], high: ['高', 'High'], xhigh: ['很高', 'X-high'], max: ['最高', 'Max'],
+      };
+      const effortLabel = key => (EFFORT_LABEL[key] ? EFFORT_LABEL[key][isEn() ? 1 : 0] : key);
+      const CUSTOM_MODEL = '::custom::';
+
+      function RoleCard({ roleId, role, agents, live, onAssign, fallbackName, connected }) {
         const agent = agents.find(item => item.id === role.agentId) || null;
         const models = agent && Array.isArray(agent.models) ? agent.models : [];
+        const efforts = agent && Array.isArray(agent.efforts) ? agent.efforts : [];
         const current = role.model || '';
+        const [customModel, setCustomModel] = useState(false);
         const [draft, setDraft] = useState(current);
-        useEffect(() => setDraft(current), [current]);
+        useEffect(() => { setDraft(current); setCustomModel(false); }, [current, role.agentId]);
         const duty = roleDuty(roleId, role.duty);
         const [dutyDraft, setDutyDraft] = useState(duty);
         useEffect(() => setDutyDraft(duty), [duty]);
         const title = roleName(roleId);
 
-        const commit = () => {
-          const next = String(draft || '').trim();
+        const commitModel = value => {
+          const next = String(value || '').trim();
           if (next !== current) onAssign(roleId, { model: next });
         };
         // 职掌会写进拟旨 prompt，中书按它决定把活派给谁
@@ -2593,13 +2649,19 @@ select.ssl-input { cursor: pointer; }
           if (next && next !== duty) onAssign(roleId, { duty: next });
           else setDutyDraft(duty);
         };
-        // 当前任职的 agent 即使停用了也要列出来：否则下拉框显示第一项、实际值却是停用的那个，选第一项也触发不了 onChange
-        const options = agents.filter(item => item.enabled !== false || item.id === role.agentId);
+        // 任职下拉只列「已连通」的命令行员工（找得到、登录了）与只有界面的员工；还没查过时退回「已启用」。
+        // 现任即使没连通也要列出来：否则下拉框显示第一项、实际值却是它，选第一项也触发不了 onChange
+        const connectedSet = Array.isArray(connected) ? new Set(connected) : null;
+        const ready = agents.filter(item => item.adapter === 'cli' && (connectedSet ? connectedSet.has(item.id) : item.enabled !== false));
+        const gui = agents.filter(item => item.adapter !== 'cli' && item.enabled !== false);
+        const listed = new Set([...ready, ...gui].map(item => item.id));
+        const stray = agent && !listed.has(agent.id) ? agent : null;
         const isCli = agent && agent.adapter === 'cli' && agent.enabled !== false;
         const glyph = roleGlyph(roleId);
+        const optionText = item => `${item.name}${item.enabled === false ? t('disabledSuffix') : ''}`;
 
         let note = null;
-        if (BUILT_IN.has(roleId)) note = h('div', { className: 'ssl-caption', style: { marginTop: '8px' } }, t(roleId === 'jinyiwei' ? 'roleJinyiwei' : 'roleShangshu'));
+        if (BUILT_IN.has(roleId)) note = h('div', { className: 'ssl-caption', style: { marginTop: '10px' } }, t(roleId === 'jinyiwei' ? 'roleJinyiwei' : 'roleShangshu'));
         else if (roleId === 'yushi' && isCli) note = h('div', { className: 'ssl-caption', style: { marginTop: '8px' } }, t('roleYushi'));
         else if (fallbackName && !isCli) {
           const reason = !agent ? t('roleVacantShort') : agent.enabled === false ? t('roleDisabledShort', { name: agent.name }) : t('roleNoCliShort', { name: agent.name });
@@ -2607,27 +2669,49 @@ select.ssl-input { cursor: pointer; }
         } else if (!agent) note = h('div', { className: 'ssl-hint' }, t('roleVacant'));
         else if (agent.enabled === false) note = h('div', { className: 'ssl-hint' }, t('roleDisabled', { name: agent.name }));
         else if (agent.adapter !== 'cli') note = h('div', { className: 'ssl-caption', style: { marginTop: '8px' } }, agent.adapter === 'self' ? t('roleSelf') : t('roleManual'));
+        else if (stray) note = h('div', { className: 'ssl-hint' }, zhEn(`${agent.name} 现在连不通（没找到或没登录），去「群臣」看看`, `${agent.name} is not reachable right now (missing or signed out); check the roster`));
 
-        return h('div', { className: cx('ssl-card ssl-role', live && 'is-live') },
+        const modelValue = customModel ? CUSTOM_MODEL : current;
+        const modelSelect = roleId === 'shangshu' ? null : customModel
+          ? h('input', {
+            className: 'ssl-input', value: draft, autoFocus: true, placeholder: zhEn('输入模型名，回车确定', 'Type a model id, Enter to save'),
+            onChange: event => setDraft(event.target.value),
+            onBlur: () => { commitModel(draft); setCustomModel(false); },
+            onKeyDown: event => {
+              if (event.key === 'Enter') event.target.blur();
+              if (event.key === 'Escape') { setDraft(current); setCustomModel(false); }
+            },
+          })
+          : h('select', {
+            className: 'ssl-input', value: modelValue, disabled: !isCli, 'aria-label': t('fieldModel'),
+            onChange: event => (event.target.value === CUSTOM_MODEL ? setCustomModel(true) : commitModel(event.target.value)),
+          },
+          h('option', { value: '' }, isCli ? zhEn('默认（CLI 自带）', 'Default (the CLI\'s own)') : t('modelNoCli')),
+          models.map(model => h('option', { key: model, value: model }, model)),
+          current && !models.includes(current) ? h('option', { value: current }, current) : null,
+          isCli ? h('option', { value: CUSTOM_MODEL }, zhEn('其它模型…', 'Other model…')) : null);
+
+        return h('div', { className: cx('ssl-card ssl-role', live && 'is-live', !BUILT_IN.has(roleId) && !agent && 'is-vacant') },
           h('div', { className: 'ssl-role-head' },
             h('span', { className: cx('ssl-glyph', latinClass(glyph)) }, glyph),
-            h('div', { className: 'ssl-grow' },
+            h('div', { className: 'ssl-grow', style: { minWidth: 0 } },
               h('div', { className: 'ssl-role-title' }, title),
-              h('input', {
-                className: 'ssl-inline',
+              h('textarea', {
+                className: 'ssl-inline ssl-duty',
+                rows: 2,
                 value: dutyDraft,
                 title: t('dutyTitle', { duty }),
                 'aria-label': t('dutyAria', { role: title }),
                 onChange: event => setDutyDraft(event.target.value),
                 onBlur: commitDuty,
                 onKeyDown: event => {
-                  if (event.key === 'Enter') event.target.blur();
+                  if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.target.blur(); }
                   if (event.key === 'Escape') { setDutyDraft(duty); setTimeout(() => event.target.blur()); }
                 },
               })),
             live ? h(StatusPill, { status: 'running', text: fmtElapsed(live.elapsedMs) }) : h(StatusPill, { status: 'idle' })),
-          BUILT_IN.has(roleId) ? null : h('div', { className: 'ssl-role-fields' },
-            h('label', { className: 'ssl-field' },
+          BUILT_IN.has(roleId) ? null : h('div', { className: 'ssl-role-grid' },
+            h('label', { className: 'ssl-field is-wide' },
               h('span', { className: 'ssl-label' }, t('fieldAgent')),
               h('select', {
                 className: 'ssl-input',
@@ -2635,24 +2719,21 @@ select.ssl-input { cursor: pointer; }
                 onChange: event => onAssign(roleId, { agentId: event.target.value }),
               },
               h('option', { value: '' }, t('vacantOption')),
-              options.map(item => h('option', { key: item.id, value: item.id },
-                `${item.name}${item.enabled === false ? t('disabledSuffix') : ''}`)))),
+              ready.length ? h('optgroup', { label: zhEn('已连通', 'Reachable') }, ready.map(item => h('option', { key: item.id, value: item.id }, optionText(item)))) : null,
+              gui.length ? h('optgroup', { label: zhEn('只有界面（要你回填）', 'GUI only (you fill in)') }, gui.map(item => h('option', { key: item.id, value: item.id }, optionText(item)))) : null,
+              stray ? h('option', { value: stray.id }, stray.enabled === false ? optionText(stray) : `${stray.name} ${zhEn('（未连通）', '(not reachable)')}`) : null)),
             h('label', { className: 'ssl-field' },
               h('span', { className: 'ssl-label' }, t('fieldModel')),
-              h('input', {
-                className: 'ssl-input',
-                value: draft,
-                disabled: !isCli || roleId === 'shangshu',
-                list: `ssl-models-${roleId}`,
-                placeholder: roleId === 'shangshu' ? t('modelPlugin') : isCli ? t('modelDefault') : t('modelNoCli'),
-                onChange: event => setDraft(event.target.value),
-                onBlur: commit,
-                onKeyDown: event => {
-                  if (event.key === 'Enter') event.target.blur();
-                  if (event.key === 'Escape') { setDraft(current); setTimeout(() => event.target.blur()); }
-                },
-              }),
-              h('datalist', { id: `ssl-models-${roleId}` }, models.map(model => h('option', { key: model, value: model }))))),
+              roleId === 'shangshu' ? h('input', { className: 'ssl-input', disabled: true, placeholder: t('modelPlugin') }) : modelSelect),
+            h('label', { className: 'ssl-field' },
+              h('span', { className: 'ssl-label' }, zhEn('思考深度', 'Effort')),
+              h('select', {
+                className: 'ssl-input', value: efforts.length ? role.effort || '' : '', disabled: !isCli || !efforts.length,
+                title: isCli && !efforts.length ? zhEn(`${agent.name} 的命令行没有思考深度的开关`, `${agent.name}'s CLI has no effort switch`) : '',
+                onChange: event => onAssign(roleId, { effort: event.target.value }),
+              },
+              h('option', { value: '' }, isCli && !efforts.length ? zhEn('不支持', 'Not supported') : zhEn('默认', 'Default')),
+              efforts.map(key => h('option', { key, value: key }, effortLabel(key)))))),
           note,
           live ? h('div', { className: 'ssl-live' },
             h('div', { className: 'ssl-caption ssl-ellipsis' }, `${kindLabel(live.kind)} · ${live.title || t('working')}`),
@@ -2835,10 +2916,35 @@ select.ssl-input { cursor: pointer; }
         const assign = (roleId, patch) => {
           const prev = state.roles[roleId] || {};
           const next = { ...prev, ...patch };
-          // 换了人，上一位的模型名多半不适用（如把 opus 带给 Codex），清空回默认
-          if (patch.agentId !== undefined && patch.agentId !== prev.agentId) next.model = '';
-          savePreset({ roles: { ...state.roles, [roleId]: next } }, t('roleUpdated', { role: roleName(roleId) }));
+          // 换了人，上一位的模型名与思考深度多半不适用（如把 opus 带给 Codex），清空回默认
+          if (patch.agentId !== undefined && patch.agentId !== prev.agentId) { next.model = ''; next.effort = ''; }
+          // 选了一个停用着的员工：顺手启用，不然派过去也办不了
+          const picked = patch.agentId ? state.agents.find(item => item.id === patch.agentId) : null;
+          const agents = picked && picked.enabled === false ? state.agents.map(item => (item.id === picked.id ? { ...item, enabled: true } : item)) : undefined;
+          savePreset({ roles: { ...state.roles, [roleId]: next }, ...(agents ? { agents } : {}) }, t('roleUpdated', { role: roleName(roleId) }));
         };
+        const [recommending, setRecommending] = useState(false);
+        // 一键推荐：按本机此刻连得通的工具重新排岗位、配模型与思考深度
+        const recommend = () => {
+          setRecommending(true);
+          apiJson('/recommend', { method: 'POST', body: '{}' })
+            .then(result => {
+              onRefresh();
+              const changes = result.changes || [];
+              if (!result.ready || !result.ready.length) { notify(zhEn('本机没有连得通的工具：先去「群臣」接一个', 'No reachable tool on this machine yet: add one in the roster first'), 'err'); return; }
+              const nameOf = id => ((result.agents || []).find(item => item.id === id) || {}).name || zhEn('空缺', 'vacant');
+              const lines = changes.slice(0, 8).map(item => `${roleName(item.roleId)} → ${[nameOf(item.to.agentId), item.to.model, item.to.effort ? effortLabel(item.to.effort) : ''].filter(Boolean).join(' · ')}`);
+              notify(changes.length
+                ? zhEn(`按本机连通的 ${result.ready.length} 个工具重新排了 ${changes.length} 个岗位`, `Re-staffed ${changes.length} offices from ${result.ready.length} reachable tools`)
+                : zhEn('现在的安排已经是推荐的了', 'The current staffing is already the recommended one'), 'ok', lines.join('\n'));
+            })
+            .catch(error => notify(String(error.message || error), 'err'))
+            .finally(() => setRecommending(false));
+        };
+        const recommendBtn = h('button', {
+          className: 'ssl-btn ssl-btn--sm ssl-btn--seal ssl-section-right', disabled: recommending, onClick: recommend,
+          title: zhEn('重新查一遍本机连得通的命令行工具，按各家所长排岗位：出方案和审方案分给两家，写代码和测试分给两家；顺带配好模型与思考深度', 'Re-check which CLIs are reachable and staff by strengths: planner and reviewer from two vendors, coder and tester from two vendors; models and effort included'),
+        }, recommending ? zhEn('推荐中…', 'Working…') : zhEn('✦ 一键推荐', '✦ Recommend'));
         const autonomous = state.rules && state.rules.autonomous === true;
         const fallbackAgent = autonomous && state.agents.find(item => item.id === state.rules.fallbackAgentId && item.adapter === 'cli' && item.enabled !== false);
         const fallbackName = fallbackAgent ? fallbackAgent.name : '';
@@ -2847,7 +2953,7 @@ select.ssl-input { cursor: pointer; }
           withRules ? h(Section, { title: t('rulesTitle'), note: t('rulesNote') }) : null,
           withRules ? h(RulesCard, { state, onSave: savePreset }) : null,
           ROLE_GROUPS.map(group => h('div', { key: group.key },
-            h(Section, { title: t(group.key), note: t(group.note) }),
+            h(Section, { title: t(group.key), note: t(group.note), right: group === ROLE_GROUPS[0] ? recommendBtn : null }),
             h('div', { className: 'ssl-grid' }, group.ids.map(roleId => h(RoleCard, {
               key: roleId,
               roleId,
@@ -2856,6 +2962,7 @@ select.ssl-input { cursor: pointer; }
               live: liveByRole[roleId],
               onAssign: assign,
               fallbackName: BUILT_IN.has(roleId) ? '' : fallbackName,
+              connected: state.connected,
             }))))));
       }
 
@@ -2909,10 +3016,13 @@ select.ssl-input { cursor: pointer; }
       }
 
       // ---------- 上手检查：每个岗位的人在不在、能不能自动跑 ----------
-      function ReadinessCard({ state, notify, compact }) {
-        const [probes, setProbes] = useState(null);
-        const [pending, setPending] = useState(false);
+      function ReadinessCard({ state, notify, compact, probes: given, pending: givenPending, onRun }) {
+        const [own, setProbes] = useState(null);
+        const [ownPending, setPending] = useState(false);
+        const probes = given !== undefined ? given : own;
+        const pending = givenPending !== undefined ? givenPending : ownPending;
         const run = () => {
+          if (onRun) { onRun(); return; }
           setPending(true);
           apiJson('/probe-all', { method: 'POST', body: '{}' })
             .then(setProbes)
@@ -4230,9 +4340,25 @@ select.ssl-input { cursor: pointer; }
             .then(result => setProbe(prev => ({ ...prev, [id]: result })))
             .catch(error => setProbe(prev => ({ ...prev, [id]: { ok: false, detail: String(error.message || error) } })));
         };
-        const probeAll = () => apiJson('/probe-all', { method: 'POST', body: '{}' })
-          .then(setProbe)
-          .catch(error => notify(String(error.message || error), 'err'));
+        const [probing, setProbing] = useState(false);
+        const [market, setMarket] = useState(false);
+        const [removing, setRemoving] = useState('');
+        const probeAll = () => {
+          setProbing(true);
+          return apiJson('/probe-all', { method: 'POST', body: '{}' })
+            .then(result => { setProbe(result); onRefresh(); })
+            .catch(error => notify(String(error.message || error), 'err'))
+            .finally(() => setProbing(false));
+        };
+        // 一打开群臣页就查一遍每个工具：找不找得到、登没登录（只跑 where / auth status，不调模型、不花钱）
+        useEffect(() => { probeAll(); }, []);
+        const remove = item => {
+          if (removing !== item.id) { setRemoving(item.id); setTimeout(() => setRemoving(prev => (prev === item.id ? '' : prev)), 4000); return; }
+          setRemoving('');
+          apiJson(`/agents/${encodeURIComponent(item.id)}`, { method: 'DELETE', body: '{}' })
+            .then(() => { notify(zhEn(`已撤掉 ${item.name}，它担任的官职已空出`, `Removed ${item.name}; its offices are vacant`)); onRefresh(); })
+            .catch(error => notify(String(error.message || error), 'err'));
+        };
 
         // 每个 agent 当前担任的官职
         const postsOf = id => ALL_ROLES.filter(roleId => (state.roles[roleId] || {}).agentId === id).map(roleName);
@@ -4241,12 +4367,13 @@ select.ssl-input { cursor: pointer; }
           h('input', { className: 'ssl-input ssl-mono', value: valueOf(id, key, value), placeholder, onChange: event => edit(id, { [key]: event.target.value }) }));
 
         return h('div', null,
-          h('div', { style: { marginBottom: '12px' } }, h(ReadinessCard, { state, notify, compact: state.edicts.length > 0 })),
+          h('div', { style: { marginBottom: '12px' } }, h(ReadinessCard, { state, notify, compact: state.edicts.length > 0, probes: Object.keys(probe).length ? probe : null, pending: probing, onRun: probeAll })),
           h('div', { className: 'ssl-between', style: { marginBottom: '12px', flexWrap: 'wrap' } },
             h('span', { className: 'ssl-caption' }, t('agentsIntro')),
             h('div', { className: 'ssl-actions' },
+              probing ? h('span', { className: 'ssl-caption' }, t('probing')) : null,
               h('span', { className: 'ssl-caption ssl-mono ssl-ellipsis', title: state.root, style: { maxWidth: '360px' } }, state.root),
-              h('button', { className: 'ssl-btn ssl-btn--sm', onClick: probeAll }, t('probeAll')))),
+              h('button', { className: 'ssl-btn ssl-btn--sm ssl-btn--seal', onClick: () => setMarket(true) }, zhEn('＋ 添加工具', '＋ Add a tool')))),
           h('div', { className: 'ssl-grid ssl-agents' }, state.agents.map(item => {
             const check = probe[item.id];
             const enabled = valueOf(item.id, 'enabled', item.enabled !== false);
@@ -4268,6 +4395,11 @@ select.ssl-input { cursor: pointer; }
                   h('div', { className: 'ssl-caption ssl-ellipsis' }, posts.length ? t('postsNow', { list: posts.join(isEn() ? ', ' : '、') }) : t('noPost')),
                   expanded ? null : h('div', { className: 'ssl-caption ssl-mono ssl-ellipsis' }, summary)),
                 item.adapter === 'cli' ? h('button', { className: 'ssl-btn ssl-btn--sm', disabled: check && check.pending, onClick: () => doProbe(item.id) }, check && check.pending ? t('probing') : t('probe')) : null,
+                h('button', {
+                  className: cx('ssl-btn ssl-btn--ghost ssl-btn--sm', removing === item.id && 'ssl-btn--danger'),
+                  title: zhEn('撤掉这个员工（它担任的官职会空出来）', 'Remove this officer (its offices become vacant)'),
+                  onClick: () => remove(item),
+                }, removing === item.id ? zhEn('确认撤掉？', 'Remove?') : '×'),
                 h('button', { className: 'ssl-btn ssl-btn--ghost ssl-btn--sm ssl-chevron', title: expanded ? t('collapse') : t('expand'), 'aria-label': expanded ? t('collapse') : t('expand'), onClick: () => toggle(item.id) }, expanded ? '▴' : '▾')),
               !expanded ? null : (item.traits || []).length ? h('div', { style: { display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '10px' } },
                 item.traits.map(trait => h('span', { key: trait, className: 'ssl-pill' }, trait))) : null,
@@ -4288,12 +4420,135 @@ select.ssl-input { cursor: pointer; }
               expanded && check && !check.pending ? h('div', { className: 'ssl-probe' },
                 h('span', { className: cx('ssl-pill', check.ok ? 'ssl-pill--ok' : 'ssl-pill--err') }, check.ok ? t('found') : t('notFound')),
                 h('span', { className: 'ssl-mono ssl-ellipsis', title: check.detail }, check.detail)) : null);
-          })),
+          }),
+          h('button', { className: 'ssl-agent-add', onClick: () => setMarket(true) },
+            h('b', null, '＋'), zhEn('添加工具：Codex、Gemini CLI、Cursor、OpenCode、Qwen Code……', 'Add a tool: Codex, Gemini CLI, Cursor, OpenCode, Qwen Code…'))),
+          market ? h(MarketModal, { onClose: () => setMarket(false), onChanged: () => { onRefresh(); probeAll(); }, notify }) : null,
           h('div', { className: 'ssl-savebar' },
             h('span', { className: 'ssl-caption' }, dirty ? t('unsavedN', { n: dirty }) : t('allSaved')),
             h('div', { className: 'ssl-actions' },
               dirty ? h('button', { className: 'ssl-btn ssl-btn--ghost', onClick: () => setDrafts({}) }, t('undo')) : null,
               h('button', { className: 'ssl-btn ssl-btn--primary', disabled: !dirty || saving, onClick: save }, saving ? t('saving') : t('saveAgents')))));
+      }
+
+      // ---------- 群臣市场：常见工具，点「＋」接进来，没装的一键安装；也能手动加自定义工具 ----------
+      const KIND_LABEL = { agent: ['命令行员工', 'CLI officer'], gui: ['只有界面', 'GUI only'], tool: ['给员工用的工具', 'Tool for officers'] };
+      function MarketModal({ onClose, onChanged, notify }) {
+        const [data, setData] = useState(null);
+        const [busy, setBusy] = useState('');
+        const [custom, setCustom] = useState({ name: '', adapter: 'cli', command: '', args: '', promptMode: 'stdin', modelArgs: '--model {model}', models: '' });
+        const load = (fresh = false) => apiJson(`/catalog${fresh ? '?fresh=1' : ''}`).then(setData).catch(error => notify(String(error.message || error), 'err'));
+        useEffect(() => { load(true); }, []);
+        const installing = data && data.entries.some(entry => entry.job && entry.job.state === 'running');
+        // 装着的时候每 3 秒看一眼，装好了自动接上并刷新
+        useEffect(() => {
+          if (!installing) return undefined;
+          const timer = setInterval(() => load(true).then(() => onChanged()), 3000);
+          return () => clearInterval(timer);
+        }, [installing]);
+        const L = pair => (pair ? pair[isEn() ? 'en' : 'zh'] : '');
+        const add = entry => {
+          setBusy(entry.id);
+          apiJson('/catalog/add', { method: 'POST', body: JSON.stringify({ id: entry.id }) })
+            .then(result => {
+              setData({ entries: result.entries });
+              if (result.ok) { notify(zhEn(`${entry.name} 已接入`, `${entry.name} added`)); onChanged(); }
+              else if (result.installing) notify(zhEn(`正在安装 ${entry.name}，装好会自动接入`, `Installing ${entry.name}; it joins by itself when done`));
+              else if (result.needNode) notify(zhEn('本机没有 npm：先装 Node.js（nodejs.org），再点一次', 'npm is missing: install Node.js (nodejs.org) and try again'), 'err');
+              else if (result.reason === 'manual' || result.reason === 'missing') notify(zhEn(`本机还没有 ${entry.name}`, `${entry.name} is not installed yet`), 'err', result.installText ? zhEn(`在终端运行：${result.installText}`, `Run in a terminal: ${result.installText}`) : '');
+            })
+            .catch(error => notify(String(error.message || error), 'err'))
+            .finally(() => setBusy(''));
+        };
+        const signIn = entry => apiJson('/catalog/signin', { method: 'POST', body: JSON.stringify({ id: entry.id }) })
+          .then(result => notify(result.opened ? zhEn('已打开登录窗口，按提示在浏览器里登录', 'A sign-in window opened; follow it in the browser') : zhEn('打不开登录窗口', 'Could not open a sign-in window'), result.opened ? 'ok' : 'err', result.manual ? zhEn(`手动运行：${result.manual}`, `Run by hand: ${result.manual}`) : ''))
+          .catch(error => notify(String(error.message || error), 'err'));
+        const copy = text => {
+          try { navigator.clipboard.writeText(text); notify(zhEn('命令已复制', 'Command copied')); } catch { notify(text); }
+        };
+        const addCustom = () => {
+          if (!custom.name.trim() || (custom.adapter === 'cli' && !custom.command.trim())) { notify(zhEn('名字和命令都要填', 'Name and command are required'), 'err'); return; }
+          setBusy('custom');
+          apiJson('/agents', { method: 'POST', body: JSON.stringify(custom) })
+            .then(() => { notify(zhEn(`${custom.name} 已加入群臣`, `${custom.name} joined the roster`)); setCustom(prev => ({ ...prev, name: '', command: '', args: '', models: '' })); onChanged(); })
+            .catch(error => notify(String(error.message || error), 'err'))
+            .finally(() => setBusy(''));
+        };
+        const status = entry => {
+          const job = entry.job;
+          if (job && job.state === 'running') return ['ssl-pill--warn', zhEn('安装中…', 'Installing…')];
+          if (entry.added && !entry.found && !entry.builtIn && entry.kind !== 'gui') return ['ssl-pill--warn', zhEn('接入了 · 本机没装', 'Added · not installed')];
+          if (entry.added) return ['ssl-pill--ok', zhEn('已接入', 'Added')];
+          if (job && job.state === 'failed') return ['ssl-pill--err', zhEn('安装失败', 'Install failed')];
+          if (entry.kind === 'gui' || entry.builtIn) return ['ssl-pill--plain', entry.builtIn ? zhEn('随 DSH 自带', 'Comes with DSH') : zhEn('不用安装', 'No install')];
+          return entry.found ? ['ssl-pill--info', zhEn('本机已安装', 'Installed')] : ['ssl-pill--plain', zhEn('未安装', 'Not installed')];
+        };
+        const field = (key, label, placeholder) => h('label', { className: 'ssl-field' },
+          h('span', { className: 'ssl-label' }, label),
+          h('input', { className: 'ssl-input ssl-mono', value: custom[key], placeholder, onChange: event => setCustom(prev => ({ ...prev, [key]: event.target.value })) }));
+
+        return h('div', { className: 'ssl-overlay ssl-mask', onClick: event => { if (event.target === event.currentTarget) onClose(); } },
+          h('div', { className: 'ssl-modal ssl-modal--wide', role: 'dialog', 'aria-label': zhEn('添加工具', 'Add a tool') },
+            h('div', { className: 'ssl-modal-h' },
+              h(Seal, { name: 'roster' }),
+              h('div', { className: 'ssl-grow' },
+                h('div', { className: 'ssl-role-title', style: { fontSize: '15px' } }, zhEn('添加工具', 'Add a tool')),
+                h('div', { className: 'ssl-caption' }, zhEn('市面上常见的 AI 工具：点「＋」接进来，没装的一键安装，装好自动上岗。接进来以后，「官职」里的「一键推荐」会按各家所长排岗位。', 'Common AI tools: click ＋ to add one; missing ones install in one click and join by themselves. Then Recommend under Offices staffs them by strengths.'))),
+              h('button', { className: 'ssl-btn ssl-btn--ghost ssl-btn--sm', onClick: onClose }, '✕')),
+            !data ? h('div', { className: 'ssl-empty' }, t('probing')) : h('div', { className: 'ssl-market' }, data.entries.map(entry => {
+              const [tone, text] = status(entry);
+              const running = entry.job && entry.job.state === 'running';
+              let action;
+              // 接进来了但本机找不到（被卸载、换了电脑）：给一键安装，别只摆个「已接入」
+              const missing = entry.added && !entry.found && !entry.builtIn && entry.kind !== 'gui';
+              if (entry.added && !missing) action = h('button', { className: 'ssl-btn ssl-btn--sm', disabled: true }, zhEn('✓ 已接入', '✓ Added'));
+              else if (missing && !running && entry.install === 'auto') action = h('button', { className: 'ssl-btn ssl-btn--sm ssl-btn--seal', disabled: busy === entry.id, onClick: () => add(entry) }, zhEn('本机没装 · 一键安装', 'Missing here · Install'));
+              else if (running) action = h('button', { className: 'ssl-btn ssl-btn--sm', disabled: true }, zhEn('安装中…', 'Installing…'));
+              else if (entry.found || entry.builtIn) action = h('button', { className: 'ssl-btn ssl-btn--sm ssl-btn--seal', disabled: busy === entry.id, onClick: () => add(entry) }, zhEn('＋ 接入', '＋ Add'));
+              else if (entry.install === 'auto') action = h('button', { className: 'ssl-btn ssl-btn--sm ssl-btn--seal', disabled: busy === entry.id, onClick: () => add(entry) }, zhEn('＋ 安装并接入', '＋ Install & add'));
+              else if (entry.install === 'manual') action = h('button', { className: 'ssl-btn ssl-btn--sm', onClick: () => copy(entry.installText) }, zhEn('复制安装命令', 'Copy install command'));
+              const showSignIn = entry.found && entry.canSignIn && entry.signedIn !== true && entry.kind === 'agent' && !entry.builtIn;
+              return h('div', { key: entry.id, className: cx('ssl-market-card', entry.added && 'is-added') },
+                h('div', { className: 'ssl-market-top' },
+                  h('div', { className: 'ssl-grow', style: { minWidth: 0 } },
+                    h('div', { className: 'ssl-market-name' }, entry.name),
+                    h('div', { className: 'ssl-market-vendor' }, [entry.vendor, zhEn(...KIND_LABEL[entry.kind])].join(' · '))),
+                  h('span', { className: cx('ssl-pill', tone) }, text)),
+                h('div', { className: 'ssl-market-desc' }, L(entry.desc)),
+                h('div', { className: 'ssl-market-pc' },
+                  h('ul', { className: 'is-pro' }, (L(entry.pros) || []).map(item => h('li', { key: item }, item))),
+                  h('ul', { className: 'is-con' }, (L(entry.cons) || []).map(item => h('li', { key: item }, item)))),
+                h('div', { className: 'ssl-caption' }, zhEn('需要：', 'Needs: '), L(entry.needs)),
+                !entry.found && entry.installText ? h('div', { className: 'ssl-market-cmd', title: zhEn('点「安装」时执行的命令', 'The command run when you install') }, entry.installText) : null,
+                entry.job && entry.job.state === 'failed' ? h('div', { className: 'ssl-hint' }, entry.job.error || '') : null,
+                h('div', { className: 'ssl-market-foot' },
+                  action,
+                  showSignIn ? h('button', { className: 'ssl-btn ssl-btn--ghost ssl-btn--sm', onClick: () => signIn(entry) }, entry.signedIn === false ? zhEn('去登录', 'Sign in') : zhEn('登录', 'Sign in')) : null,
+                  h('span', { className: 'ssl-grow' }),
+                  entry.site ? h('a', { href: entry.site, target: '_blank', rel: 'noopener noreferrer' }, zhEn('官网 ↗', 'Website ↗')) : null));
+            })),
+            h('details', { className: 'ssl-custom' },
+              h('summary', { className: 'ssl-role-title', style: { cursor: 'pointer' } }, zhEn('手动添加自定义工具', 'Add a custom tool by hand'),
+                h('span', { className: 'ssl-caption', style: { fontWeight: 400, marginLeft: '8px' } }, zhEn('市场里没有的命令行工具，或只有界面的软件', 'A CLI that is not listed, or a GUI-only app'))),
+              h('div', { className: 'ssl-custom-grid' },
+                field('name', zhEn('名字', 'Name'), zhEn('如 Kimi CLI', 'e.g. Kimi CLI')),
+                h('label', { className: 'ssl-field' },
+                  h('span', { className: 'ssl-label' }, zhEn('类型', 'Type')),
+                  h('select', { className: 'ssl-input', value: custom.adapter, onChange: event => setCustom(prev => ({ ...prev, adapter: event.target.value })) },
+                    h('option', { value: 'cli' }, zhEn('命令行（能自动办差）', 'CLI (works unattended)')),
+                    h('option', { value: 'manual' }, zhEn('只有界面（要你回填）', 'GUI only (you fill in)')))),
+                custom.adapter === 'cli' ? field('command', zhEn('命令', 'Command'), 'kimi') : null,
+                custom.adapter === 'cli' ? field('args', zhEn('参数（{prompt} / {promptFile}）', 'Arguments ({prompt} / {promptFile})'), '-p') : null,
+                custom.adapter === 'cli' ? h('label', { className: 'ssl-field' },
+                  h('span', { className: 'ssl-label' }, zhEn('提示词怎么给', 'How the prompt is passed')),
+                  h('select', { className: 'ssl-input', value: custom.promptMode, onChange: event => setCustom(prev => ({ ...prev, promptMode: event.target.value })) },
+                    h('option', { value: 'stdin' }, zhEn('标准输入（推荐）', 'Standard input (recommended)')),
+                    h('option', { value: 'file' }, zhEn('写进文件，参数里放 {promptFile}', 'A file; put {promptFile} in the arguments')),
+                    h('option', { value: 'arg' }, zhEn('直接放进参数 {prompt}（长提示词可能被截断）', 'Inline {prompt} (long prompts may be cut)')))) : null,
+                custom.adapter === 'cli' ? field('modelArgs', zhEn('模型参数（{model}）', 'Model arguments ({model})'), '--model {model}') : null,
+                custom.adapter === 'cli' ? field('models', zhEn('模型候选（逗号分隔）', 'Candidate models (comma-separated)'), 'kimi-k2, kimi-k2-turbo') : null),
+              h('div', { className: 'ssl-actions', style: { justifyContent: 'flex-end', marginTop: '12px' } },
+                h('button', { className: 'ssl-btn ssl-btn--primary ssl-btn--sm', disabled: busy === 'custom', onClick: addCustom }, zhEn('加入群臣', 'Add to the roster'))))));
       }
 
       function Toast({ toast }) {

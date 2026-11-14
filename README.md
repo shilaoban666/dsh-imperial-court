@@ -224,6 +224,7 @@ Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.1.0`。
 | ![殿宇](docs/screenshots/06-hall.jpg) | ![默认浅色主题](docs/screenshots/07-default-light.jpg) |
 | ![Senate](docs/screenshots/en-09-senate.jpg) | ![Gains](docs/screenshots/en-08-gains.jpg) |
 | ![一人公司皮肤](docs/screenshots/15-modern-workbench.jpg) | ![皮肤与语言](docs/screenshots/17-style.jpg) |
+| ![群臣市场：添加工具](docs/screenshots/19-market.png) | ![官职：任职、模型、思考深度与一键推荐](docs/screenshots/20-offices.png) |
 
 </details>
 
@@ -270,6 +271,8 @@ flowchart LR
 | 🎩 | **丞相府** | super-agent 的本机实现：拆清单、分拣、排队、派发；满员照收，急件与短活优先，可插队、撤回，重启不丢 |
 | ⏩ | **钦定流程提速** | 直办（跳过拟旨与封驳）、同时办（互不依赖的步骤并行） |
 | 🧰 | **你的团队** | 自动找到本机工具并排岗；一键安装、一键登录、接上；可随时交回自动分配 |
+| 🛒 | **群臣市场** | Claude Code、Codex、Gemini CLI、Cursor、OpenCode、Qwen Code、WorkBuddy、千问办公、Seedance：看优缺点，点「＋」接入，没装的一键安装；也能手动加自定义工具 |
+| 🎯 | **一键推荐** | 按本机连得通的工具排岗位，两家分别出方案与审方案；模型与思考深度下拉选，不用手填 |
 | 🌏 | **中英双语** | 六套主题，提示词也跟着换语言 |
 
 每个页签、每项设置的详细说明见 **[使用指南](docs/GUIDE.md)**。
