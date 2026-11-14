@@ -1,0 +1,8 @@
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 你让朝堂办了什么 / What you had the court do
+      description: 下了什么旨、排了哪几家工具、效果如何；截图欢迎（记得去掉私有路径与 Key）。The brief, the tools, how it went; screenshots welcome (strip private paths and keys).
+    validations:
+      required: true

@@ -17,6 +17,8 @@
 
 **中文** · [English](README.en.md)
 
+**[▶ 在线试玩（不用安装）](https://shilaoban666.github.io/dsh-imperial-court/preview.html)** · [💬 讨论区](https://github.com/shilaoban666/dsh-imperial-court/discussions) · [📖 Wiki](https://github.com/shilaoban666/dsh-imperial-court/wiki)
+
 [快速开始](#快速开始) · [super-agent 最佳实现](#superagent) · [为什么用它](#为什么用它) · [截图](#截图) · [功能一览](#功能一览) · [常见问题](#常见问题) · [使用指南](docs/GUIDE.md) · [更新日志](CHANGELOG.md)
 
 </div>
@@ -137,7 +139,7 @@ Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.2.0`。
 
 只装了 DSH 也能用：DSH 本体能担任任何岗位。想要真正的交叉审查（不同家的模型互相审），在「你的团队」里点 **一键安装 / 一键登录**：走的是 Claude Code 与 Codex 的官方安装方式和官方登录，装好、登好会自动上岗。Claude Code 需要 Claude 订阅或 Anthropic API Key，Codex 需要 ChatGPT 订阅或 OpenAI API Key。
 
-> 👀 **还没装、想先看看？** 在仓库目录运行 `python -m http.server`，打开 `http://localhost:8000/preview.html`，会自动演示一次完整的朝会。加 `?lang=en` 看英文版。
+> 👀 **还没装、想先看看？** 直接打开 **[在线试玩](https://shilaoban666.github.io/dsh-imperial-court/preview.html)**，会自动演示一次完整的朝会（真实界面 + 演示数据，加 `?lang=en` 看英文版）。也可以在仓库目录运行 `python -m http.server`，打开 `http://localhost:8000/preview.html`。
 
 ## 为什么用它
 
@@ -346,7 +348,11 @@ flowchart LR
 
 ## 参与
 
-欢迎提 [Issue](https://github.com/shilaoban666/dsh-imperial-court/issues) 和 PR。改之前跑一遍 `npm test`（86 个测试，真 git 仓库 + 假 CLI；CI 在 Windows / macOS / Linux 上各跑一遍）；界面改动可以在 `preview.html` 里直接看。
+- **用着有问题**：到 [Discussions · Q&A](https://github.com/shilaoban666/dsh-imperial-court/discussions/categories/q-a) 问；先翻 [Wiki 的故障排查](https://github.com/shilaoban666/dsh-imperial-court/wiki/故障排查) 也许更快。
+- **有点子**：发到 [Ideas](https://github.com/shilaoban666/dsh-imperial-court/discussions/categories/ideas)；**办成了一件漂亮的事**：晒到 [Show and tell](https://github.com/shilaoban666/dsh-imperial-court/discussions/categories/show-and-tell)。
+- **想改代码**：看 [CONTRIBUTING.md](CONTRIBUTING.md)。零依赖，`npm test` 跑 86 个测试（真 git 仓库 + 假 CLI；CI 在 Windows / macOS / Linux 上各跑一遍）；界面改动在 `preview.html` 里直接看。PR 提到 `dev` 分支。
+
+觉得有用，点个 ⭐ 是对作者最直接的鼓励。
 
 ## License
 
