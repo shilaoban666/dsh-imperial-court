@@ -2,6 +2,19 @@
 
 > [← 首页 / Home](README.md) · 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.2.1] - 2026-11-15
+
+安全修复：HTTP 路由接上 DSH 自己的访问检查。Security fix: the HTTP routes now go through DSH's own access check.
+
+### 修复 Fixed
+
+- **HTTP 路由没有 DSH 的访问检查**（awesome-dsh-plugin 维护者复验时指出）：浏览器里打开的网页可能调用插件的 `/sansheng-liubu/*` 端点。现在每个请求（读请求也算）先过 DSH 的 `connection.requestRejection`，与 DSH 核心 API 同一套规则；拿不到这个服务就一律拒绝（失败即关闭）。插件原有的 Host 白名单、同源检查、改状态只收 JSON 照常保留。
+- 插件声明依赖 DSH 的 `connection` 服务。
+
+### 验证 Verified
+
+- `npm test` 89 项通过，新增 3 项：用假的 DSH 上下文走 `apply()`，读写请求未获放行时被拒、放行后正常；没有 connection 服务时一律 403；检查本身出错按拒绝处理。
+
 ## [1.2.0] - 2026-11-14
 
 群臣市场、一键推荐、思考深度，加上界面打磨与几处修复。A tool market, one-click recommend and effort levels, plus UI polish and fixes.

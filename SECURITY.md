@@ -19,15 +19,16 @@ The plugin starts the command-line tools you configure and lets them read and wr
 
 ## HTTP 端点 · The HTTP endpoint
 
-界面通过宿主的 `/sansheng-liubu/*` 读写状态。请求要过三道检查：
+界面通过宿主的 `/sansheng-liubu/*` 读写状态。每个请求（读请求也算）要过四道检查：
 
+0. **DSH 的访问检查**：先交给 DSH 自己的 `connection.requestRejection`，与 DSH 核心 API 同一套规则；拿不到这个服务就一律拒绝（v1.2.1 起）。
 1. **Host**：只认回环地址、`*.localhost`、IP 字面量，或配置里 `allowedHosts` 放行的域名（挡 DNS 重绑定，读请求也查）。
 2. **来源**：浏览器标明跨站的、Origin 与 Host 对不上的拒绝。
 3. **类型**：改状态的请求只收 `application/json`（挡跨站表单）。
 
-端点本身不做登录鉴权，依赖 DSH 宿主只在本机监听。把 DSH 暴露到不可信网络之前，请先在前面加一层鉴权。
+登录与可信主机由 DSH 的访问检查负责，插件不另设一套。把 DSH 暴露到不可信网络之前，请先按 DSH 的文档配置可信主机与鉴权。
 
-The endpoint checks the Host header (loopback, `*.localhost`, IP literals, or names in `allowedHosts`), the request origin, and the content type. It has no login of its own and relies on DSH listening locally: put authentication in front before exposing DSH to an untrusted network.
+Every request, reads included, first goes through DSH's own access check (`connection.requestRejection`, the same rules as DSH's core API; refused if the service is unavailable, since v1.2.1). The plugin then checks the Host header (loopback, `*.localhost`, IP literals, or names in `allowedHosts`), the request origin, and the content type. Sign-in and trusted hosts are DSH's job; configure them in DSH before exposing it to an untrusted network.
 
 ## 支持的版本 · Supported versions
 
