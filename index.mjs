@@ -35,7 +35,8 @@ try {
 }
 
 export const name = 'dsh-sansheng-liubu';
-export const inject = ['tools', 'webServer'];
+// connection：DSH 自己的访问检查（与核心 API 同一套规则：本机、可信主机、登录态），每个 HTTP 请求先过它
+export const inject = ['tools', 'webServer', 'connection'];
 
 const ROUTE_PREFIX = '/sansheng-liubu';
 const BACKGROUND_TYPES = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' };
@@ -2125,6 +2126,23 @@ export function apply(ctx, config = {}) {
   ctx.effect(() => () => court.dispose(), 'sansheng-liubu.lifecycle');
 }
 
+/**
+ * DSH 的访问检查：connection.requestRejection 返回 undefined 表示放行，否则是该回的状态码（401 / 403）。
+ * 拿不到这个服务就一律拒绝（失败即关闭）：宁可界面打不开，也不让浏览器里随便一个网页能调本插件。
+ * @returns {(req) => number | undefined}
+ */
+export function dshAccessCheck(ctx) {
+  return req => {
+    const connection = typeof ctx.get === 'function' ? ctx.get('connection') : ctx.connection;
+    if (!connection || typeof connection.requestRejection !== 'function') return 403;
+    try {
+      return connection.requestRejection({ headers: (req && req.headers) || {} });
+    } catch {
+      return 403;
+    }
+  };
+}
+
 function registerHttp(ctx, court) {
   const { api } = court;
   const webServer = ctx.webServer;
@@ -2136,18 +2154,21 @@ function registerHttp(ctx, court) {
   ctx.effect(() => webServer.register({
     kind: 'prefix',
     path: ROUTE_PREFIX,
-    handler: (req, res) => handleRequest(api, req, res, court.uiLocale),
+    handler: (req, res) => handleRequest(api, req, res, court.uiLocale, dshAccessCheck(ctx)),
   }));
 }
 
 /** 单独导出，测试可以直接喂假的 req / res */
-export async function handleRequest(api, req, res, uiLocale = () => 'zh') {
+export async function handleRequest(api, req, res, uiLocale = () => 'zh', accessCheck = null) {
   const url = new URL(req.url || '/', 'http://127.0.0.1');
   const route = url.pathname.slice(ROUTE_PREFIX.length) || '/';
   const method = (req.method || 'GET').toUpperCase();
   const locale = normalizeLocale((req.headers && req.headers['x-court-locale']) || uiLocale());
   const body = async limit => JSON.parse(await readBody(req, limit) || '{}');
   try {
+    // 先过 DSH 自己的访问检查（读请求也查）；再过插件自己的：Host 白名单、同源、改状态只收 JSON
+    const rejection = accessCheck ? accessCheck(req) : undefined;
+    if (rejection) return sendJson(res, Number(rejection) || 403, { error: tr(locale, 'errOrigin') });
     const refused = checkRequest(req, method, api.allowedHosts);
     if (refused) return sendJson(res, 403, { error: tr(locale, refused) });
     if (route === '/state' && method === 'GET') return sendJson(res, 200, api.getState());
