@@ -11,7 +11,8 @@ import { spawn } from 'node:child_process';
 import os from 'node:os';
 import { runAgent, probeAgent, findDshCli } from './lib/adapters.mjs';
 import { TOOLS, toolStatus, startInstall, installJob, openSignIn, locateTool } from './lib/setup.mjs';
-import { autoStaff, staffingChanged } from './lib/staffing.mjs';
+import { autoStaff, staffingChanged, staffingDiff } from './lib/staffing.mjs';
+import { CATALOG, catalogEntry, catalogOfAgent, locateEntry, forgetLocation, catalogSignedIn, catalogInstallPlan, installText, agentFromEntry, openTerminal } from './lib/catalog.mjs';
 import { runEdict, normalizeVerdict, deliverablePath } from './lib/court.mjs';
 import { ministriesOf, splitHandoff, extractJson } from './lib/prompts.mjs';
 import { tr, fail, errorText, normalizeLocale, langOf, voiceOf, voiced, STYLES, roleTitle, MINISTRY_IDS, ROLE_IDS } from './lib/i18n.mjs';
@@ -329,7 +330,12 @@ function sanitizePreset(input, current) {
       // 丞相模式下追加的参数：放开 CLI 自己的权限确认（如 claude --permission-mode acceptEdits、codex --full-auto）
       autoArgs: list(raw.autoArgs),
       models: list(raw.models).filter(Boolean),
-      promptMode: raw.promptMode === 'arg' ? 'arg' : 'stdin',
+      promptMode: ['arg', 'file'].includes(raw.promptMode) ? raw.promptMode : 'stdin',
+      // 思考深度：可选档位与参数模板（{effort}）；不支持的 CLI 两项都空
+      efforts: list(raw.efforts).filter(Boolean).slice(0, 8),
+      effortArgs: list(raw.effortArgs),
+      // 从群臣市场接进来的：记下是哪一项（界面显示优缺点、去重）
+      catalogId: /^[a-z0-9-]{1,32}$/.test(String(raw.catalogId || '')) ? String(raw.catalogId) : '',
       timeoutMs: Math.max(10_000, Number(raw.timeoutMs) || 600_000),
       env: raw.env && typeof raw.env === 'object' ? raw.env : {},
     };
@@ -346,7 +352,9 @@ function sanitizePreset(input, current) {
     // 每个岗位可以单独指定模型；留空 = 用该 CLI 的默认模型
     role.model = String(role.model || '').trim().slice(0, 80);
     // 职掌会写进拟旨 prompt，中书按它派活；界面上可改（如套用「短视频」官制）
-    role.duty = String(role.duty || '').trim().slice(0, 200);
+    role.duty = String(role.duty || '').trim().slice(0, 300);
+    // 思考深度：留空 = 该 CLI 默认
+    role.effort = /^[a-z]{1,16}$/.test(String(role.effort || '')) ? String(role.effort) : '';
   }
   const rules = next.rules;
   rules.maxReviewRounds = clampInt(rules.maxReviewRounds, 1, 5, 3);
@@ -515,6 +523,7 @@ function migrateDshAgent(store, preset) {
 export function createCourt(config = {}, { log = console } = {}) {
   const presetPath = new URL('./role-preset.json', import.meta.url);
   const preset = JSON.parse(fs.readFileSync(presetPath, 'utf8'));
+  const presetAgents = structuredClone(preset.agents || []);
   const store = createStore(config.dataDir);
   store.load(preset);
   migrateDshAgent(store, preset);
@@ -561,12 +570,54 @@ export function createCourt(config = {}, { log = console } = {}) {
     for (const id of Object.keys(TOOLS)) tools[id] = toolStatus(id);
     const dsh = !!findDshCli();
     const ready = new Set();
-    if (dsh) ready.add('dsh');
-    for (const tool of Object.values(tools)) if (tool.found && tool.signedIn !== false) ready.add(tool.agentId);
-    const buddy = (store.state.agents || []).find(agent => agent.id === 'workbuddy');
-    if (buddy && probeAgent(buddy).ok) ready.add('workbuddy');
-    readiness = { tools, dsh, ready: [...ready], checkedAt: Date.now() };
+    // 每个命令行员工此刻能不能用：找得到命令（Claude Code / Codex 还要已登录）
+    const probes = {};
+    for (const agent of store.state.agents || []) {
+      if (agent.adapter !== 'cli') continue;
+      const tool = Object.values(tools).find(item => item.agentId === agent.id);
+      let check;
+      if (agent.id === 'dsh') check = dsh ? { ok: true, detail: findDshCli() } : probeAgent(agent);
+      else if (tool) check = tool.found ? (tool.signedIn === false ? { ok: false, detail: 'not signed in', signin: true } : { ok: true, detail: tool.path }) : probeAgent(agent);
+      else check = probeAgent(agent);
+      probes[agent.id] = check;
+      if (check.ok) ready.add(agent.id);
+    }
+    readiness = { tools, dsh, ready: [...ready], probes, checkedAt: Date.now() };
     return readiness;
+  }
+
+  /** 把市场里的一项接成员工（已经有了就只是启用） */
+  function enlist(entry, located = {}) {
+    const agents = store.state.agents || [];
+    const existing = agents.find(agent => agent.id === entry.agentId || agent.catalogId === entry.id);
+    let list;
+    if (existing) list = agents.map(agent => (agent === existing ? { ...agent, enabled: true } : agent));
+    else {
+      const fromPreset = (presetAgents || []).find(agent => agent.id === entry.agentId);
+      const agent = agentFromEntry(entry, located) || (fromPreset ? { ...structuredClone(fromPreset), enabled: true, catalogId: entry.id } : null);
+      if (!agent) return;
+      list = [...agents, agent];
+    }
+    const next = sanitizePreset({ agents: list, roles: store.state.roles, rules: store.state.rules }, store.state);
+    store.state.agents = next.agents;
+    store.save();
+  }
+  /** 工具类（seedance）：记进朝规的工具箱，并把用法写进对应岗位的职掌 */
+  function attachTool(entry) {
+    const rules = store.state.rules || {};
+    const toolkit = new Set(rules.toolkit || []);
+    toolkit.add(entry.id);
+    store.state.rules = { ...rules, toolkit: [...toolkit] };
+    if (entry.duty) {
+      const role = store.state.roles[entry.duty.role] || {};
+      const locale = langOf(uiLocale()) === 'en' ? 'en' : 'zh';
+      const duty = String(role.duty || '');
+      if (!duty.includes(entry.id)) {
+        const base = duty || roleTitle(locale, entry.duty.role);
+        store.state.roles = { ...store.state.roles, [entry.duty.role]: { ...role, duty: `${base}${locale === 'en' ? '; ' : '；'}${entry.duty[locale]}`.slice(0, 300) } };
+      }
+    }
+    store.save();
   }
   /** 自动编制下按本机能用的工具重排岗位；手动编制不动 */
   function applyAutoStaff() {
@@ -792,6 +843,7 @@ export function createCourt(config = {}, { log = console } = {}) {
       const rules = store.state.rules || {};
       let agent = assigned;
       let model = String(meta.model !== undefined ? meta.model : role.model || '');
+      let effort = String(meta.effort !== undefined ? meta.effort : role.effort || '');
       let substitute = null;
 
       const canRun = item => item && item.enabled !== false && item.adapter === 'cli';
@@ -800,8 +852,9 @@ export function createCourt(config = {}, { log = console } = {}) {
         if (canRun(fallback)) {
           substitute = { original: assigned ? assigned.name : T('vacant', { role: title }) };
           agent = fallback;
-          // 岗位上配的模型是给原来那个工具的，代办人用自己 CLI 的默认模型
+          // 岗位上配的模型、思考深度是给原来那个工具的，代办人用自己 CLI 的默认
           model = '';
+          effort = '';
         }
       }
       let promptText = typeof prompt === 'function' ? prompt({ substitute }) : prompt;
@@ -864,6 +917,7 @@ export function createCourt(config = {}, { log = console } = {}) {
         result = await runAgent(agent, promptText, {
           cwd: edict.execDir || edict.workspace,
           model,
+          effort,
           locale,
           // 「完全权限」与丞相模式都放开 CLI 自己的确认；「仅可查看」什么都不放
           autonomous: permission !== 'read' && (edict.autonomous === true || permission === 'full'),
@@ -1202,6 +1256,9 @@ export function createCourt(config = {}, { log = console } = {}) {
         } : null,
         // 没命令行的岗位可以交给谁代办（界面上的「交给 DSH 代办」按钮）
         deputy: (() => { const agent = runtime.deputy(); return agent ? { id: agent.id, name: agent.name } : null; })(),
+        // 已连通的命令行员工（找得到、登录了）：官职下拉只列这些；null = 还没查过
+        connected: readiness ? readiness.ready : null,
+        probes: readiness ? readiness.probes || {} : {},
       };
     },
     /** 工作目录候选：DSH 侧栏里的工作区（按 DSH 的顺序）+ 朝堂最近用过的 */
@@ -1366,6 +1423,135 @@ export function createCourt(config = {}, { log = console } = {}) {
       return { ok: true, ...api.setup({ fresh: false }) };
     },
     /** 回到自动编制：按本机现在能用的工具重新排一遍 */
+    /** 群臣市场：常见工具的说明、优缺点，以及本机装没装、登没登、接没接进来 */
+    catalog({ fresh = false } = {}) {
+      const agents = store.state.agents || [];
+      const toolkit = new Set((store.state.rules || {}).toolkit || []);
+      return {
+        entries: CATALOG.map(entry => {
+          const where = entry.id === 'dsh' ? { path: findDshCli(), command: 'dsh' } : TOOLS[entry.id] ? { path: locateTool(entry.id, { fresh }).path } : locateEntry(entry, { fresh });
+          const plan = entry.install;
+          return {
+            id: entry.id, agentId: entry.agentId, name: entry.name, vendor: entry.vendor, kind: entry.kind, site: entry.site,
+            desc: entry.desc, pros: entry.pros, cons: entry.cons, needs: entry.needs,
+            builtIn: entry.builtIn === true,
+            found: entry.kind === 'gui' ? true : !!where.path,
+            path: where.path || '',
+            signedIn: !where.path ? null : TOOLS[entry.id] ? (readiness && readiness.tools[entry.id] ? readiness.tools[entry.id].signedIn : null) : catalogSignedIn(entry),
+            added: entry.kind === 'tool' ? toolkit.has(entry.id) : agents.some(agent => agent.id === entry.agentId || agent.catalogId === entry.id),
+            install: plan ? (plan.manual ? 'manual' : 'auto') : 'none',
+            installText: installText(entry),
+            canSignIn: Array.isArray(entry.signIn),
+            job: installJob(entry.id),
+          };
+        }),
+      };
+    },
+    /**
+     * 从群臣市场接一个进来：装好了直接接上；没装且能一键装的，先装，装完自动接上。
+     * 工具类（seedance）不当员工：写进对应岗位的职掌，办差的员工去调它。
+     */
+    addFromCatalog(id) {
+      const entry = catalogEntry(id);
+      if (!entry) fail('errNoAgent');
+      if (entry.kind === 'tool') {
+        const where = locateEntry(entry, { fresh: true });
+        if (!where.path) return { ok: false, reason: 'missing', installText: installText(entry), ...api.catalog() };
+        attachTool(entry);
+        return { ok: true, ...api.catalog() };
+      }
+      const where = entry.kind === 'gui' || entry.id === 'dsh' ? { path: 'n/a' } : TOOLS[entry.id] ? { path: locateTool(entry.id, { fresh: true }).path } : locateEntry(entry, { fresh: true });
+      if (where.path) {
+        enlist(entry, where);
+        return { ok: true, ...api.catalog() };
+      }
+      const plan = TOOLS[entry.id] ? null : catalogInstallPlan(entry);
+      if (TOOLS[entry.id]) {
+        // Claude Code / Codex 走原来的官方安装，装完由自动编制接上
+        const result = startInstall(entry.id, { onDone: job => { if (job.state === 'done') { enlist(entry, { path: locateTool(entry.id, { fresh: true }).path }); checkReadiness(); applyAutoStaff(); } } });
+        return { ok: false, installing: !!result.started, needNode: !!result.needNode, ...api.catalog() };
+      }
+      if (!plan) return { ok: false, reason: 'missing', ...api.catalog() };
+      if (plan.manual) return { ok: false, reason: 'manual', installText: plan.manual, ...api.catalog() };
+      if (plan.needNode) return { ok: false, needNode: true, ...api.catalog() };
+      const result = startInstall(entry.id, {
+        plan,
+        locate: () => { forgetLocation(entry.id); return locateEntry(entry, { fresh: true }).path; },
+        onDone: job => {
+          if (job.state !== 'done') return;
+          enlist(entry, locateEntry(entry, { fresh: true }));
+          checkReadiness();
+          applyAutoStaff();
+        },
+      });
+      return { ok: false, installing: !!result.started, ...api.catalog() };
+    },
+    /** 打开某个工具的官方登录（在看得见的终端里） */
+    catalogSignIn(id) {
+      const entry = catalogEntry(id);
+      if (!entry || !Array.isArray(entry.signIn)) fail('errNoAgent');
+      if (TOOLS[entry.id]) return openSignIn(entry.id);
+      const where = locateEntry(entry, { fresh: true });
+      if (!where.path) return { opened: false, reason: 'missing' };
+      return openTerminal(where.path, entry.signIn, `${entry.name} sign in`);
+    },
+    /** 手动加一个自定义员工：命令行（填命令与参数）或只有界面的（人工回填） */
+    addCustomAgent(input = {}) {
+      const name = String(input.name || '').trim().slice(0, 40);
+      if (!name) fail('errNoCommand', { name: '?' });
+      const adapter = input.adapter === 'manual' ? 'manual' : 'cli';
+      const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'agent';
+      const taken = new Set((store.state.agents || []).map(agent => agent.id));
+      let id = /^[a-z0-9-]{2,32}$/.test(base) ? base : `agent-${base}`.slice(0, 32);
+      for (let n = 2; taken.has(id); n += 1) id = `${base.slice(0, 28)}-${n}`;
+      const words = text => String(text || '').split(/\s+/).filter(Boolean);
+      const agent = adapter === 'manual'
+        ? { id, name, adapter, models: [], traits: words(input.traits), enabled: true }
+        : {
+          id, name, adapter, enabled: true, command: String(input.command || '').trim(),
+          args: Array.isArray(input.args) ? input.args.map(String) : words(input.args),
+          promptMode: ['arg', 'file'].includes(input.promptMode) ? input.promptMode : 'stdin',
+          modelArgs: Array.isArray(input.modelArgs) ? input.modelArgs.map(String) : words(input.modelArgs),
+          models: String(input.models || '').split(/[,，]/).map(item => item.trim()).filter(Boolean),
+          execArgs: [], autoArgs: [], outputFormat: 'text', formatArgs: [], resumeArgs: [], traits: words(input.traits),
+        };
+      const state = store.state;
+      api.savePreset({ agents: [...state.agents, agent], roles: state.roles, rules: state.rules });
+      checkReadiness();
+      return { id, ...api.getState() };
+    },
+    /** 撤掉一个员工：他担任的官职空出来（自动编制下重新排），代办 / 史官指向他的也清掉 */
+    removeAgent(agentId) {
+      const state = store.state;
+      if (!(state.agents || []).some(agent => agent.id === agentId)) fail('errNoAgent');
+      const roles = Object.fromEntries(Object.entries(state.roles || {}).map(([roleId, role]) => [roleId, role && role.agentId === agentId ? { ...role, agentId: '', model: '', effort: '' } : role]));
+      const rules = { ...state.rules };
+      if (rules.fallbackAgentId === agentId) rules.fallbackAgentId = '';
+      if (rules.historianAgentId === agentId) rules.historianAgentId = '';
+      const next = sanitizePreset({ agents: state.agents.filter(agent => agent.id !== agentId), roles, rules }, state);
+      store.state.agents = next.agents;
+      store.state.roles = next.roles;
+      store.state.rules = next.rules;
+      store.save();
+      checkReadiness();
+      applyAutoStaff();
+      return api.getState();
+    },
+    /**
+     * 一键推荐：重新查一遍本机哪些工具连得通，按各家所长排岗位、配模型与思考深度，直接生效。
+     * 不改「自动 / 手动编制」：手动编制的用户点了推荐，之后仍由他自己说了算。
+     */
+    recommend() {
+      const info = checkReadiness();
+      const next = autoStaff(store.state, new Set(info.ready));
+      if (!next) return { changes: [], ready: info.ready, ...api.getState() };
+      const changes = staffingDiff(store.state.roles, next.roles);
+      store.state.roles = next.roles;
+      store.state.rules = next.rules;
+      store.state.agents = next.agents;
+      store.save();
+      return { changes, ready: info.ready, ...api.getState() };
+    },
     autoStaffNow() {
       store.state.staffing = 'auto';
       checkReadiness();
@@ -1384,8 +1570,10 @@ export function createCourt(config = {}, { log = console } = {}) {
       return probeAgent(agent);
     },
     probeAll() {
+      // 顺带刷新「已连通」：官职下拉、一键推荐都看这份
+      const info = checkReadiness();
       const out = {};
-      for (const agent of store.state.agents || []) out[agent.id] = probeAgent(agent);
+      for (const agent of store.state.agents || []) out[agent.id] = info.probes[agent.id] || probeAgent(agent);
       return out;
     },
     /** 再办一次：同一份需求、同一个文件夹、同样的验收标准、权限与指定流程，开一道新的（重启打断、办砸了都能用） */
@@ -1981,6 +2169,14 @@ export async function handleRequest(api, req, res, uiLocale = () => 'zh') {
     if (route === '/setup/signin' && method === 'POST') return sendJson(res, 200, api.signInTool((await body()).tool));
     if (route === '/setup/connect' && method === 'POST') return sendJson(res, 200, api.connectTool((await body()).tool));
     if (route === '/setup/auto' && method === 'POST') return sendJson(res, 200, api.autoStaffNow());
+    // 群臣市场：看、接、登录；自定义员工；撤掉员工；一键推荐
+    if (route === '/catalog' && method === 'GET') return sendJson(res, 200, api.catalog({ fresh: url.searchParams.get('fresh') === '1' }));
+    if (route === '/catalog/add' && method === 'POST') return sendJson(res, 200, api.addFromCatalog((await body()).id));
+    if (route === '/catalog/signin' && method === 'POST') return sendJson(res, 200, api.catalogSignIn((await body()).id));
+    if (route === '/agents' && method === 'POST') return sendJson(res, 200, api.addCustomAgent(await body()));
+    const agentRoute = route.match(/^\/agents\/([a-z0-9-]{2,32})$/);
+    if (agentRoute && method === 'DELETE') return sendJson(res, 200, api.removeAgent(agentRoute[1]));
+    if (route === '/recommend' && method === 'POST') return sendJson(res, 200, api.recommend());
     // 下旨可带附件（base64），放宽到 25 MB
     // 朝堂满了也收：进候旨队列，轮到了自动放行（返回 queued: true）
     if (route === '/edicts' && method === 'POST') return sendJson(res, 200, api.submit({ locale, ...(await body(25 * 1024 * 1024)) }));

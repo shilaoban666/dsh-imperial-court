@@ -10,7 +10,7 @@
 [![DSH plugin](https://img.shields.io/badge/DSH-plugin-e9c46a)](https://dshbase.com/zh/plugins/)
 [![super-agent](https://img.shields.io/badge/super--agent-Router%E2%80%93Worker-8e44ad)](#superagent)
 [![CI](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml/badge.svg)](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-79%20passing-1f8a70)](test)
+[![Tests](https://img.shields.io/badge/tests-86%20passing-1f8a70)](test)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-3c873a)](package.json)
 [![Languages](https://img.shields.io/badge/English-%E4%B8%AD%E6%96%87-2e6f9e)](README.md)
 [![License](https://img.shields.io/badge/license-MIT-5d5348)](LICENSE)
@@ -126,10 +126,10 @@ Three steps, and only one command.
 **1. Install** ([DSH](https://dshbase.com/zh/plugins/), Node 20+ and git)
 
 ```bash
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.1.0
+dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.2.0
 ```
 
-Use `--profile web` for the web build; drop `#v1.1.0` to follow the latest code.
+Use `--profile web` for the web build; drop `#v1.2.0` to follow the latest code.
 
 **2. Open**: restart DSH, click the seal in the sidebar and switch to **EN**. The plugin finds DSH, Claude Code and Codex on your machine and fills the roles by itself; there is nothing to set up.
 
@@ -218,7 +218,7 @@ Five regimes: the more tools, the safer your throne; one tool alone makes you *D
 | ![Decree](docs/screenshots/en-02-decree.jpg) | ![Scroll](docs/screenshots/en-03-scroll.jpg) |
 | ![Acta](docs/screenshots/en-04-acta.jpg) | ![Annals](docs/screenshots/en-05-annals.jpg) |
 | ![Marble](docs/screenshots/en-06-marble.jpg) | ![Panorama](docs/screenshots/11-panorama.jpg) |
-| ![One-Person Company skin](docs/screenshots/en-10-modern.jpg) | |
+| ![One-Person Company skin](docs/screenshots/en-10-modern.jpg) | ![Tool market](docs/screenshots/19-market.png) |
 
 </details>
 
@@ -265,6 +265,8 @@ Three procedures. *Auto* picks by brief size and estimates calls and cost before
 | 🎩 | **The Chancellor** | The super-agent design on your machine: split, triage, queue, dispatch; a full Senate still accepts work, urgent and short work go first, bump or withdraw, survives restarts |
 | ⏩ | **Faster fixed workflows** | Straight to work (no draft or veto round) and parallel steps |
 | 🧰 | **Your team** | Finds the tools on your machine and fills the roles; one-click install, sign-in and add; hand back to automatic any time |
+| 🛒 | **Tool market** | Claude Code, Codex, Gemini CLI, Cursor, OpenCode, Qwen Code, WorkBuddy, Qwen Office, Seedance: read the pros and cons, click ＋ to add, install missing ones in one click, or add a custom tool by hand |
+| 🎯 | **Recommend** | Staffs the offices from the tools that are reachable, with two vendors planning and reviewing; model and effort are picked from a list |
 | 🌏 | **Two languages** | Six themes, prompts in either language |
 
 Every tab and setting is explained in the **[guide](docs/GUIDE.en.md)**.
@@ -338,7 +340,7 @@ Full list and roadmap: [guide · known limits](docs/GUIDE.en.md#15-known-limits-
 
 ## Contributing
 
-Issues and PRs are welcome. Run `npm test` first (79 tests against real git repositories and a fake CLI; CI runs them on Windows, macOS and Linux); check UI changes in `preview.html`.
+Issues and PRs are welcome. Run `npm test` first (86 tests against real git repositories and a fake CLI; CI runs them on Windows, macOS and Linux); check UI changes in `preview.html`.
 
 ## License
 

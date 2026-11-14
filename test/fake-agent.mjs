@@ -5,11 +5,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { modernize } from '../lib/modern.mjs';
 
-const prompt = fs.readFileSync(0, 'utf8');
+const args = process.argv.slice(2);
+// 只收参数的 CLI（promptMode: file）：提示词在 --prompt-file 指的文件里，标准输入是空的
+const fileAt = args.indexOf('--prompt-file');
+const promptFile = fileAt >= 0 ? args[fileAt + 1] : '';
+const prompt = promptFile ? fs.readFileSync(promptFile, 'utf8') : fs.readFileSync(0, 'utf8');
 const flags = new Set(String(process.env.FAKE_FLAGS || '').split(',').filter(Boolean));
 const format = process.env.FAKE_FORMAT || 'text';
 const log = process.env.FAKE_LOG;
-const args = process.argv.slice(2);
 const resumeAt = args.indexOf('--resume');
 const resumed = resumeAt >= 0 ? args[resumeAt + 1] : '';
 // 古代与现代（一人公司）两种说法都认：现代提示词就是古代模板过一遍 modernize
@@ -95,7 +98,7 @@ async function task(ministry, deliverable) {
     fs.writeFileSync(file, `${ministry} was here\n`);
   }
   record({
-    kind: 'task', ministry, start, end: Date.now(), cwd: process.cwd(), args,
+    kind: 'task', ministry, start, end: Date.now(), cwd: process.cwd(), args, promptFile,
     pressure: (prompt.match(/【锦衣卫·([^】]+)】|\[Praetorian ([a-z ]+)\]/) || [])[0] || '',
     chronicle: has('【实录】', '[Chronicle]'),
   });

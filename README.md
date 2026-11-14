@@ -10,7 +10,7 @@
 [![DSH plugin](https://img.shields.io/badge/DSH-plugin-e9c46a)](https://dshbase.com/zh/plugins/)
 [![super-agent](https://img.shields.io/badge/super--agent-Router%E2%80%93Worker-8e44ad)](#superagent)
 [![CI](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml/badge.svg)](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-79%20passing-1f8a70)](test)
+[![Tests](https://img.shields.io/badge/tests-86%20passing-1f8a70)](test)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-3c873a)](package.json)
 [![Languages](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-English-2e6f9e)](README.en.md)
 [![License](https://img.shields.io/badge/license-MIT-5d5348)](LICENSE)
@@ -126,10 +126,10 @@ flowchart LR
 **1. 安装**（需要 [DSH](https://dshbase.com/zh/plugins/)，以及 Node 20+ 与 git）
 
 ```bash
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.1.0
+dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.2.0
 ```
 
-Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.1.0`。
+Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.2.0`。
 
 **2. 打开**：重启 DSH，点侧栏的「三」。插件会自己找本机的 DSH、Claude Code、Codex 并排好岗位，什么都不用设。
 
@@ -224,6 +224,7 @@ Web 版把 `desktop` 换成 `web`；想跟最新代码就去掉 `#v1.1.0`。
 | ![殿宇](docs/screenshots/06-hall.jpg) | ![默认浅色主题](docs/screenshots/07-default-light.jpg) |
 | ![Senate](docs/screenshots/en-09-senate.jpg) | ![Gains](docs/screenshots/en-08-gains.jpg) |
 | ![一人公司皮肤](docs/screenshots/15-modern-workbench.jpg) | ![皮肤与语言](docs/screenshots/17-style.jpg) |
+| ![群臣市场：添加工具](docs/screenshots/19-market.png) | ![官职：任职、模型、思考深度与一键推荐](docs/screenshots/20-offices.png) |
 
 </details>
 
@@ -270,6 +271,8 @@ flowchart LR
 | 🎩 | **丞相府** | super-agent 的本机实现：拆清单、分拣、排队、派发；满员照收，急件与短活优先，可插队、撤回，重启不丢 |
 | ⏩ | **钦定流程提速** | 直办（跳过拟旨与封驳）、同时办（互不依赖的步骤并行） |
 | 🧰 | **你的团队** | 自动找到本机工具并排岗；一键安装、一键登录、接上；可随时交回自动分配 |
+| 🛒 | **群臣市场** | Claude Code、Codex、Gemini CLI、Cursor、OpenCode、Qwen Code、WorkBuddy、千问办公、Seedance：看优缺点，点「＋」接入，没装的一键安装；也能手动加自定义工具 |
+| 🎯 | **一键推荐** | 按本机连得通的工具排岗位，两家分别出方案与审方案；模型与思考深度下拉选，不用手填 |
 | 🌏 | **中英双语** | 六套主题，提示词也跟着换语言 |
 
 每个页签、每项设置的详细说明见 **[使用指南](docs/GUIDE.md)**。
@@ -343,7 +346,7 @@ flowchart LR
 
 ## 参与
 
-欢迎提 [Issue](https://github.com/shilaoban666/dsh-imperial-court/issues) 和 PR。改之前跑一遍 `npm test`（79 个测试，真 git 仓库 + 假 CLI；CI 在 Windows / macOS / Linux 上各跑一遍）；界面改动可以在 `preview.html` 里直接看。
+欢迎提 [Issue](https://github.com/shilaoban666/dsh-imperial-court/issues) 和 PR。改之前跑一遍 `npm test`（86 个测试，真 git 仓库 + 假 CLI；CI 在 Windows / macOS / Linux 上各跑一遍）；界面改动可以在 `preview.html` 里直接看。
 
 ## License
 

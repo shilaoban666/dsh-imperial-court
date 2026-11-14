@@ -2,9 +2,23 @@
 
 > [← 首页 / Home](README.md) · 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased]
+## [1.2.0] - 2026-11-14
+
+群臣市场、一键推荐、思考深度，加上界面打磨与几处修复。A tool market, one-click recommend and effort levels, plus UI polish and fixes.
+
+### 新增 Added
+
+- **群臣市场**：「群臣」页的「＋ 添加工具」列出市面上常见的 AI 工具：Claude Code、Codex、DSH、WorkBuddy、Gemini CLI、Cursor CLI、OpenCode、Qwen Code、千问办公、Seedance CLI。每个写明是什么、长处短处、要什么账号、点安装时会执行的命令；装好了点「＋ 接入」，没装的「＋ 安装并接入」，装完自动上岗。A tool market with descriptions, pros and cons, and one-click install.
+- **手动添加自定义工具**：市场里没有的命令行工具（填命令、参数、提示词怎么给、模型候选）或只有界面的软件，都能自己加；不要的员工可以撤掉，它担任的官职空出来。
+- **Seedance CLI 当工具接入**：它不是员工，接入后写进工部职掌，办差的员工去调 `seedance` 出片。
+- **思考深度**：官职卡多一格「思考深度」，下拉选（Claude Code：低 / 中 / 高 / 很高 / 最高；Codex：低 / 中 / 高）；CLI 不支持的显示「不支持」。
+- **一键推荐**：「官职」页三省标题旁的按钮，按本机此刻连得通的工具排岗位：出方案与审方案分给两家、写代码与测试分给两家，顺带配好模型与思考深度。
+- **提示词走文件**：只收参数的 CLI（OpenCode、Cursor）改为把提示词写进临时文件、参数里只放文件路径，办完删掉。Windows 上 npm 装的 `.cmd` 会把长参数截断、换行压平，这样不受影响。
 
 ### 改进 Changed
+
+- **群臣页一打开就探测**每个工具找不找得到、登没登录（只跑 where / auth status，不调模型），列表上方重复的「一键探测」去掉，「上手检查」里的保留。
+- **官职卡重做**：任职下拉只列「已连通」的工具（另列只有界面的），现任连不通时标出来；模型改成下拉（列出该工具的模型，另有「其它模型…」可手填）；职掌显示两行不再截断；选了停用的员工会顺手启用。
 
 - **页签从十个并成四组**：朝堂（朝堂 · 朝会 · 值房）、百官（官职 · 群臣 · 朝规）、账目（成效 · 国库 · 史馆 · 本纪）、殿宇。不再有「更多」，任何页面两下之内点得到。The ten tabs become four groups with sub-pages; no more *More* menu.
 - **朝规单独成页，加「办事方式」三套搭配**：亲自把关、丞相代管（super-agent 的用法）、全权放手，一点就换；十几项细则按「谁来拍板 / 审多细 / 同时办多少 / 安全与记忆」分组，每项一句白话说明；「钦定流程直办」也能在这里开关。并写明丞相府（收活排队）、丞相模式（替你拍板）、朝制（审多细）各管什么。
