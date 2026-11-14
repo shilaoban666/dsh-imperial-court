@@ -249,7 +249,7 @@ dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court
 
 **本地预览**：在仓库目录起一个静态服务（如 `python -m http.server`），打开 `preview.html`。它加载的就是真正的 `client.js`，只是把 DSH 宿主换成了内存里的假数据，会自动演示一次朝会。参数：`?lang=en`、`&theme=roma`、`&at=25`（跳到第 25 秒）、`&regime=jiuxi`（看某一级朝局）、`&tab=7`。
 
-**开发**：`npm test` 跑 79 个测试（真 git 仓库 + 假 CLI，需要 Node 20+ 与 git）。
+**开发**：`npm test` 跑 86 个测试（真 git 仓库 + 假 CLI，需要 Node 20+ 与 git）。
 
 ## 14. 目录结构
 

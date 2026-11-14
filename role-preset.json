@@ -48,6 +48,17 @@
       "resumeArgs": [
         "--resume",
         "{session}"
+      ],
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "effortArgs": [
+        "--effort",
+        "{effort}"
       ]
     },
     {
@@ -89,7 +100,16 @@
       "formatArgs": [
         "--json"
       ],
-      "resumeArgs": []
+      "resumeArgs": [],
+      "efforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "effortArgs": [
+        "-c",
+        "model_reasoning_effort={effort}"
+      ]
     },
     {
       "id": "workbuddy",
