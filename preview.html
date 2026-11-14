@@ -111,7 +111,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script>
 (function () {
-  // URL 参数（截图 / 调试用）：?lang=en&theme=roma&at=26&page=plugin&tab=3&view=sansheng-liubu-workflow&pane=sansheng-exec&auto=1
+  // URL 参数（截图 / 调试用）：?lang=en&theme=roma&at=26&page=plugin&tab=2&sub=3&view=sansheng-liubu-workflow&pane=sansheng-exec&auto=1
   const params = new URLSearchParams(location.search);
   const LANG = params.get('lang') === 'en' ? 'en' : params.get('lang') === 'zh' ? 'zh' : (/^zh/i.test(navigator.language) ? 'zh' : 'en');
   const L = (zh, en) => (db.ui.locale === 'en' ? en : zh);
@@ -795,9 +795,11 @@
     paintTokens();
     sidebarRight.openTab(params.get('pane') || 'sansheng-chat');
     ReactDOM.createRoot(document.getElementById('root')).render(h(Shell));
-    // 截图用：进到插件页后点第 N 个页签
+    // 截图用：进到插件页后点第 N 组页签，再点这组里的第 M 个子页（?tab=2&sub=3）
     const tab = Number(params.get('tab'));
+    const sub = Number(params.get('sub'));
     if (tab) setTimeout(() => { const el = document.querySelectorAll('.ssl-nav [role=tab]')[tab - 1]; if (el) el.click(); }, 600);
+    if (sub) setTimeout(() => { const el = document.querySelectorAll('.ssl-subnav [role=tab]')[sub - 1]; if (el) el.click(); }, 900);
     if (params.get('modal') === '1') setTimeout(() => { const el = document.querySelector('.ssl-header-btn'); if (el) el.click(); }, 600);
     // ?shot=new：演示的那份被 DSH 重启打断，再点「新旨」——截新旨页（待你处理、你的团队）用
     if (params.get('shot') === 'new') setTimeout(() => { window.__preview.interrupt(); setTimeout(() => { const el = document.querySelector('.ssl-bench-new'); if (el) el.click(); }, 400); }, 600);
