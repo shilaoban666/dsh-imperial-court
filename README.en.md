@@ -11,7 +11,7 @@
 [![DSH plugin](https://img.shields.io/badge/DSH-plugin-e9c46a)](https://dshbase.com/zh/plugins/)
 [![super-agent](https://img.shields.io/badge/super--agent-Router%E2%80%93Worker-8e44ad)](#superagent)
 [![CI](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml/badge.svg)](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-86%20passing-1f8a70)](test)
+[![Tests](https://img.shields.io/badge/tests-89%20passing-1f8a70)](test)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-3c873a)](package.json)
 [![Languages](https://img.shields.io/badge/English-%E4%B8%AD%E6%96%87-2e6f9e)](README.md)
 [![License](https://img.shields.io/badge/license-MIT-5d5348)](LICENSE)
@@ -326,7 +326,7 @@ Same idea, different setting. The [official prototype](https://github.com/deepse
 <details>
 <summary><b>Where is my data? Is anything uploaded?</b></summary>
 
-Everything stays on your machine in `~/.dsh/sansheng-liubu/`. The plugin serves a local HTTP endpoint for its own page only, accepts state changes only as same-origin JSON, and calls models only through the CLIs you installed.
+Everything stays on your machine in `~/.dsh/sansheng-liubu/`. The plugin serves a local HTTP endpoint for its own page only, sends every request through DSH's own access check first, accepts state changes only as same-origin JSON, and calls models only through the CLIs you installed.
 
 </details>
 
@@ -345,7 +345,7 @@ Full list and roadmap: [guide · known limits](docs/GUIDE.en.md#15-known-limits-
 
 - **Questions**: ask in [Discussions · Q&A](https://github.com/shilaoban666/dsh-imperial-court/discussions/categories/q-a), or check the [wiki](https://github.com/shilaoban666/dsh-imperial-court/wiki) first.
 - **Ideas**: post them in [Ideas](https://github.com/shilaoban666/dsh-imperial-court/discussions/categories/ideas); show off what your court did in [Show and tell](https://github.com/shilaoban666/dsh-imperial-court/discussions/categories/show-and-tell).
-- **Code**: read [CONTRIBUTING.md](CONTRIBUTING.md). Zero dependencies; `npm test` runs 86 tests against real git repositories and a fake CLI (CI covers Windows, macOS and Linux); check UI changes in `preview.html`. Open PRs against `dev`.
+- **Code**: read [CONTRIBUTING.md](CONTRIBUTING.md). Zero dependencies; `npm test` runs 89 tests against real git repositories and a fake CLI (CI covers Windows, macOS and Linux); check UI changes in `preview.html`. Open PRs against `dev`.
 
 If it helps you, a ⭐ is the most direct way to say so.
 

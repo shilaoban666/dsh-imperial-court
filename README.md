@@ -11,7 +11,7 @@
 [![DSH plugin](https://img.shields.io/badge/DSH-plugin-e9c46a)](https://dshbase.com/zh/plugins/)
 [![super-agent](https://img.shields.io/badge/super--agent-Router%E2%80%93Worker-8e44ad)](#superagent)
 [![CI](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml/badge.svg)](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-86%20passing-1f8a70)](test)
+[![Tests](https://img.shields.io/badge/tests-89%20passing-1f8a70)](test)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-3c873a)](package.json)
 [![Languages](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-English-2e6f9e)](README.en.md)
 [![License](https://img.shields.io/badge/license-MIT-5d5348)](LICENSE)
@@ -332,7 +332,7 @@ flowchart LR
 <details>
 <summary><b>数据存在哪？会上传吗？</b></summary>
 
-都在本机：`~/.dsh/sansheng-liubu/`（状态、奏折、史馆、实录）。插件只在本机起一个 HTTP 端点给自己的界面用：只认本机地址（或 IP、你在配置里放行的域名）发来的请求，挡住 DNS 重绑定；改状态的请求只收同源的 JSON，挡住跨站表单。调用模型走的是你自己装的 CLI。
+都在本机：`~/.dsh/sansheng-liubu/`（状态、奏折、史馆、实录）。插件只在本机起一个 HTTP 端点给自己的界面用：每个请求先过 DSH 自己的访问检查（与 DSH 核心 API 同一套规则），再只认本机地址（或 IP、你在配置里放行的域名）发来的请求，挡住 DNS 重绑定；改状态的请求只收同源的 JSON，挡住跨站表单。调用模型走的是你自己装的 CLI。
 
 </details>
 
@@ -351,7 +351,7 @@ flowchart LR
 
 - **用着有问题**：到 [Discussions · Q&A](https://github.com/shilaoban666/dsh-imperial-court/discussions/categories/q-a) 问；先翻 [Wiki 的故障排查](https://github.com/shilaoban666/dsh-imperial-court/wiki/故障排查) 也许更快。
 - **有点子**：发到 [Ideas](https://github.com/shilaoban666/dsh-imperial-court/discussions/categories/ideas)；**办成了一件漂亮的事**：晒到 [Show and tell](https://github.com/shilaoban666/dsh-imperial-court/discussions/categories/show-and-tell)。
-- **想改代码**：看 [CONTRIBUTING.md](CONTRIBUTING.md)。零依赖，`npm test` 跑 86 个测试（真 git 仓库 + 假 CLI；CI 在 Windows / macOS / Linux 上各跑一遍）；界面改动在 `preview.html` 里直接看。PR 提到 `dev` 分支。
+- **想改代码**：看 [CONTRIBUTING.md](CONTRIBUTING.md)。零依赖，`npm test` 跑 89 个测试（真 git 仓库 + 假 CLI；CI 在 Windows / macOS / Linux 上各跑一遍）；界面改动在 `preview.html` 里直接看。PR 提到 `dev` 分支。
 
 觉得有用，点个 ⭐ 是对作者最直接的鼓励。
 
