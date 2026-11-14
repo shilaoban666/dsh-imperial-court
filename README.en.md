@@ -7,6 +7,7 @@
 **The best local implementation of the DSH super-agent (Router–Worker) design · no server · works out of the box**
 
 [![Release](https://img.shields.io/github/v/release/shilaoban666/dsh-imperial-court?color=b4362b&label=release)](https://github.com/shilaoban666/dsh-imperial-court/releases)
+[![npm](https://img.shields.io/npm/v/dsh-sansheng-liubu?color=cb3837&label=npm)](https://www.npmjs.com/package/dsh-sansheng-liubu)
 [![DSH plugin](https://img.shields.io/badge/DSH-plugin-e9c46a)](https://dshbase.com/zh/plugins/)
 [![super-agent](https://img.shields.io/badge/super--agent-Router%E2%80%93Worker-8e44ad)](#superagent)
 [![CI](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml/badge.svg)](https://github.com/shilaoban666/dsh-imperial-court/actions/workflows/ci.yml)
@@ -128,10 +129,10 @@ Three steps, and only one command.
 **1. Install** ([DSH](https://dshbase.com/zh/plugins/), Node 20+ and git)
 
 ```bash
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v1.2.0
+dsh plugin --profile desktop add dsh-sansheng-liubu
 ```
 
-Use `--profile web` for the web build; drop `#v1.2.0` to follow the latest code.
+Use `--profile web` for the web build. This installs the [release on npm](https://www.npmjs.com/package/dsh-sansheng-liubu); to follow the latest code on GitHub, use `dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court`.
 
 **2. Open**: restart DSH, click the seal in the sidebar and switch to **EN**. The plugin finds DSH, Claude Code and Codex on your machine and fills the roles by itself; there is nothing to set up.
 
