@@ -120,8 +120,8 @@
 
   // ======================= 假宿主：/sansheng-liubu/* =======================
   const AGENTS = [
-    { id: 'cc', name: 'Claude Code', adapter: 'cli', command: 'claude', args: ['-p'], promptMode: 'stdin', modelArgs: ['--model', '{model}'], execArgs: ['--permission-mode', 'acceptEdits', '--allowedTools', 'Bash,Read,Write,Edit,Glob,Grep'], autoArgs: ['--permission-mode', 'acceptEdits', '--allowedTools', 'Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch'], models: ['opus', 'sonnet', 'haiku'], timeoutMs: 900000, traits: ['规划', '架构', '实现'], enabled: true },
-    { id: 'codex', name: 'Codex', adapter: 'cli', command: 'codex', args: ['exec', '--skip-git-repo-check'], promptMode: 'stdin', modelArgs: ['--model', '{model}'], execArgs: ['--sandbox', 'workspace-write'], autoArgs: ['--full-auto'], models: ['gpt-5-codex', 'gpt-5', 'o3'], timeoutMs: 900000, traits: ['审查', '测试', '异构视角'], enabled: true },
+    { id: 'cc', name: 'Claude Code', efforts: ['low', 'medium', 'high', 'xhigh', 'max'], effortArgs: ['--effort', '{effort}'], adapter: 'cli', command: 'claude', args: ['-p'], promptMode: 'stdin', modelArgs: ['--model', '{model}'], execArgs: ['--permission-mode', 'acceptEdits', '--allowedTools', 'Bash,Read,Write,Edit,Glob,Grep'], autoArgs: ['--permission-mode', 'acceptEdits', '--allowedTools', 'Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch'], models: ['opus', 'sonnet', 'haiku'], timeoutMs: 900000, traits: ['规划', '架构', '实现'], enabled: true },
+    { id: 'codex', name: 'Codex', efforts: ['low', 'medium', 'high'], effortArgs: ['-c', 'model_reasoning_effort={effort}'], adapter: 'cli', command: 'codex', args: ['exec', '--skip-git-repo-check'], promptMode: 'stdin', modelArgs: ['--model', '{model}'], execArgs: ['--sandbox', 'workspace-write'], autoArgs: ['--full-auto'], models: ['gpt-5-codex', 'gpt-5', 'o3'], timeoutMs: 900000, traits: ['审查', '测试', '异构视角'], enabled: true },
     { id: 'workbuddy', name: 'WorkBuddy', adapter: 'cli', command: 'codebuddy', args: ['-p'], promptMode: 'stdin', modelArgs: ['--model', '{model}'], execArgs: [], autoArgs: [], models: ['auto', 'hy3', 'glm-5.3', 'deepseek-v4-pro'], timeoutMs: 900000, traits: ['表格', '文档', '报表'], enabled: true },
     { id: 'dsh', name: 'DSH', adapter: 'cli', command: 'dsh', args: ['headless', '--patch', '{pluginDir}/dsh-headless.patch.yml', '-'], formatArgs: ['--json'], outputFormat: 'dsh-json', modelEnv: 'SANSHENG_DSH_MODEL', permissionEnv: 'DSH_PERMISSION_MODE', resumeArgs: ['--session-id', '{session}'], models: ['deepseek-flash', 'deepseek-v4-pro'], traits: ['中文', '长文本', '便宜'], enabled: true },
     { id: 'qwen', name: '千问办公', adapter: 'manual', models: [], traits: ['公文', 'PPT'], enabled: true },
@@ -493,6 +493,8 @@
       annals: { count: annals.length, rubberStamp: false },
       regime: regimeNow(),
       deputy: { id: 'dsh', name: 'DSH' },
+      connected: db.agents.filter(a => a.adapter === 'cli' && a.command !== 'codebuddy').map(a => a.id),
+      probes: {},
     };
   }
 
@@ -534,6 +536,34 @@
     return queueDb.slice().sort((a, b) => (b.priority - a.priority) || (WEIGHT[a.mode] - WEIGHT[b.mode]) || (a.at - b.at)).map((entry, index) => ({ ...entry, position: index + 1 }));
   }
 
+  // ---------- 群臣市场（演示） ----------
+  const MARKET_BASE = [
+    ['claude', 'cc', 'Claude Code', 'Anthropic', 'agent', true, 'auto', ['Anthropic 的命令行编程助手，读懂整个代码库再动手，规划与实现都强。', 'Anthropic\'s coding agent: reads the whole codebase before acting.'], [['规划、架构、改大代码库最稳', '会话可续接，国库有真账', '可选思考深度（low → max）'], ['Most reliable on planning and large codebases', 'Resumable sessions', 'Selectable effort']], [['价格偏高', '需要 Claude 订阅或 API Key'], ['On the expensive side', 'Needs a Claude plan or an API key']]],
+    ['codex', 'codex', 'Codex', 'OpenAI', 'agent', true, 'auto', ['OpenAI 的命令行编程助手，审查与测试眼光毒，适合当门下省。', 'OpenAI\'s coding agent; a sharp reviewer and tester.'], [['审查、找 bug、写测试强', '自带沙箱', '可选推理强度'], ['Strong at review and tests', 'Built-in sandbox', 'Selectable effort']], [['需要 ChatGPT 订阅或 API Key'], ['Needs a ChatGPT plan or an API key']]],
+    ['dsh', 'dsh', 'DSH', 'DeepSeek', 'agent', true, 'none', ['DeepSeek Harness 本体（dsh headless），随 DSH 一起装好。', 'DeepSeek Harness itself; comes with DSH.'], [['不用另外装', '便宜，中文与长文本好'], ['Already there', 'Cheap; good at Chinese']], [['只有它一家时没有别家来审'], ['Alone, no second opinion']]],
+    ['workbuddy', 'workbuddy', 'WorkBuddy', '腾讯 Tencent', 'agent', false, 'auto', ['腾讯 CodeBuddy 的命令行，可切换混元、GLM、Kimi、DeepSeek。', 'Tencent CodeBuddy\'s CLI.'], [['国内网络直连', '一个账号切多家模型'], ['Works in mainland China', 'Many models, one account']], [['与桌面端共用配置'], ['Shares config with the desktop app']]],
+    ['gemini', 'gemini', 'Gemini CLI', 'Google', 'agent', true, 'auto', ['Google 的开源命令行助手，上下文窗口很长。', 'Google\'s open-source CLI agent with a very long context.'], [['上下文超长', '个人账号有免费额度', '开源'], ['Very long context', 'Free tier', 'Open source']], [['国内网络需要代理'], ['Needs a proxy in mainland China']]],
+    ['cursor', 'cursor', 'Cursor CLI', 'Cursor', 'agent', false, 'auto', ['Cursor 编辑器的命令行版，一个订阅里可用多家模型。', 'The command-line side of Cursor.'], [['一个订阅用多家模型', '写代码快'], ['Several models, one plan', 'Fast at code']], [['需要 Cursor 账号', '改文件要 --force'], ['Needs a Cursor account', 'Editing needs --force']]],
+    ['opencode', 'opencode', 'OpenCode', 'SST', 'agent', false, 'auto', ['开源的终端编程助手，模型自带，能接几十家。', 'Open-source terminal agent; bring your own model.'], [['开源，不绑定厂家', '适合拿便宜模型跑量'], ['No lock-in', 'Good on cheap models']], [['要先配好模型与 Key'], ['Configure a provider first']]],
+    ['qwen-code', 'qwen-code', 'Qwen Code', '阿里 Alibaba', 'agent', false, 'auto', ['通义千问的命令行编程助手。', 'Alibaba Qwen\'s command-line agent.'], [['国内网络直连', '中文写作好'], ['Works in mainland China', 'Good Chinese writing']], [['改文件要 --yolo'], ['Editing needs --yolo']]],
+    ['qwen', 'qwen', '千问办公', '阿里 Alibaba', 'gui', true, 'none', ['只有图形界面的办公助手，派到它的差事要你回填。', 'A GUI-only office assistant.'], [['公文、PPT 排版好'], ['Good layouts']], [['不能自动办差'], ['Cannot work unattended']]],
+    ['seedance', '', 'Seedance CLI', '第三方 · 字节 Seedance 模型', 'tool', false, 'manual', ['用 Seedance 生成视频的命令行（第三方）。装好后写进工部职掌。', 'A third-party CLI that renders video with Seedance.'], [['短视频画面生成能自动办'], ['Automates the visuals step']], [['第三方工具', '需要 SEEDANCE_API_KEY'], ['Third-party', 'Needs SEEDANCE_API_KEY']]],
+  ];
+  const INSTALL_TEXT = { claude: 'irm https://claude.ai/install.ps1 | iex', codex: 'npm install -g @openai/codex', workbuddy: 'npm install -g @tencent-ai/codebuddy-code', gemini: 'npm install -g @google/gemini-cli', cursor: "irm 'https://cursor.com/install?win32=true' | iex", opencode: 'npm install -g opencode-ai', 'qwen-code': 'npm install -g @qwen-code/qwen-code', seedance: 'cargo install seedance' };
+  const MARKET = MARKET_BASE.map(([id, agentId, name, vendor, kind, found, install, desc, pros, cons]) => ({
+    id, agentId, name, vendor, kind, found, install, installText: INSTALL_TEXT[id] || '', site: 'https://example.com',
+    desc: { zh: desc[0], en: desc[1] }, pros: { zh: pros[0], en: pros[1] }, cons: { zh: cons[0], en: cons[1] }, needs: { zh: '对应账号', en: 'An account' },
+    builtIn: id === 'dsh', canSignIn: kind === 'agent' && id !== 'dsh', signedIn: found ? true : null,
+  }));
+  const marketJobs = {};
+  function catalogNow() {
+    return MARKET.map(entry => ({ ...entry, added: entry.kind === 'tool' ? false : db.agents.some(a => a.id === entry.agentId), job: marketJobs[entry.id] || null }));
+  }
+  function enlistMock(entry) {
+    if (entry.kind === 'tool' || db.agents.some(a => a.id === entry.agentId)) return;
+    db.agents = [...db.agents, { id: entry.agentId, name: entry.name, adapter: entry.kind === 'gui' ? 'manual' : 'cli', command: entry.id, args: ['-p'], models: entry.id === 'gemini' ? ['gemini-2.5-pro', 'gemini-2.5-flash'] : [], traits: [], enabled: true }];
+  }
+
   function route(method, pathname, query, body) {
     tickSim();
     const find = id => { const e = db.edicts.find(x => x.id === id); if (!e) throw new Error(L('奏折不存在', 'Decree not found')); return e; };
@@ -562,6 +592,44 @@
     if (pathname === '/preset' && method === 'PUT') {
       if (body.roles.zhongshu.agentId && body.roles.zhongshu.agentId === body.roles.menxia.agentId) throw new Error(L('中书省与门下省不能由同一个 agent 担任（同源互审等于没审）', 'The Consul and the Tribune cannot be the same agent'));
       db.agents = body.agents; db.roles = body.roles; db.rules = body.rules || db.rules; return state();
+    }
+    if (pathname === '/catalog' && method === 'GET') return { entries: catalogNow() };
+    if (pathname === '/catalog/add' && method === 'POST') {
+      const entry = MARKET.find(item => item.id === body.id);
+      if (!entry) throw new Error('unknown');
+      if (!entry.found && entry.install === 'auto') {
+        marketJobs[entry.id] = { state: 'running' };
+        setTimeout(() => { marketJobs[entry.id] = { state: 'done' }; entry.found = true; enlistMock(entry); }, 3500);
+        return { ok: false, installing: true, entries: catalogNow() };
+      }
+      if (!entry.found) return { ok: false, reason: 'manual', installText: entry.installText, entries: catalogNow() };
+      enlistMock(entry);
+      return { ok: true, entries: catalogNow() };
+    }
+    if (pathname === '/catalog/signin' && method === 'POST') return { opened: true };
+    if (pathname === '/agents' && method === 'POST') {
+      const id = String(body.name || 'agent').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24) || 'agent';
+      db.agents = [...db.agents, { id, name: body.name, adapter: body.adapter === 'manual' ? 'manual' : 'cli', command: body.command || '', args: String(body.args || '').split(' ').filter(Boolean), models: String(body.models || '').split(',').map(x => x.trim()).filter(Boolean), traits: [], enabled: true }];
+      return { id, ...state() };
+    }
+    const agentDel = pathname.match(/^\/agents\/([a-z0-9-]+)$/);
+    if (agentDel && method === 'DELETE') {
+      db.agents = db.agents.filter(a => a.id !== agentDel[1]);
+      for (const key of Object.keys(db.roles)) if (db.roles[key].agentId === agentDel[1]) db.roles[key] = { ...db.roles[key], agentId: '', model: '', effort: '' };
+      return state();
+    }
+    if (pathname === '/recommend' && method === 'POST') {
+      const before = JSON.parse(JSON.stringify(db.roles));
+      const pick = { zhongshu: ['cc', 'opus', 'high'], menxia: ['codex', '', 'high'], war: ['cc', 'sonnet', 'medium'], justice: ['codex', '', 'medium'], yushi: ['dsh', 'deepseek-flash', ''], rites: ['dsh', '', ''], revenue: ['gemini', '', ''], works: ['cc', '', ''], personnel: ['cc', '', ''] };
+      const ready = new Set(db.agents.filter(a => a.adapter === 'cli' && a.command !== 'codebuddy').map(a => a.id));
+      const changes = [];
+      for (const [roleId, [agentId, model, effort]] of Object.entries(pick)) {
+        const holder = ready.has(agentId) ? agentId : 'dsh';
+        const next = { ...db.roles[roleId], agentId: holder, model: holder === agentId ? model : '', effort: holder === agentId ? effort : '' };
+        if (['agentId', 'model', 'effort'].some(k => (before[roleId][k] || '') !== (next[k] || ''))) changes.push({ roleId, from: before[roleId], to: next });
+        db.roles[roleId] = next;
+      }
+      return { changes, ready: [...ready], ...state() };
     }
     const probeOne = a => (a && a.command === 'codebuddy' ? { ok: false, detail: L('未找到 codebuddy（PATH 里没有，或绝对路径不存在）', 'codebuddy not found (not on PATH)') } : { ok: true, detail: `C:\\Users\\you\\AppData\\Roaming\\npm\\${a ? a.command : ''}.cmd` });
     if (pathname === '/probe' && method === 'POST') return probeOne(db.agents.find(x => x.id === body.agentId));
@@ -801,6 +869,8 @@
     if (tab) setTimeout(() => { const el = document.querySelectorAll('.ssl-nav [role=tab]')[tab - 1]; if (el) el.click(); }, 600);
     if (sub) setTimeout(() => { const el = document.querySelectorAll('.ssl-subnav [role=tab]')[sub - 1]; if (el) el.click(); }, 900);
     if (params.get('modal') === '1') setTimeout(() => { const el = document.querySelector('.ssl-header-btn'); if (el) el.click(); }, 600);
+    // ?market=1：在群臣页打开「添加工具」（截图用）
+    if (params.get('market') === '1') setTimeout(() => { const el = document.querySelector('.ssl-agent-add'); if (el) el.click(); }, 1400);
     // ?shot=new：演示的那份被 DSH 重启打断，再点「新旨」——截新旨页（待你处理、你的团队）用
     if (params.get('shot') === 'new') setTimeout(() => { window.__preview.interrupt(); setTimeout(() => { const el = document.querySelector('.ssl-bench-new'); if (el) el.click(); }, 400); }, 600);
   };
