@@ -202,10 +202,10 @@ HTTP: `POST /dispatch` (`{ brief | items, workspace, criteria, autonomous, prior
 ## 13. Install and configure
 
 ```bash
-dsh plugin --profile desktop add github:shilaoban666/dsh-imperial-court#v0.9.0
+dsh plugin --profile desktop add dsh-sansheng-liubu
 ```
 
-- Use `--profile web` for the web build; drop `#v0.9.0` to follow the latest code.
+- Use `--profile web` for the web build. This installs the release on npm; pin a version with `dsh-sansheng-liubu@1.2.0`, or follow the latest code on GitHub with `github:shilaoban666/dsh-imperial-court` (add `#v1.2.0` to pin).
 - From a local clone: `dsh plugin --profile desktop add "link:<absolute path>"`.
 - Install and sign in to the CLIs you want to use (`npm i -g @anthropic-ai/claude-code`, `npm i -g @openai/codex`, then run each once). DSH itself needs nothing extra.
 - **Write args** (`agents[].execArgs`) are added to executing orders only; **autonomy args** (`agents[].autoArgs`) to every call in autonomy.
