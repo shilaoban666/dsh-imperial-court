@@ -17,6 +17,8 @@
 
 [中文](README.md) · **English**
 
+**[▶ Live demo (no install)](https://shilaoban666.github.io/dsh-imperial-court/preview.html?lang=en)** · [💬 Discussions](https://github.com/shilaoban666/dsh-imperial-court/discussions) · [📖 Wiki](https://github.com/shilaoban666/dsh-imperial-court/wiki)
+
 [Quick start](#quick-start) · [Super-agent, done best](#superagent) · [Why](#why) · [Screenshots](#screenshots) · [Features](#features) · [FAQ](#faq) · [Guide](docs/GUIDE.en.md) · [Changelog](CHANGELOG.md)
 
 </div>
@@ -137,7 +139,7 @@ Use `--profile web` for the web build; drop `#v1.2.0` to follow the latest code.
 
 DSH alone works: DSH itself can hold any role. For a real cross-check (models from different vendors reviewing each other), press **Install** / **Sign in** under *Your team*. It uses the official Claude Code and Codex installers and sign-in, and each tool joins the team once it is ready. Claude Code needs a Claude subscription or an Anthropic API key; Codex needs a ChatGPT plan or an OpenAI API key.
 
-> 👀 **Just want to look?** Run `python -m http.server` in the repo and open `http://localhost:8000/preview.html?lang=en` for a full replayed session.
+> 👀 **Just want to look?** Open the **[live demo](https://shilaoban666.github.io/dsh-imperial-court/preview.html?lang=en)**: the real interface replaying a full session on demo data. Or run `python -m http.server` in the repo and open `http://localhost:8000/preview.html?lang=en`.
 
 ## Why
 
@@ -340,7 +342,11 @@ Full list and roadmap: [guide · known limits](docs/GUIDE.en.md#15-known-limits-
 
 ## Contributing
 
-Issues and PRs are welcome. Run `npm test` first (86 tests against real git repositories and a fake CLI; CI runs them on Windows, macOS and Linux); check UI changes in `preview.html`.
+- **Questions**: ask in [Discussions · Q&A](https://github.com/shilaoban666/dsh-imperial-court/discussions/categories/q-a), or check the [wiki](https://github.com/shilaoban666/dsh-imperial-court/wiki) first.
+- **Ideas**: post them in [Ideas](https://github.com/shilaoban666/dsh-imperial-court/discussions/categories/ideas); show off what your court did in [Show and tell](https://github.com/shilaoban666/dsh-imperial-court/discussions/categories/show-and-tell).
+- **Code**: read [CONTRIBUTING.md](CONTRIBUTING.md). Zero dependencies; `npm test` runs 86 tests against real git repositories and a fake CLI (CI covers Windows, macOS and Linux); check UI changes in `preview.html`. Open PRs against `dev`.
+
+If it helps you, a ⭐ is the most direct way to say so.
 
 ## License
 
