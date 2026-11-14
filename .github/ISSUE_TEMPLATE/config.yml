@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 使用问题 / Questions
+    url: https://github.com/shilaoban666/dsh-imperial-court/discussions/categories/q-a
+    about: 怎么装、怎么接工具、怎么排岗位——在 Discussions 的 Q&A 里问，答案大家都能搜到。How-to questions go to Q&A.
+  - name: 💡 想法与功能讨论 / Ideas
+    url: https://github.com/shilaoban666/dsh-imperial-court/discussions/categories/ideas
+    about: 还没想清楚的点子先在 Ideas 里聊，定下来再开 Issue。Talk ideas through before filing a feature request.
+  - name: 📖 Wiki
+    url: https://github.com/shilaoban666/dsh-imperial-court/wiki
+    about: 上手教程、常见问题、故障排查。Tutorials, FAQ and troubleshooting.

@@ -1,0 +1,12 @@
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 现在哪里不顺手 / What is awkward today
+      description: 先说场景再说方案 / The situation first, then the idea
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: 你设想的做法 / What you have in mind
